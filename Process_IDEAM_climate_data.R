@@ -1,6 +1,6 @@
 ## Calculate summary climate data from IDEAM
 
-ProcessDataToDF <- function(data_dir, ideam_cols, summary, indices, widths, skip_cols = FALSE) {
+ProcessData <- function(data_dir, ideam_cols, summary, indices, widths, skip_cols = FALSE) {
   list_of_data <- list()
   for (index in indices) {
     file <- read.fwf(paste(data_dir, "/", index, ".txt", sep = ""), widths = widths, skip = 5, fill = TRUE)
@@ -13,7 +13,7 @@ ProcessDataToDF <- function(data_dir, ideam_cols, summary, indices, widths, skip
     list_of_data[[index]] <- file
   }
   df <- do.call(rbind, list_of_data)
-  return(df)
+  return(list_of_data)
 }
 
 data_dir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Colombia/IDEAM_parsed'
@@ -43,8 +43,7 @@ precip_indices <- summary[which(summary$variable == variables[2]), 'index']
 temp_widths <- c(21, rep(9, 12))
 precip_widths <- c(18, rep(c(7,2), 12))
 
-temp_df <- ProcessDataToDF(data_dir, ideam_cols, summary, temp_indices, temp_widths)
-precip_df <- ProcessDataToDF(data_dir, ideam_cols, summary, precip_indices, precip_widths, skip_cols = TRUE)
+temp_list <- ProcessData(data_dir, ideam_cols, summary, temp_indices, temp_widths)
+precip_list <- ProcessData(data_dir, ideam_cols, summary, precip_indices, precip_widths, skip_cols = TRUE)
 
-  
 
