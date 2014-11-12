@@ -17,6 +17,4 @@ veg_data$label[veg_data$Transect == '6'] <- 'b'
 
 p <- ggplot(veg_data, aes(x = Transect, y = DM_g_per_sq_m)) + geom_boxplot()
 p <- p + xlab('Transect') + ylab('Dry matter (g per sq m)')
-p <- p + geom_text(data = veg_data, aes(label = label), 
-                   size = 3, position=position_dodge(width=0.8))
 print(p)
