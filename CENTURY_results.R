@@ -1,17 +1,27 @@
 # Plot output data from CENTURY
 
-outdir <- 'C:/Users/Ginger/Documents/NatCap/Other_Peoples_Models/CENTURY4.6/Kenya'
-datadir <- 'C:/Users/Ginger/Documents/NatCap/Other_Peoples_Models/CENTURY4.6/Century46_PC_Jan-2014' 
+datadir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Century46_PC_Jan-2014' 
+outdir <- datadir
 outvars <- read.table(paste(datadir, '/outvars.txt', sep = ""), header = FALSE)
 
 widths <- rep(16, length(outvars[, 1]) + 1)
-opc1 <- read.fwf(paste(outdir, '/opc1a.lis', sep = ""), widths, skip = 2)
+Kenya <- read.fwf(paste(outdir, '/K_P93.lis', sep = ""), widths, skip = 2)
+col.names = read.table(paste(outdir, '/K_P93.lis', sep = ""), nrow = 1, as.is = TRUE)
+colnames(Kenya) <- col.names
+
+recent <- Kenya[(Kenya$time > 5000),]
+k_jan <- recent[(recent$time %% 1 == 0), ]
+k_mar <- Kenya[(Kenya$time - floor(Kenya$time) == 0.25), ]
+k_may <- Kenya[((Kenya$time - floor(Kenya$time)) > 0.41) & ((Kenya$time - floor(Kenya$time)) < 0.43), ]
+k_jul <- Kenya[((Kenya$time - floor(Kenya$time)) > 0.57) & ((Kenya$time - floor(Kenya$time)) < 0.59), ]
+k_sep <- Kenya[((Kenya$time - floor(Kenya$time)) > 0.74) & ((Kenya$time - floor(Kenya$time)) < 0.76), ]
+k_nov <- Kenya[((Kenya$time - floor(Kenya$time)) > 0.91) & ((Kenya$time - floor(Kenya$time)) < 0.93), ]
+
 opc1g <- read.fwf(paste(outdir, '/opc1a-g.lis', sep = ""), widths, skip = 2)
 opc4 <- read.fwf(paste(outdir, '/opc4.lis', sep = ""), widths, skip = 2)
 opc6 <- read.fwf(paste(outdir, '/opc6.lis', sep = ""), widths, skip = 2)
 
-col.names = read.table(paste(outdir, '/opc1.lis', sep = ""), nrow = 1, as.is = TRUE)
-colnames(opc1) <- col.names
+
 colnames(opc4) <- col.names
 colnames(opc6) <- col.names
 
