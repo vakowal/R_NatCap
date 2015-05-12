@@ -35,11 +35,13 @@ all_data <- read.table(paste(datadir, 'fig_data.txt', sep = "/"), header = TRUE,
 # define grouping factors
 all_data$actual_baseline <- factor(all_data$actual.baseline, levels = c("baseline", "actual"))
 all_data$site <- factor(all_data$site, levels = c("Iowa", "Heilongjiang", "Jiangxi", "Mato Grosso", "synthetic")) 
-all_data$pattern <- factor(all_data$pattern, levels = c("To stream", "From stream", "Buffer", "From cropland"))
+all_data$pattern <- factor(all_data$pattern, levels = c("To stream", "From stream", "Buffer", "From cropland"),
+                           labels = c("To stream", "From stream", "From stream + buffer", "From cropland"))
 all_data$k <- factor(all_data$k, levels = c(1, 1.5, 2, 2.5))
 all_data$ic <- factor(all_data$ic, levels = c(0.25, 0.5, 0.75))
 all_data$extent <- factor(all_data$extent, levels = c("regular", "double"))
-all_data$slope <- factor(all_data$slope, levels = c("constant", "broken"))
+all_data$slope <- factor(all_data$slope, levels = c("constant", "broken"),
+                         labels = c("constant", "variable"))
 
 # these line types or colors will map to a factor level in the defined order
 lines <- c("solid", "longdash", "dotted", "twodash")
@@ -83,11 +85,11 @@ print(fig2)
 
 # export the figure to file
 if(color){
-  epsname <- paste(figdir, "Fig2_color.eps", sep = "/")
+  jpgname <- paste(figdir, "Fig2_color.jpg", sep = "/")
 } else {
-  epsname <- paste(figdir, "Fig2.eps", sep = "/")
+  jpgname <- paste(figdir, "Fig2.jpg", sep = "/")
 }
-ggsave(filename = epsname, plot = fig2, width = 5, height=9, units = "in", dpi = 600)
+ggsave(filename = jpgname, plot = fig2, width = 5, height=9, units = "in", dpi = 600)
 
 # because fig 1a and 1b don't share x and y units, facet_grid won't work
 # must place the plots together manually
@@ -130,10 +132,11 @@ if (color){
 }
 p <- p + scale_y_continuous(breaks = seq(0, 125, 25))
 p <- p + xlab("Percent converted")
-p <- p + ylab(expression(atop("Rate of change in sediment", paste("export (T / ha / yr)"))))
+p <- p + ylab("Rate of change in sediment export (T / ha / yr)")
+#p <- p + ylab(expression(atop("Rate of change in sediment", paste("export (T / ha / yr)"))))
 p <- p + scale_x_continuous(labels = percent)
 p <- p + print_theme
-p <- p + theme(axis.text=element_text(size=9))
+p <- p + theme(axis.text=element_text(size=9), axis.title.y=element_text(size=7.2))
 p <- p + theme(plot.margin=unit(c(0.1, 0.2, 0.13, 0), "cm"))
 p <- p + theme(legend.margin=unit(-1,"cm")) 
 p <- p + annotate("text", label = "b", x = 0.1, y = 140, size = 5)
@@ -146,13 +149,11 @@ mylegend <- g_legend(fig1a)
 
 # export to file
 if(color){
-  epsname <- paste(figdir, "Fig1_color.eps", sep = "/")
+  jpgname <- paste(figdir, "Fig1_color.jpg", sep = "/")
 } else {
-  epsname <- paste(figdir, "Fig1.eps", sep = "/")
+  jpgname <- paste(figdir, "Fig1.jpg", sep = "/")
 }
-setEPS()
-postscript(epsname, horizontal = FALSE, onefile = FALSE, paper = "special", 
-           width = 6, height=2.75)
+jpeg(jpgname, width = 6, height=2.75, units = "in", res = 600)
 grid.arrange(arrangeGrob(fig1a + theme(legend.position="none"),
                          fig1b + theme(legend.position="none"),
                          nrow=1),
@@ -164,74 +165,78 @@ supp1a_data <- all_data[which(!is.na(all_data$Total.cumulative.sediment.export) 
                                   !is.na(all_data$k)), ]
 supp1a_data$sed_thousands <- supp1a_data$Total.cumulative.sediment.export / 1000
 
-p <- ggplot(supp1a_data, aes(x = Area.converted..ha., y = sed_thousands, group = interaction(k, pattern)))
+p <- ggplot(supp1a_data, aes(x = percent.converted, y = export.per.ha, group = interaction(k, pattern)))
 p <- p + geom_line(aes(linetype = pattern, col = k), size = 0.8) + print_theme # size = lwd
 p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
 p <- p + scale_colour_manual(values = cbPalette, name = "K", guide = guide_legend(nrow = 2))
-p <- p + xlab("Area converted (ha)")
-p <- p + ylab("Total sediment export (kT / yr)")
+p <- p + xlab("Percent converted")
+p <- p + ylab("Total sediment export (T / ha / yr)")
 # p <- p + ylab(expression(atop("Total sediment export", paste("(kT / yr)"))))
 p <- p + theme(plot.margin=unit(c(0.1, 0, 0.1, 0.05), "cm"))
-p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "Kb", x = 4.9, y = 3.5, size = 4)
+p <- p + theme(legend.margin=unit(-0.7,"cm"))
+p <- p + scale_x_continuous(labels = percent, breaks = seq(0.2, 0.8, 0.2))
+p <- p + annotate("text", label = "a", x = 0, y = 42, size = 4)
 # p <- p + theme(axis.ticks = element_blank())
 figsupp1a <- p
 
 supp1b_data <- all_data[which(!is.na(all_data$Total.cumulative.sediment.export) &
                                 !is.na(all_data$ic)), ]
 supp1b_data$sed_thousands <- supp1b_data$Total.cumulative.sediment.export / 1000
-p <- ggplot(supp1b_data, aes(x = Area.converted..ha., y = sed_thousands, group = interaction(ic, pattern)))
+p <- ggplot(supp1b_data, aes(x = percent.converted, y = export.per.ha, group = interaction(ic, pattern)))
 p <- p + geom_line(aes(linetype = pattern, col = ic), size = 0.8) + print_theme
 # p <- p + scale_size(range=c(0.1, 1.5), guide=FALSE)
 p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
 p <- p + scale_colour_manual(values = cbPalette, name = "IC0", guide = guide_legend(nrow = 2))
-p <- p + xlab("Area converted (ha)") + ylab("")
+p <- p + xlab("Percent converted") + ylab("")
 p <- p + theme(plot.margin=unit(c(0.1, 0, 0.1, -0.3), "cm"))
-p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "IC0", x = 5, y = 2.8, size = 4)
+p <- p + theme(legend.margin=unit(-0.7,"cm"))
+p <- p + scale_x_continuous(labels = percent, breaks = seq(0.2, 0.8, 0.2))
+p <- p + annotate("text", label = "b", x = 0, y = 35, size = 4)
 # p <- p + theme(axis.ticks = element_blank())
 figsupp1b <- p
 
 supp1c_data <- all_data[which(!is.na(all_data$Total.cumulative.sediment.export) &
                                 !is.na(all_data$slope)), ]
 supp1c_data$sed_thousands <- supp1c_data$Total.cumulative.sediment.export / 1000
-p <- ggplot(supp1c_data, aes(x = Area.converted..ha., y = sed_thousands, group = interaction(slope, pattern)))
+p <- ggplot(supp1c_data, aes(x = percent.converted, y = export.per.ha, group = interaction(slope, pattern)))
 p <- p + geom_line(aes(linetype = pattern, col = slope), size = 0.8) + print_theme
 # p <- p + scale_size(range=c(0.1, 1.5), guide=FALSE)
 p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
 p <- p + scale_colour_manual(values = cbPalette, name = "Slope", guide = guide_legend(nrow = 2))
-p <- p + xlab("Area converted (ha)") + ylab("")
+p <- p + xlab("Percent converted") + ylab("")
 p <- p + theme(plot.margin=unit(c(0.1, 0, 0.1, -0.3), "cm"))
-p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "Slope", x = 8.7, y = 3.365, size = 4)
+p <- p + theme(legend.margin=unit(-0.7,"cm"))
+p <- p + scale_x_continuous(labels = percent, breaks = seq(0.2, 0.8, 0.2))
+p <- p + annotate("text", label = "c", x = 0, y = 41, size = 4)
 # p <- p + theme(axis.ticks = element_blank())
 figsupp1c <- p
 
 supp1d_data <- all_data[which(!is.na(all_data$Total.cumulative.sediment.export) &
                                 !is.na(all_data$extent)), ]
 supp1d_data$sed_thousands <- supp1d_data$Total.cumulative.sediment.export / 1000
-p <- ggplot(supp1d_data, aes(x = Area.converted..ha., y = sed_thousands, group = interaction(extent, pattern)))
+p <- ggplot(supp1d_data, aes(x = percent.converted, y = export.per.ha, group = interaction(extent, pattern)))
 p <- p + geom_line(aes(linetype = pattern, guide=FALSE, col = extent), guide = FALSE, size = 0.8) + print_theme
 # p <- p + scale_size(range=c(0.1, 1.5), guide=FALSE)
 p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
-p <- p + scale_colour_manual(values = cbPalette, name = "Extent", guide = guide_legend(nrow = 2))
-p <- p + xlab("Area converted (ha)") + ylab("")
+p <- p + scale_colour_manual(values = cbPalette, name = "Area", guide = guide_legend(nrow = 2))
+p <- p + xlab("Percent converted") + ylab("")
 p <- p + theme(plot.margin=unit(c(0.1, 0.2, 0.1, -0.3), "cm"))
-p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "Extent", x = 10, y = 6.3, size = 4)
+p <- p + theme(legend.margin=unit(-0.7,"cm"))
+p <- p + scale_x_continuous(labels = percent, breaks = seq(0.2, 0.8, 0.2))
+p <- p + annotate("text", label = "d", x = 0, y = 38.5, size = 4)
 # p <- p + theme(axis.ticks = element_blank())
 figsupp1d <- p
 
-pngname <- paste(figdir, "supp_fig1.png", sep = "/")
-png(file = pngname, units="in", res=300, width = 9, height=3.5)
+jpgname <- paste(figdir, "supp_fig1.jpg", sep = "/")
+jpeg(file = jpgname, units="in", res=300, width = 9, height=3.5)
 grid.arrange(arrangeGrob(figsupp1a, figsupp1b, figsupp1c, figsupp1d, nrow=1),
              mylegend, heights=c(10, 0.6))
 dev.off()
@@ -248,7 +253,7 @@ p <- p + xlab("Percent converted") + ylab("Rate of change in sediment export (T 
 p <- p + scale_x_continuous(labels = percent)
 p <- p + theme(plot.margin=unit(c(0.1, 0.1, 0.1, 0.1), "cm"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "Slope", x = 0.165, y = 180, size = 5)
+p <- p + annotate("text", label = "a", x = 0.1, y = 180, size = 5)
 figsupp2a <- p
 print(figsupp2a)
 
@@ -257,19 +262,19 @@ supp2b_data <- all_data[which(!is.na(all_data$change.in.sediment.per.area) &
 p <- ggplot(supp2b_data, aes(x = percent.converted, y = change.in.sediment.per.area, group = interaction(extent, pattern)))
 p <- p + geom_line(aes(linetype = pattern, col = extent), size = 0.8) + print_theme
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
-p <- p + scale_colour_manual(values = cbPalette, name = "Extent")
+p <- p + scale_colour_manual(values = cbPalette, name = "Area")
 p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + xlab("Percent converted") + ylab("")
 p <- p + scale_x_continuous(labels = percent)
 p <- p + theme(plot.margin=unit(c(0.1, 0.1, 0.1, -0.2), "cm"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
-p <- p + annotate("text", label = "Extent", x = 0.17, y = 150, size = 5)
+p <- p + annotate("text", label = "b", x = 0.1, y = 150, size = 5)
 figsupp2b <- p
 print(figsupp2b)
 
-pngname <- paste(figdir, "supp_fig2.png", sep = "/")
-png(file = pngname, units="in", res=300, width = 7, height=4)
+jpgname <- paste(figdir, "supp_fig2.jpg", sep = "/")
+jpeg(file = jpgname, units="in", res=300, width = 7, height=4)
 grid.arrange(arrangeGrob(figsupp2a, figsupp2b, nrow=1), mylegend, heights=c(10, 0.65))
 dev.off()
 

@@ -9,10 +9,24 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+coeff_var <- function(values){
+  cv <- sd(values) / mean(values) * 100
+  return(cv)
+}
+
 outdir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/output/'
 
 Jenny_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Jenny_biomass_reshaped.txt"
 Sharon_file = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Vegetation data_July-August_2014_biomass.txt"
+
+cp_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/CP_combined.txt"
+
+## Jenny's crude protien data
+cp_dat <- read.table(cp_file, header = TRUE, sep = "\t")
+cp_dat$Year <- factor(cp_dat$Year)
+cp_dat$group <- interaction(cp_dat$Year, cp_dat$site)
+cp_dat <- cp_dat[order(cp_dat$group), ]
+cv_df <- aggregate(cp_dat$mj_per_kg_dm, by = list(cp_dat$Year), FUN = coeff_var)
 
 ## Jenny's data
 veg_data <- read.table(Jenny_file, header = TRUE, sep = "\t")

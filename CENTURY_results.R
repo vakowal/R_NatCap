@@ -4,6 +4,33 @@ library(scales)
 library(grid)
 library(gridExtra)
 
+read_CENTURY_results <- function(datadir, origdir, sites) {
+  outvars <- read.table(paste(origdir, '/outvars.txt', sep = ""), header = FALSE)
+  widths <- rep(16, length(outvars[, 1]) + 1)
+  col_names = read.table(paste(datadir, '/', sites[1], '.lis', sep = ""), nrow = 1, as.is = TRUE)
+  col_names <- gsub("\\(", ".", col_names)
+  col_names <- gsub(")", ".", col_names)
+  
+  site_list <- list()
+  for (site in sites){
+    data <- read.fwf(paste(datadir, '/', site, '.lis', sep = ""), widths, skip = 2)
+    colnames(data) <- col_names
+    data$site <- site
+    data$standing_live <- data$aglivc * 2.5
+    data$standing_dead <- data$stdedc * 2.5
+    data$total_biomass <- data$standing_live + data$standing_dead
+    data$cp_live <- (data$aglive.1. * 6.25) / data$standing_live
+    data$cp_dead <- (data$stdede.1. * 6.25) / data$standing_dead
+    data$cp_overall <- ((data$cp_live * data$standing_live) + 
+                          (data$cp_dead * data$standing_dead)) / data$total_biomass
+    data$percent_green <- data$aglivc / data$total_biomass
+    # data$month <- seq(1, dim(data)[1])
+    site_list[[site]] <- data
+  }
+  sites_df <- do.call(rbind, site_list)
+  return(sites_df)
+}
+
 print_theme <- theme(strip.text.y=element_text(size=10), 
                      strip.text.x=element_text(size=9), 
                      axis.title.x=element_text(size=10), 
@@ -13,46 +40,35 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
-datadir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Century46_PC_Jan-2014' 
-outdir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/output/'
-outvars <- read.table(paste(datadir, '/outvars.txt', sep = ""), header = FALSE)
-sites <- c('W06') #, 'W06_1', 'W06_2', 'W06_3', 'W06_4', 'W06_5', 'W06_6', 'W06_7')
+cbPalette <- c("#999999", "#E69F00", "#CC79A7", "#56B4E9", "#D55E00", "#009E73", "#F0E442", "#0072B2")
 
-widths <- rep(16, length(outvars[, 1]) + 1)
-col_names = read.table(paste(datadir, '/', sites[1], '.lis', sep = ""), nrow = 1, as.is = TRUE)
-col_names <- gsub("\\(", ".", col_names)
-col_names <- gsub(")", ".", col_names)
+datadir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/identical_management/CENTURY_files'
+origdir <-  'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Century46_PC_Jan-2014' 
+outdir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/output'
+sites <- c('W06_id', 'W3_id', 'MO_id') #'W06_1', 'W06_2', 'W06_3', 'W06_4', 'W06_5')
 
-site_list <- list()
-for (site in sites){
-  data <- read.fwf(paste(datadir, '/', site, '.lis', sep = ""), widths, skip = 2)
-  colnames(data) <- col_names
-  data$site <- site
-  data$standing_live <- data$aglivc * 2.5
-  data$standing_dead <- data$stdedc * 2.5
-  data$total_biomass <- data$standing_live + data$standing_dead
-  data$cp_live <- (data$aglive.1. * 6.25) / data$standing_live
-  data$cp_dead <- (data$stdede.1. * 6.25) / data$standing_dead
-  data$cp_overall <- ((data$cp_live * data$standing_live) + 
-    (data$cp_dead * data$standing_dead)) / data$total_biomass
-  data$percent_green <- data$aglivc / data$total_biomass
-  # data$month <- seq(1, dim(data)[1])
-  site_list[[site]] <- data
-}
-sites_df <- do.call(rbind, site_list)
+sites_df <- read_CENTURY_results(datadir, origdir, sites)
 
-sites_df$site <- factor(sites_df$site)
+sites_df$site <- factor(sites_df$site, levels=c('W06_id', 'W3_id', 'MO_id'), labels = c('W06', 'W3', 'MO')) #'W06', 'W06_1', 'W06_2', 'W06_3', 'W06_4', 'W06_5'),
+                        # labels=c('actual', '90% sand', '90% clay', '90% silt', '0.1 bulkd', '3 bulkd'))
+
+restrict_dates <- c(2000, 2015)
 
 # look at biomass at each site
-restrict_time <- sites_df[sites_df$time >= 2000 & sites_df$time <= 2014, c('time', 'site', 'standing_live', 'total_biomass')]
-live_combined <- ggplot(restrict_time, aes(x = time, y = standing_live, group = site, linetype = site, colour = site))
-live_combined <- live_combined + geom_line(size = 1.3) + scale_y_continuous(limits=c(0, 400)) + print_theme #+ scale_x_continuous(limits = c(2011.8, 2015.2))
-live_combined <- live_combined + ylab('Live biomass (g per sq m)') + ggtitle('Live biomass: soil extremes at site W06')
-live_combined <- live_combined + theme(legend.key.width=unit(3.7, "line"))
+restrict_time <- sites_df[sites_df$time >= restrict_dates[1] & sites_df$time <= restrict_dates[2], c('time', 'site', 'standing_live', 'total_biomass')]
+live_combined <- ggplot(restrict_time, aes(x = time, y = standing_live, group = site, colour = site))
+live_combined <- live_combined + geom_line(size = 1.3) + scale_y_continuous(limits=c(0, 400)) # + print_theme #+ scale_x_continuous(limits = c(2011.8, 2015.2))
+live_combined <- live_combined + xlab('date') + ylab('Live biomass (g per sq m)') + ggtitle('Live biomass: Three sites, identical management')
+live_combined <- live_combined + scale_colour_manual(values=cbPalette)
+live_combined <- live_combined + theme(plot.title=element_text(size=18), legend.text=element_text(size=18), 
+                                       axis.title=element_text(size=18), legend.title=element_blank(), legend.key = element_blank())
 print(live_combined)
 
 # look at crude protein variation
-restrict_time <- sites_df[sites_df$time >= 2000 & sites_df$time <= 2014, c('time', 'site', 'cp_live', 'cp_dead', 'cp_overall', 'standing_live', 'standing_dead')]
+restrict_time <- sites_df[sites_df$time >= restrict_dates[1] & sites_df$time <= restrict_dates[2], c('time', 'site', 'cp_live', 'cp_dead', 'cp_overall', 'standing_live', 'standing_dead')]
+restrict_time$year <- floor(restrict_time$time)
+cent_cv_df <- aggregate(restrict_time$cp_overall, by = list(restrict_time$year), FUN = coeff_var)
+
 cp <- ggplot(restrict_time, aes(time))
 cp <- cp + geom_line(aes(y = cp_overall, colour = 'cp_overall'), size = 1.3)
 cp <- cp + print_theme
@@ -115,23 +131,29 @@ print(cp)
 dev.off()
 
 ## find maximum difference between sites for each time step
-diff_table <- as.data.frame(matrix(NA, nrow = length(unique(restrict_time$time)), ncol = 2))
-colnames(diff_table) <- c('time', 'max_diff')
+diff_table <- as.data.frame(matrix(NA, nrow = length(unique(restrict_time$date)), ncol = 4))
+colnames(diff_table) <- c('time', 'max_diff', 'min_value', 'perc_of_min')
 i <- 0
-for (row in unique(restrict_time$time)){
-  values <- restrict_time[restrict_time$time == row, 'standing_live']
+for (row in unique(restrict_time$date)){
+  values <- restrict_time[restrict_time$date == row, 'mm_prec']
   max_diff <- max(values) - min(values)
+  perc <- max_diff / min(values) * 100
   diff_table[i, 'time'] <- row
   diff_table[i, 'max_diff'] <- max_diff
+  diff_table[i, 'min_value'] <- min(values)
+  diff_table[i, 'perc_of_min'] <- perc
   i <- i + 1
 }
-p <- ggplot(diff_table, aes(x = time, y = max_diff))
-p <- p + geom_line(size = 1.3) + print_theme #+ scale_x_continuous(limits = c(2011.8, 2015.2))
-p <- p + xlab('date') + ylab('Maximum difference (g per square m)') + ggtitle('Differences between soil extremes: site W06')
-p <- p + theme(legend.key.width=unit(3.7, "line"))
-p <- p + scale_x_continuous(limits = c(2000, 2015))
-diff_plot <- p
-print(diff_plot)
+
+p <- ggplot(diff_table, aes(time)) + 
+  geom_line(aes(y = max_diff, colour = "red"), size = 1.3)
+# p <- p + geom_line(aes(y = mean, colour = "mean"), size = 1.3)
+p <- p + print_theme #+ scale_x_continuous(limits = c(2011.8, 2015.2))
+p <- p + xlab('date') + ylab('g per square m') + ggtitle('Maximum difference between sites: precipitation')
+p <- p + theme(legend.position = "none", axis.text.x = element_blank())
+# p <- p + scale_x_continuous(limits = c(2000, 2015), breaks=seq(2001, 2015, by = 2))
+diff_plot_precip <- p
+print(diff_plot_precip)
   
 ## make summary plot of precipitation
 precip_summary <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/precipitation_summary.txt"
@@ -139,10 +161,11 @@ precip <- read.table(precip_summary, header = TRUE, sep = "\t", stringsAsFactors
 precip$Site <- as.factor(precip$Site)
 
 precip$date <- as.Date(precip$Date, format = "%m/%d/%Y")
-precip_rest <- precip[precip$Site == 'kamok', ] #, c('time', 'site', 'standing_live', 'total_biomass')]
+precip_sites <- c('kamok', 'research', 'rongai')
+precip_rest <- precip[precip$Site %in% precip_sites, ] #, c('time', 'site', 'standing_live', 'total_biomass')]
 precip <- precip_rest
-p <- ggplot(precip, aes(x = date, y = mm_prec)) + geom_line()
-p <- p + xlab("date") + ylab("Monthly precipitation (cm)") + ggtitle("Rainfall: Kamok")
+p <- ggplot(precip, aes(x = date, y = mm_prec, group = Site, colour = Site)) + geom_line()
+p <- p + xlab("date") + ylab("cm") + ggtitle("Monthly precipitation: Kamok")
 p <- p + scale_x_date(breaks = "2 years", labels = date_format("%Y"),
              limits = as.Date(c('2000-01-01','2015-01-01')))
 p <- p + print_theme
@@ -150,10 +173,10 @@ precip_plot <- p
 print(precip_plot)
 
 # plot rainfall and diff between sites together
-pngname <- paste(outdir, 'soil_extremes', 'rainfall_and_diff.png', sep = '/')
+pngname <- paste(outdir, 'identical_management', 'rainfall_and_diff.png', sep = '/')
 png(file = pngname, units="in", res=300, width = 11, height=8)
 grid.arrange(arrangeGrob(diff_plot + theme(legend.position="none"),
-                         precip_plot + theme(legend.position="none"),
+                         diff_plot_precip + theme(legend.position="none"),
                          nrow=2))
 dev.off()
 
@@ -202,7 +225,7 @@ print(p)
 
 ######## CENTURY simulations following back-calculated management, vs Jenny's caged sites
 file = 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/Calculated_management_reshape.txt'
-sites <- c('M05', 'MO', 'W06', 'W3')
+sites <- c('M05', 'MO', 'W06', 'W3', 'GT', 'N4')
 comparison <- read.table(file, header = TRUE)
 comparison$site <- as.factor(comparison$site)
 comparison <- comparison[which(comparison$site %in% sites), ]
@@ -210,9 +233,10 @@ comparison$source <- as.factor(comparison$source)
 comparison$date <- as.Date(comparison$date, "%m/%d/%y")
 p <- ggplot(comparison, aes(x = date, y = total_biomass, colour = source))
 p <- p + geom_line(aes(group = source), size = 1) + geom_point() + facet_wrap(~ site, scales="free_x")
-p <- p + ylab("Biomass (g per square m)") + xlab("Date") #+ scale_x_date(labels = format.Date("%m/%d"))
+p <- p + ylab("Biomass (g per square m)") + xlab("Date") + scale_x_date(labels = date_format("%m/%d"))
+p <- p + theme(legend.position = "bottom")
 print(p)
 pngname = 'C:/Users/Ginger/Desktop/CENTURY.png'
-png(file=pngname, units="in", res=400, width=7.75, height=5.5)
+png(file=pngname, units="in", res=400, width=8, height=5.5)
 print(p)
 dev.off()
