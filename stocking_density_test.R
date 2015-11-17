@@ -13,9 +13,9 @@ print_theme <- theme(strip.text.y=element_text(size=9),
                      plot.title=element_text(size=9, face="bold"),
                      legend.text=element_text(size=9),
                      legend.title=element_text(size=9)) + theme_bw()
-outdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/figures"
+outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/figures"
 
-sum_csv = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/doubled_precip/summary.csv"
+sum_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/doubled_precip/summary.csv"
 sumdf = read.csv(sum_csv)
 sumdf$stocking_density_f = as.factor(sumdf$stocking_density)
 sumdf$date_f = as.factor(sumdf$date)
@@ -29,6 +29,23 @@ sd_levels = c(levels(sumdf$stocking_density_f)[1],
 subset <- sumdf[which(sumdf$stocking_density_f %in% sd_levels), ] 
 # or
 subset <- sumdf[which(sumdf$stocking_density <= 3.17535),]
+
+# is lower biomass associated with greater water in soil profile?
+subset <- sumdf[which(sumdf$date == 2015.42), ]
+subset$avail_h2o_illus <- subset$h2o_avail_cm * 100
+p <- ggplot(subset, aes(x=stocking_density, y=avail_h2o_illus))
+p <- p + geom_line(aes(colour="water accessible by plants (* 100)"))
+p <- p + geom_line(aes(x=stocking_density, y=below_biomass_kg_ha, color="belowground biomass"))
+p <- p + geom_line(aes(x=stocking_density, y=above_total_biomass_kg_ha, color="aboveground biomass"))
+p <- p + scale_color_manual(values=c("water accessible by plants (* 100)"=cbPalette[1], 
+                                     "belowground biomass"=cbPalette[2],
+                                     "aboveground biomass"=cbPalette[3]))
+p <- p + xlab("stocking density (animals/ha)") + ylab("biomass (kg/ha)")
+p <- p + print_theme + theme(legend.key = element_blank(), legend.title=element_blank())
+pngname <- paste(outdir, "Biomass vs available h2o.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
 
 # examine biomass, above- and below-ground, and water variables
 # at different stocking density levels
@@ -57,7 +74,7 @@ p <- p + scale_color_manual(values=c("belowground biomass"=cbPalette[2],
                                      "aboveground biomass"=cbPalette[1]))
 p <- p + print_theme
 p <- p + theme(legend.key = element_blank(), legend.title=element_blank())
-p <- p + ylab("Biomass (kg/ha")
+p <- p + ylab("Biomass (kg/ha)")
 p <- p + facet_wrap( ~ stocking_density_f)
 p <- p + ggtitle("Biomass by stocking density (animals/ha)")
 pngname <- paste(outdir, "Biomass doubled precip.png", sep="/")
@@ -65,6 +82,9 @@ png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
 
+# plant-available h2o is correlated with aboveground biomass, not belowground
+test = cor.test(subset$above_total_biomass_kg_ha, subset$h2o_avail_cm, method="spearman")
+test2 = cor.test(subset$below_biomass_kg_ha, subset$h2o_avail_cm, method="spearman")
 
 # is there a threshold sd above which cattle lose weight?
 p <- ggplot(sumdf, aes(x=date, y=animal_gain_kg,
