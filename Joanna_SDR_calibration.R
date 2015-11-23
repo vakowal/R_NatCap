@@ -77,11 +77,31 @@ save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_d
 write.csv(subset, save_as)
 
 ########################
+# How many sites were sampled >= 12 times across all time periods?
+num_sites <- length(unique(data$SiteTag))
+site_df <- data.frame("site" = character(num_sites),
+                      "num_samples" = numeric(num_sites))
+i <- 1
+for (site in unique(data$SiteTag)){
+  samples <- subset(data, SiteTag == site)
+  samples <- samples[!duplicated(samples$SampleDate), ]
+  num_samples <- dim(samples)[1]
+  # site_df[i, "site"] <- site
+  site_df[i, "num_samples"] <- num_samples
+  i <- i + 1
+}
+site_df$site <- unique(data$SiteTag)
+viable <- subset(site_df, num_samples > 11)
+viable_space_matched <- viable[which(viable$site %in% match$site_tag), ]
+
+########################
 # Sites matched with SDR watersheds in GIS
 match_sheet <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_data/matched_sites.csv'
 match <- read.csv(match_sheet)
 
-time_subset <- data[which(data$SampleYear %in% c("2005", "2006", "2007", "2010", "2012")), ]
+# time_subset <- data[which(data$SampleYear %in% c("2005", "2006", "2007", "2010", "2012")), ]
+# 10.17.15: ignore time subset
+time_subset <- data
 space_time_subset <- time_subset[which(time_subset$SiteTag %in% match$site_tag), ]
 
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_data/CCAMP_SDR_matched_data.csv"
@@ -107,7 +127,7 @@ write.csv(matched_data, save_as)
 
 #########################
 # Flow data
-flow_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/NDR_calibration/Data/ndr_data.csv"
+flow_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/NDR_calibration/Data/flow_data.csv"
 flow_data <- read.csv(flow_file)
 flow_data$SampleDate <- as.Date(flow_data$SampleDate, format="%Y-%m-%d")
 flow_data$SiteTag_c <- as.character(flow_data$SiteTag)
@@ -178,6 +198,9 @@ write_loadest_file <- function(data, save_dir, calib=TRUE, suffix=NULL){
 
 ndr_data <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/NDR_calibration/Data/CCAMP_NDR_matched_data_flow.csv")
 ndr_data$SampleDate <- as.Date(ndr_data$SampleDate, format="%Y-%m-%d")
+before <- ndr_data[which(ndr_data$SampleYear < 2008), ]
+before$SiteTag <- as.factor(before$SiteTag)
+after <- ndr_data[which(ndr_data$SampleYear > 2008), ]
 data <- ndr_data
 save_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/NDR_calibration/Data/loadest_calib_files"
 write_loadest_file(data, calib=TRUE, save_dir)
@@ -186,12 +209,45 @@ write_loadest_file(data, calib=FALSE, save_dir)
 
 sdr_data <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_data/CCAMP_SDR_matched_data_flow.csv")
 sdr_data$SampleDate <- as.Date(sdr_data$SampleDate, format="%Y-%m-%d")
-before <- sdr_data[which(sdr_data$SampleYear < 2008), ]
-before$SiteTag <- as.factor(before$SiteTag)
-after <- sdr_data[which(sdr_data$SampleYear > 2008), ]
+sdr_data$SiteTag <- as.factor(sdr_data$SiteTag)
+# before <- sdr_data[which(sdr_data$SampleYear < 2008), ]
+# before$SiteTag <- as.factor(before$SiteTag)
+# after <- sdr_data[which(sdr_data$SampleYear > 2008), ]
 save_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_data/loadest_calib_files"
-write_loadest_file(before, save_dir, calib=TRUE, suffix='before')
-write_loadest_file(after, save_dir, calib=TRUE, suffix='after')
+write_loadest_file(sdr_data, save_dir, calib=TRUE)
+# write_loadest_file(before, save_dir, calib=TRUE, suffix='before')
+# write_loadest_file(after, save_dir, calib=TRUE, suffix='after')
 save_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Joanna/SDR_calibration/CCAMP_data/loadest_est_files"
-write_loadest_file(before, save_dir, calib=FALSE, suffix='before')
-write_loadest_file(after, save_dir, calib=FALSE, suffix='after')
+write_loadest_file(sdr_data, save_dir, calib=FALSE)
+# write_loadest_file(before, save_dir, calib=FALSE, suffix='before')
+# write_loadest_file(after, save_dir, calib=FALSE, suffix='after')
+
+#####################################
+# summarize fit of calibrated runs
+summary_table <- read.csv("C:/Users/Ginger/Desktop/Joanna_SDR_results.csv")
+runs <- c('run_1_11.12', 'run_0_11.12', 'run_2_11.12')  # TODO get runs through grep
+result_df <- data.frame(run=character(length(runs)), ssq=numeric(length(runs)),
+                        stringsAsFactors=FALSE)
+i <- 1
+for (run in runs){
+  ssq <- 0
+  for(row in 1:(dim(summary_table)[1] - 1)){
+    diff <- summary_table[row, 'Empirical'] - summary_table[row, run]
+    diff_sq <- diff^2
+    ssq <- ssq + diff_sq
+  }
+  result_df[i, 'run'] <- run
+  result_df[i, 'ssq'] <- ssq
+  i <- i + 1
+}
+
+p <- ggplot(summary_table, aes(x=Empirical, y=run_1_11.12))
+p <- p + geom_point() + ylab("Modeled (default parameters)")
+print(p)
+p <- ggplot(summary_table, aes(x=Empirical, y=run_1))
+p <- p + geom_point()
+print(p)
+p <- ggplot(summary_table, aes(x=Empirical, y=run_2))
+p <- p + geom_point()
+print(p)
+

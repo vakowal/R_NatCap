@@ -76,7 +76,18 @@ p <- p + theme(axis.text.y=element_text(size=9), axis.text.x=element_text(size=9
 # this is the part that builds the grid
 p <- p + facet_grid(site ~ actual_baseline, scales = "free")
 
-p <- p + xlab("Percent converted") + ylab("Rate of change in sediment export (T / ha / yr)")
+# text annotation
+len <- 8
+
+vars <- data.frame(expand.grid(levels(fig2_data$site), levels(fig2_data$actual_baseline)))
+vars <- vars[c(1:4, 6:9), ]
+colnames(vars) <- c("site", "actual_baseline")
+y_pos = c(38, 35, 120, 9.3, 38, 35, 120, 9.3)
+dat <- data.frame(x = rep(0.15, len), y = y_pos, vars, labs=letters[1:len])
+
+p <- p + geom_text(aes(x, y, label=labs, group=NULL),data=dat)
+
+p <- p + xlab("Percent converted") + ylab("Marginal change in sediment export (T / ha / yr)")
 # p <- p + theme(axis.ticks = element_blank())
 fig2 <- p
 
@@ -132,8 +143,8 @@ if (color){
 }
 p <- p + scale_y_continuous(breaks = seq(0, 125, 25))
 p <- p + xlab("Percent converted")
-p <- p + ylab("Rate of change in sediment export (T / ha / yr)")
-#p <- p + ylab(expression(atop("Rate of change in sediment", paste("export (T / ha / yr)"))))
+p <- p + ylab("Marginal change in sediment export (T / ha / yr)")
+#p <- p + ylab(expression(atop("Marginal change in sediment", paste("export (T / ha / yr)"))))
 p <- p + scale_x_continuous(labels = percent)
 p <- p + print_theme
 p <- p + theme(axis.text=element_text(size=9), axis.title.y=element_text(size=7.2))
@@ -249,7 +260,7 @@ p <- p + theme(legend.key = element_blank()) # , legend.title=element_blank())
 p <- p + theme(legend.position="bottom")
 p <- p + scale_linetype_manual(values = lines, name = "", guide = FALSE)
 p <- p + scale_colour_manual(values = cbPalette, name = "Slope")
-p <- p + xlab("Percent converted") + ylab("Rate of change in sediment export (T / ha / yr)")
+p <- p + xlab("Percent converted") + ylab("Marginal change in sediment export (T / ha / yr)")
 p <- p + scale_x_continuous(labels = percent)
 p <- p + theme(plot.margin=unit(c(0.1, 0.1, 0.1, 0.1), "cm"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
