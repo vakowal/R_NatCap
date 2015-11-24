@@ -3,6 +3,7 @@
 # biomass, and water in the soil and leaving the soil?
 
 library(ggplot2)
+library(grid)
 
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 print_theme <- theme(strip.text.y=element_text(size=9), 
@@ -15,7 +16,7 @@ print_theme <- theme(strip.text.y=element_text(size=9),
                      legend.title=element_text(size=9)) + theme_bw()
 outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/figures"
 
-sum_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/doubled_precip/summary.csv"
+sum_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/empirical_precip/summary.csv"
 sumdf = read.csv(sum_csv)
 sumdf$stocking_density_f = as.factor(sumdf$stocking_density)
 sumdf$date_f = as.factor(sumdf$date)
@@ -62,8 +63,8 @@ p <- p + print_theme + theme(legend.key = element_blank(), legend.title=element_
 p <- p + ylab("Water (cm)")
 p <- p + facet_wrap( ~ stocking_density_f)
 p <- p + ggtitle("Soil water by stocking density (animals/ha)")
-pngname <- paste(outdir, "Soil water doubled precip.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
+pngname <- paste(outdir, "Soil water doubled precip_sustainable_density.png", sep="/")
+png(file=pngname, units="in", res=300, width=9, height=5)
 print(p)
 dev.off()
 
@@ -77,7 +78,30 @@ p <- p + theme(legend.key = element_blank(), legend.title=element_blank())
 p <- p + ylab("Biomass (kg/ha)")
 p <- p + facet_wrap( ~ stocking_density_f)
 p <- p + ggtitle("Biomass by stocking density (animals/ha)")
-pngname <- paste(outdir, "Biomass doubled precip.png", sep="/")
+pngname <- paste(outdir, "Biomass doubled precip_sustainable_density.png", sep="/")
+png(file=pngname, units="in", res=300, width=9, height=5)
+print(p)
+dev.off()
+
+# look at difference in biomass between empirical and doubled precip
+sum_csv2 = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/sustainable_limit_test/doubled_precip/summary.csv"
+sumdf2 = read.csv(sum_csv2)
+sumdf2$below_biomass_kg_ha <- sumdf2$below_biomass_gm2 * 10
+sumdf$diff_aboveground_biomass <- sumdf2$above_total_biomass_kg_ha - sumdf$above_total_biomass_kg_ha
+sumdf$diff_belowground_biomass <- sumdf2$below_biomass_kg_ha - sumdf$below_biomass_kg_ha
+
+subset <- sumdf
+p <- ggplot(subset, aes(x=date, y=diff_belowground_biomass))
+p <- p + geom_line(aes(colour="difference: belowground biomass"))
+p <- p + geom_line(aes(x=date, y=diff_aboveground_biomass, colour="difference: aboveground biomass"))
+p <- p + scale_color_manual(values=c("difference: belowground biomass"=cbPalette[2], 
+                                     "difference: aboveground biomass"=cbPalette[1]))
+p <- p + print_theme
+p <- p + theme(legend.key = element_blank(), legend.title=element_blank(), legend.position="bottom",
+               legend.margin=unit(-0.7,"cm"))
+p <- p + ylab("Difference (kg/ha)")
+p <- p + facet_wrap( ~ stocking_density_f)
+pngname <- paste(outdir, "Biomass_doubled_empirical_diff.png", sep="/")
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
