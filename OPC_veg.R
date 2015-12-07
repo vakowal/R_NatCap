@@ -14,14 +14,22 @@ coeff_var <- function(values){
   return(cv)
 }
 
-outdir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/output/'
+outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
+file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_11.25.15.csv"
 
+data <- read.csv(file)
+data$date <- paste(data$Year, "-", data$Month, sep="")
+locations <- unique(data[c("Lat", "Long")])
+areas <- unique(data[c('Area')])
+months <- unique(data["date"])
+
+############## older analyses
 Jenny_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Jenny_biomass_reshaped.txt"
 Sharon_file = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Vegetation data_July-August_2014_biomass.txt"
 
 cp_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/CP_combined.txt"
 
-## Jenny's crude protien data
+## Jenny's crude protein data
 cp_dat <- read.table(cp_file, header = TRUE, sep = "\t")
 cp_dat$Year <- factor(cp_dat$Year)
 cp_dat$group <- interaction(cp_dat$Year, cp_dat$site)
