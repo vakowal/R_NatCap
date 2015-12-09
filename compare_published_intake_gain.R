@@ -3,6 +3,16 @@
 # the goal: replicate all inputs given in publication, then present published result on
 # x-axis and modeled on y-axis, for various feeds.
 
+library(ggplot2)
+print_theme <- theme(strip.text.y=element_text(size=10), 
+                     strip.text.x=element_text(size=9), 
+                     axis.title.x=element_text(size=10), 
+                     axis.title.y=element_text(size=10),
+                     axis.text=element_text(size=10),
+                     plot.title=element_text(size=10, face="bold"),
+                     legend.text=element_text(size=10),
+                     legend.title=element_text(size=10)) + theme_bw()
+
 data_dir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations'
   
 # published values
@@ -11,18 +21,20 @@ pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRU
 # simulated values
 sim_l <- list()
 for(study in c('Panjaitan_et_al_2010', 'Rubanza_et_al_2005', 'Shem_et_al_1995')){
-  sim_dat <- read.csv(paste(data_dir, study, "summary_supplemented.csv", sep="/"), header=TRUE,
+  sim_dat <- read.csv(paste(data_dir, study, "summary.csv", sep="/"), header=TRUE,
                        stringsAsFactors=FALSE)
   sim_l[[study]] <- sim_dat
 }
 df <- do.call(rbind, sim_l)
 df$grass_label <- as.factor(df$grass_label)
+df$intake_forage <- as.numeric(df$intake_forage)
+df$daily_gain <- as.numeric(df$daily_gain)
 
 sim_mean_intake <- aggregate(df$intake_forage~df$grass_label, FUN=mean)
 colnames(sim_mean_intake) <- c('grass_label', 'sim_intake_forage')
 sim_mean_gain <- aggregate(df$daily_gain~df$grass_label, FUN=mean)
 colnames(sim_mean_gain) <- c('grass_label', 'sim_daily_gain')
-pub_dat$grass_label = factor(pub_dat$type, levels=levels(sim_mean_gain$grass_label))
+pub_dat$grass_label = factor(pub_dat$type)  #, levels=levels(sim_mean_gain$grass_label))
 combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
 combined = merge(combined, pub_dat, by='grass_label')
 
@@ -38,3 +50,59 @@ p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
 # p <- p + ylim(c(0,0.75))
 print(p)
 
+summary_list <- list()
+for(ref in unique(combined$Ref)){
+  subset <- combined[which(combined$Ref == ref), ]
+  in_test <- cor.test(subset$sim_intake_forage, subset$intake_forage, method="spearman")
+  in_est <- in_test[['estimate']]
+  in_pval <- in_test[['p.value']]
+  gain_test <- cor.test(subset$sim_intake_forage, subset$intake_forage, method="spearman")
+  gain_est <- gain_test[['estimate']]
+  gain_pval <- gain_test[['p.value']]
+  summary_list[[ref]] <- data.frame(ref, gain_est, in_est, gain_pval, in_pval)
+}
+summary_df <- do.call(rbind, summary_list)
+
+############ Shem et al only
+# published values
+pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRUE,
+                    stringsAsFactors=FALSE)
+# simulated values
+studies <- c('Shem_et_al_1995')
+sim_l <- list()
+for(study in studies){
+  sim_dat <- read.csv(paste(data_dir, study, "summary.csv", sep="/"), header=TRUE,
+                      stringsAsFactors=FALSE)
+  sim_l[[study]] <- sim_dat
+}
+df <- do.call(rbind, sim_l)
+df$grass_label <- as.factor(df$grass_label)
+df$intake_forage <- as.numeric(df$intake_forage)
+df$daily_gain <- as.numeric(df$daily_gain)
+
+sim_mean_intake <- aggregate(df$intake_forage~df$grass_label, FUN=mean)
+colnames(sim_mean_intake) <- c('grass_label', 'sim_intake_forage')
+sim_mean_gain <- aggregate(df$daily_gain~df$grass_label, FUN=mean)
+colnames(sim_mean_gain) <- c('grass_label', 'sim_daily_gain')
+pub_dat$grass_label = factor(pub_dat$type)  #, levels=levels(sim_mean_gain$grass_label))
+combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
+combined = merge(combined, pub_dat, by='grass_label')
+
+in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
+in_test[['estimate']]
+in_test[['p.value']]
+gain_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
+gain_test[['estimate']]
+gain_test[['p.value']]
+
+p <- ggplot(combined, aes(x=intake_forage, y=sim_intake_forage))
+p <- p + geom_point() + print_theme
+p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
+p <- p + xlim(c(0, 5)) + ylim(c(0, 5))
+print(p)
+
+p <- ggplot(combined, aes(x=daily_gain, y=sim_daily_gain))
+p <- p + geom_point() + print_theme
+p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
+p <- p + xlim(c(0, 0.3)) + ylim(c(0, 0.3))
+print(p)
