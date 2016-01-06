@@ -87,6 +87,8 @@ colnames(sim_mean_gain) <- c('grass_label', 'sim_daily_gain')
 pub_dat$grass_label = factor(pub_dat$type)  #, levels=levels(sim_mean_gain$grass_label))
 combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
 combined = merge(combined, pub_dat, by='grass_label')
+combined$sim_gain_per_intake <- combined$sim_daily_gain / combined$sim_intake_forage
+combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
 
 in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
 in_test[['estimate']]
@@ -95,14 +97,37 @@ gain_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method
 gain_test[['estimate']]
 gain_test[['p.value']]
 
+figdir <- paste(data_dir, study, 'with_supplement', sep='/')
+
 p <- ggplot(combined, aes(x=intake_forage, y=sim_intake_forage))
 p <- p + geom_point() + print_theme
 p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
-p <- p + xlim(c(0, 5)) + ylim(c(0, 5))
+min_val <- min(c(combined$intake_forage, combined$sim_intake_forage))
+max_val <- max(c(combined$intake_forage, combined$sim_intake_forage))
+p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+pngname <- paste(figdir, "intake.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
+dev.off()
 
 p <- ggplot(combined, aes(x=daily_gain, y=sim_daily_gain))
 p <- p + geom_point() + print_theme
 p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
-p <- p + xlim(c(0, 0.3)) + ylim(c(0, 0.3))
+min_val <- min(c(combined$daily_gain, combined$sim_daily_gain))
+max_val <- max(c(combined$daily_gain, combined$sim_daily_gain))
+p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+pngname <- paste(figdir, "gain.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
+dev.off()
+
+p <- ggplot(combined, aes(x=gain_per_intake, y=sim_gain_per_intake))
+p <- p + geom_point() + print_theme
+p <- p + xlab('Empirical daily gain per kg intake') + ylab('Simulated daily gain per kg intake')
+min_val <- min(c(combined$gain_per_intake, combined$sim_gain_per_intake))
+max_val <- max(c(combined$gain_per_intake, combined$sim_gain_per_intake))
+p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+pngname <- paste(figdir, "gain_per_kg_intake.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+print(p)
+dev.off()
