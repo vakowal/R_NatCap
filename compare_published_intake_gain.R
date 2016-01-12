@@ -38,17 +38,33 @@ pub_dat$grass_label = factor(pub_dat$type)  #, levels=levels(sim_mean_gain$grass
 combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
 combined = merge(combined, pub_dat, by='grass_label')
 
-p <- ggplot(combined, aes(x=intake_forage, y=sim_intake_forage, group=Ref))
-p <- p + geom_point(aes(colour=Ref)) + print_theme
-p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
-p <- p + xlim(c(0,10))
-print(p)
+study <- 'Panjaitan_et_al'
+subset <- combined[which(combined$Ref == study), ]
+figdir <- paste(data_dir, study, sep='/')
 
-p <- ggplot(combined, aes(x=daily_gain, y=sim_daily_gain, group=Ref))
-p <- p + geom_point(aes(colour=Ref)) + print_theme
-p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
-# p <- p + ylim(c(0,0.75))
+p <- ggplot(subset, aes(x=intake_forage, y=sim_intake_forage))
+p <- p + geom_point() + print_theme
+p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
+min_val <- min(c(subset$intake_forage, subset$sim_intake_forage))
+max_val <- max(c(subset$intake_forage, subset$sim_intake_forage))
+p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+pngname <- paste(figdir, "intake.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
+dev.off()
+
+p <- ggplot(subset, aes(x=daily_gain, y=sim_daily_gain))
+p <- p + geom_point() + print_theme
+p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
+min_val <- min(c(subset$daily_gain, subset$sim_daily_gain))
+max_val <- max(c(subset$daily_gain, subset$sim_daily_gain))
+p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+pngname <- paste(figdir, "gain.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+print(p)
+dev.off()
 
 summary_list <- list()
 for(ref in unique(combined$Ref)){
@@ -93,9 +109,12 @@ combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
 in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
 in_test[['estimate']]
 in_test[['p.value']]
-gain_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
+gain_test <- cor.test(combined$sim_daily_gain, combined$daily_gain, method="spearman")
 gain_test[['estimate']]
 gain_test[['p.value']]
+gpi_test <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="spearman")
+gpi_test[['estimate']]
+gpi_test[['p.value']]
 
 figdir <- paste(data_dir, study, 'with_supplement', sep='/')
 
@@ -105,6 +124,7 @@ p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)
 min_val <- min(c(combined$intake_forage, combined$sim_intake_forage))
 max_val <- max(c(combined$intake_forage, combined$sim_intake_forage))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 pngname <- paste(figdir, "intake.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
@@ -116,6 +136,7 @@ p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
 min_val <- min(c(combined$daily_gain, combined$sim_daily_gain))
 max_val <- max(c(combined$daily_gain, combined$sim_daily_gain))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 pngname <- paste(figdir, "gain.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
@@ -123,10 +144,11 @@ dev.off()
 
 p <- ggplot(combined, aes(x=gain_per_intake, y=sim_gain_per_intake))
 p <- p + geom_point() + print_theme
-p <- p + xlab('Empirical daily gain per kg intake') + ylab('Simulated daily gain per kg intake')
+p <- p + xlab('Empirical daily gain per kg intake (kg/kg)') + ylab('Simulated daily gain per kg intake (kg/kg)')
 min_val <- min(c(combined$gain_per_intake, combined$sim_gain_per_intake))
 max_val <- max(c(combined$gain_per_intake, combined$sim_gain_per_intake))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 pngname <- paste(figdir, "gain_per_kg_intake.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)

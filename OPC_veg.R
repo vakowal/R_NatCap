@@ -14,11 +14,27 @@ coeff_var <- function(values){
   return(cv)
 }
 
-outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
+count <- function(values){
+  return(length(values))
+}
+
+outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_11.25.15_by_weather_stn"
 file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_11.25.15.csv"
 
 data <- read.csv(file)
 data$date <- paste(data$Year, "-", data$Month, sep="")
+for(site in c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai')){
+  sub <- data[which(data$X2km_weat == site), ]
+  summary <- aggregate(sub$Biomass, by=list(sub$date), FUN='mean')
+  summary_2 <- aggregate(sub$Biomass, by=list(sub$date), FUN=count)
+  summary_3 <- aggregate(sub$Biomass, by=list(sub$date), FUN=coeff_var)
+  summary <- merge(summary, summary_2, by='Group.1')
+  summary <- merge(summary, summary_3, by='Group.1')
+  colnames(summary) <- c("date", "biomass (kg/ha)", "num_obs", "cv")
+  outfile <- paste(outdir, '/', site, '_summary.csv', sep="")
+  write.csv(summary, file=outfile)
+}
+
 locations <- unique(data[c("Lat", "Long")])
 areas <- unique(data[c('Area')])
 months <- unique(data["date"])

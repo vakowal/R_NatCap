@@ -1,4 +1,5 @@
 # Calculate calibration regression for converting pasture disk meter (PDM) measurements to biomass
+library(ggplot2)
 
 calibration_data = read.table("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/pdm_calibration.txt", 
                               header = TRUE)
@@ -24,3 +25,7 @@ dm_sqm = lm(g_dm_per_sqm ~ PDM_cm, calibration_data)
 summary(dm_sqm)
 
 # dry g/m = 28.571 * PDM + 207.154
+
+p <- ggplot(calibration_data, aes(x=PDM_cm, y=kg_dm_per_ha))
+p <- p + geom_point() + geom_point(aes(x=PDM_cm, y=biomass_OPC, colour="red"))
+print(p)
