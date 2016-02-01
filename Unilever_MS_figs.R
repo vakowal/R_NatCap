@@ -69,7 +69,6 @@ p <- p + theme(legend.key.width=unit(3.7, "line"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
 p <- p + theme(legend.position="bottom")
 p <- p + theme(plot.margin=unit(c(0.01, 0.01, 0.01, 0.01), "cm"))
-# p <- p + scale_x_continuous(breaks = seq(20, 80, 20))
 p <- p + scale_x_continuous(breaks = seq(0.2, 0.8, 0.2), labels = percent)
 p <- p + theme(axis.text.y=element_text(size=9), axis.text.x=element_text(size=9))
 
@@ -101,6 +100,69 @@ if(color){
   jpgname <- paste(figdir, "Fig2.jpg", sep = "/")
 }
 ggsave(filename = jpgname, plot = fig2, width = 5, height=9, units = "in", dpi = 600)
+
+# new figure (USLE) 1.15.16, fig 3
+fig3_dat <- read.table(paste(datadir, 'fig_data_1.15.16.txt', sep="/"), header=TRUE, sep="\t")
+fig3_dat$site <- factor(fig3_dat$site, levels = c("Iowa", "Heilongjiang", "Jiangxi", "Mato Grosso")) 
+fig3_dat$pattern <- factor(fig3_dat$pattern, levels=c("To stream", "From stream", "Buffer", "From cropland"),
+                           labels = c("To stream", "From stream", "From stream + buffer", "From cropland"))
+lines <- c("solid", "longdash", "dotted", "twodash")
+fig3_dat$eros_div = fig3_dat$erosion.potential / 100000000
+p <- ggplot(fig3_dat, aes(x=percent.converted, y=eros_div, group=pattern))
+p <- p + geom_line(aes(linetype=pattern), size=0.4) + print_theme
+p <- p + scale_linetype_manual(values = lines, name = "", guide = guide_legend(nrow = 2))
+p <- p + theme(legend.key = element_blank(), legend.title=element_blank())
+p <- p + theme(legend.key.height=unit(0.5, "line"))
+p <- p + theme(legend.key.width=unit(3.7, "line"))
+p <- p + theme(legend.position="bottom")
+# for a-d: p <- p + theme(plot.margin=unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+p <- p + theme(plot.margin=unit(c(0.05, 0.1, -0.1, 0.1), "cm")) # for a-h: 
+p <- p + theme(legend.margin=unit(-0.2, "cm"))
+p <- p + theme(legend.text=element_text(size=6))
+p <- p + theme(axis.title.x=element_text(size=6))
+p <- p + scale_x_continuous(breaks = seq(0.2, 0.8, 0.2), labels = percent)
+p <- p + theme(axis.text.y=element_text(size=6), axis.text.x=element_text(size=6))
+p <- p + theme(axis.title.y=element_text(size=7))
+p <- p + ylab(expression(atop("Erosion potential", paste("(100,000,000 T / yr)"))))
+p <- p + facet_wrap(~ site, nrow=1, scales = "free") + theme(strip.background = element_blank(),
+                                                   strip.text.x = element_blank())
+fig3a <- p
+print(fig3a)
+
+# bottom part
+fig3_dat$change_div <- fig3_dat$marginal.change / 100000000
+p <- ggplot(fig3_dat, aes(x=percent.converted, y=marginal.change, group=pattern))
+p <- p + geom_line(aes(linetype=pattern), size=0.4) + print_theme
+p <- p + scale_linetype_manual(values = lines, name = "", guide = guide_legend(nrow = 2))
+p <- p + theme(legend.key = element_blank(), legend.title=element_blank())
+p <- p + theme(legend.key.height=unit(0.5, "line"))
+p <- p + theme(legend.key.width=unit(3.7, "line"))
+p <- p + theme(legend.position="bottom")
+p <- p + theme(plot.margin=unit(c(-0.1, 0.1, 0.1, 0.1), "cm"))
+p <- p + theme(legend.margin=unit(-0.2, "cm"))
+p <- p + theme(legend.text=element_text(size=6))
+p <- p + theme(axis.title.x=element_text(size=6), axis.text.x=element_text(size=6))
+p <- p + scale_x_continuous(breaks = seq(0.2, 0.8, 0.2), labels = percent)
+p <- p + theme(axis.text.y=element_text(size=6))
+# p <- p + xlab("Percent converted") + ylab("Marginal change in erosion potential per ha converted (T / ha / yr)")
+p <- p + xlab("Percent converted") + ylab(expression(atop("Marginal change in eros. potential",
+                                          paste("per ha converted (T / ha / yr)"))))
+p <- p + theme(axis.title.y=element_text(size=6))
+p <- p + facet_wrap(~ site, nrow=1, scales = "free") + theme(strip.background = element_blank(),
+                                                             strip.text.x = element_blank())
+fig3b <- p
+print(fig3b)
+jpgname <- paste(figdir, "Fig3_a-d_2x2.jpg", sep = "/")
+# ggsave(filename=jpgname, plot=fig3b, width=3.5, height=3.5, units="in", dpi=600)
+
+mylegend <- g_legend(fig3a)
+jpgname <- paste(figdir, "Fig3_a-h.jpg", sep = "/")
+jpeg(jpgname, width = 6, height=2.75, units = "in", res = 600)
+grid.arrange(arrangeGrob(fig3a + theme(legend.position="none") + xlab(""),
+                         fig3b + theme(legend.position="none"),
+                         nrow=2),
+                         mylegend, heights=c(10, 1))
+dev.off()
 
 # because fig 1a and 1b don't share x and y units, facet_grid won't work
 # must place the plots together manually
