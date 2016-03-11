@@ -89,9 +89,44 @@ summary_plots <- function(model_results_folder, imgpath){
   dev.off()
 }
 
-model_results_folder <- "C:/Users/Ginger/Desktop/test"
-imgpath <- paste(model_results_folder, "summary_figs/", sep="/")
-summary_plots(model_results_folder, imgpath)
+for(suf in c('low', 'med', 'high')){
+  model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/cattle_", suf, sep="")
+  imgpath <- paste(model_results_folder, "summary_figs/", sep="/")
+  if(file.exists(imgpath) == FALSE){
+    dir.create(imgpath, showWarnings = FALSE)
+  }
+  summary_plots(model_results_folder, imgpath)
+}
+
+write_marginal_table <- function(outerdir, save_as){
+  folders <- list.files(outerdir)
+  rows = length(folders)
+  marginal_table <- data.frame('soil_zone'=numeric(rows), 'clim_zone'=numeric(rows),
+                               'animal'=character(rows), 'density'=character(rows),
+                               'perc_gain'=numeric(rows), stringsAsFactors=FALSE)
+  for(i in 1:length(folders)){
+    folder <- folders[i]
+    s_zone <- substr(unlist(strsplit(folder, "_"))[1], 2, 2)
+    c_zone <- substr(unlist(strsplit(folder, "_"))[2], 2, 2)
+    anim <- unlist(strsplit(folder, "_"))[3]
+    if(anim == 'cattle'){
+      anim <- 'cow'
+    }
+    sd <- unlist(strsplit(folder, "_"))[4]
+    summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"))
+    start_wt <- summary[1, paste(anim, '_kg', sep="")] -
+      summary[1, paste(anim, '_gain_kg', sep="")]
+    end_wt <- summary[dim(summary)[1], paste(anim, '_kg', sep="")]
+    delta_wt <- end_wt - start_wt
+    perc_gain <- (delta_wt / start_wt) * 100
+    marginal_table[i, ] <- c(s_zone, c_zone, anim, sd, perc_gain)
+  }
+  write.csv(marginal_table, save_as, row.names=FALSE)
+}
+
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results"
+save_as <- "C:/Users/Ginger/Desktop/marginal_table.csv"
+write_marginal_table(outerdir, save_as)
 
 ################# empirical stocking density test
 fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/Figures"
