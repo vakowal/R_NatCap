@@ -98,35 +98,52 @@ for(suf in c('low', 'med', 'high')){
   summary_plots(model_results_folder, imgpath)
 }
 
-write_marginal_table <- function(outerdir, save_as){
+write_marginal_table <- function(outerdir, sd_table, save_as){
+  sd_df <- read.csv(sd_table)
   folders <- list.files(outerdir)
   rows = length(folders)
   marginal_table <- data.frame('soil_zone'=numeric(rows), 'clim_zone'=numeric(rows),
                                'animal'=character(rows), 'density'=character(rows),
-                               'perc_gain'=numeric(rows), stringsAsFactors=FALSE)
+                               'perc_gain'=numeric(rows), 'total_delta_weight_kg'=
+                                 numeric(rows), stringsAsFactors=FALSE)
   for(i in 1:length(folders)){
     folder <- folders[i]
     s_zone <- substr(unlist(strsplit(folder, "_"))[1], 2, 2)
     c_zone <- substr(unlist(strsplit(folder, "_"))[2], 2, 2)
     anim <- unlist(strsplit(folder, "_"))[3]
-    if(anim == 'cattle'){
-      anim <- 'cow'
-    }
-    sd <- unlist(strsplit(folder, "_"))[4]
-    summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"))
+    density <- unlist(strsplit(folder, "_"))[4]
+    sd <- sd_df[which(sd_df$animal_level == paste(anim, density, sep="_")),
+                'stocking_density']
+    summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"),
+                        stringsAsFactors=FALSE)
+    summary[, paste(anim, '_kg', sep="")] = as.numeric(
+      summary[, paste(anim, '_kg', sep="")])
+    summary[, paste(anim, '_gain_kg', sep="")] <- as.numeric(
+      summary[, paste(anim, '_gain_kg', sep="")])
     start_wt <- summary[1, paste(anim, '_kg', sep="")] -
       summary[1, paste(anim, '_gain_kg', sep="")]
     end_wt <- summary[dim(summary)[1], paste(anim, '_kg', sep="")]
+    if (is.na(end_wt)){
+      i <- 1
+        while(is.na(end_wt)){
+          end_wt <- summary[dim(summary)[1] - i, paste(anim, '_kg', sep="")]
+          i <- i + 1
+        }
+    }
     delta_wt <- end_wt - start_wt
+    delta_wt_herd <- delta_wt * sd
     perc_gain <- (delta_wt / start_wt) * 100
-    marginal_table[i, ] <- c(s_zone, c_zone, anim, sd, perc_gain)
+    marginal_table[i, ] <- c(s_zone, c_zone, anim, density, perc_gain,
+                             delta_wt_herd)
   }
   write.csv(marginal_table, save_as, row.names=FALSE)
 }
 
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results"
-save_as <- "C:/Users/Ginger/Desktop/marginal_table.csv"
-write_marginal_table(outerdir, save_as)
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_3.14.16"
+sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_3.14.16.csv"
+write_marginal_table(outerdir, sd_table, save_as)
+
 
 ################# empirical stocking density test
 fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/Figures"
