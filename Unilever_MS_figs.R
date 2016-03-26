@@ -28,6 +28,58 @@ print_theme <- theme(strip.text.y=element_text(size=9),
                      legend.text=element_text(size=9),
                      legend.title=element_text(size=9)) + theme_bw()
 
+# LCA MS fig 2 (3.4.16)
+datacsv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Unilever/LCA_MS/Fig2_data_transformed.csv"
+figdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Unilever/LCA_MS"
+data <- read.csv(datacsv)
+data$impact_lim <- NA
+data$metric <- factor(data$metric, levels=c('GWP_footprint',
+                      'EP_footprint', 'ERP_footprint',
+                      'MSA_footprint', 'Water_scarcity_footprint'))
+
+ylim <- data.frame(HDPE_production=rep(23000, 10), impact_lim=rep(0, 10),
+                   metric=rep(levels(data$metric), 2),
+                   material=rep(c(rep('Sugarcane', 5), rep('Maize', 5)), 2),
+                   method=c(rep('LCA', 10), rep('LUCI', 10)),
+                   impact=rep(NA, 20))
+data <- rbind(ylim, data)
+
+lca_dat <- data[which(data$method == 'LCA'), ]
+luci_dat <- data[which(data$method == 'LUCI'), ]
+  
+p <- ggplot(lca_dat, aes(x=HDPE_production, y=impact))
+p <- p + geom_line(aes(linetype=material)) + print_theme
+p <- p + geom_point(aes(x=HDPE_production, y=impact_lim), size=0)
+p <- p + facet_wrap(~metric, nrow=5, scales="free_y")
+p <- p + theme(strip.background = element_blank(), strip.text.x = element_blank())
+p <- p + scale_linetype_manual(values=lines, name="")
+p <- p + xlab("HDPE production") + ylab("") + theme(legend.position="bottom", 
+                                                    legend.key=element_blank(),
+                                                    legend.title=element_blank())
+p1 <- p
+print(p1)
+
+p <- ggplot(luci_dat, aes(x=HDPE_production, y=impact))
+p <- p + geom_line(aes(linetype=material)) + print_theme
+p <- p + geom_point(aes(x=HDPE_production, y=impact_lim), size=0)
+p <- p + facet_wrap(~metric, nrow=5, scales="free_y")
+p <- p + theme(strip.background = element_blank(), strip.text.x = element_blank())
+p <- p + scale_linetype_manual(values=lines, name="")
+p <- p + xlab("HDPE production") + ylab("")
+p2 <- p
+jpgname <- paste(figdir, "fig2_luci.jpg", sep="/")
+ggsave(filename=jpgname, plot=p2, width=4, height=7.5, units="in", dpi=600)
+
+mylegend <- g_legend(p1)
+jpgname <- paste(figdir, "Fig2.jpg", sep = "/")
+jpeg(jpgname, width=5, height=7.5, units="in", res=800)
+grid.arrange(arrangeGrob(p1 + theme(legend.position="none"),
+                         p2 + theme(legend.position="none"),
+                         nrow=1),
+             mylegend, heights=c(10, 1))
+dev.off()
+
+##### sediment paper figs
 datadir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Unilever/Manuscript materials' 
 figdir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Unilever/Manuscript materials/figs'
 all_data <- read.table(paste(datadir, 'fig_data.txt', sep = "/"), header = TRUE, sep="\t")
@@ -64,7 +116,7 @@ if (color){
   p <- p + geom_line(aes(linetype = pattern), size = 0.8) + print_theme
   p <- p + scale_linetype_manual(values = lines, name = "", guide = guide_legend(nrow = 2))
 }
-p <- p + theme(legend.key = element_blank(), legend.title=element_blank())
+p <- p + theme(legend.key=element_blank(), legend.title=element_blank())
 p <- p + theme(legend.key.width=unit(3.7, "line"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
 p <- p + theme(legend.position="bottom")

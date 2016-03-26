@@ -23,7 +23,7 @@ file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Shar
 
 data <- read.csv(file)
 data$date <- paste(data$Year, "-", data$Month, sep="")
-for(site in c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai')){
+for(site in c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')){
   sub <- data[which(data$X2km_weat == site), ]
   summary <- aggregate(sub$Biomass, by=list(sub$date), FUN='mean')
   summary_2 <- aggregate(sub$Biomass, by=list(sub$date), FUN=count)

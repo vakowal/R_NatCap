@@ -139,9 +139,9 @@ write_marginal_table <- function(outerdir, sd_table, save_as){
   write.csv(marginal_table, save_as, row.names=FALSE)
 }
 
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_3.14.16"
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_3.15.16"
 sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_3.14.16.csv"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_3.15.16.csv"
 write_marginal_table(outerdir, sd_table, save_as)
 
 

@@ -242,8 +242,14 @@ for (run in runs){
 }
 
 p <- ggplot(summary_table, aes(x=Empirical, y=run_1_11.12))
-p <- p + geom_point() + ylab("Modeled (default parameters)")
+p <- p + geom_point() + ylab("Modeled sediment export") + xlab("Empirical sediment export")
 print(p)
+imgpath <- "F:/From_NatCap_backup/Joanna/SDR_calibration"
+pngname <- paste(imgpath, "Modeled_vs_empirical_SDR_k_1_no_restr.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
 p <- ggplot(summary_table, aes(x=Empirical, y=run_1))
 p <- p + geom_point()
 print(p)
