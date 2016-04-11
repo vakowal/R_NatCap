@@ -124,10 +124,10 @@ write_marginal_table <- function(outerdir, sd_table, save_as){
       summary[1, paste(anim, '_gain_kg', sep="")]
     end_wt <- summary[dim(summary)[1], paste(anim, '_kg', sep="")]
     if (is.na(end_wt)){
-      i <- 1
+      r <- 1
         while(is.na(end_wt)){
-          end_wt <- summary[dim(summary)[1] - i, paste(anim, '_kg', sep="")]
-          i <- i + 1
+          end_wt <- summary[dim(summary)[1] - r, paste(anim, '_kg', sep="")]
+          r <- r + 1
         }
     }
     delta_wt <- end_wt - start_wt
