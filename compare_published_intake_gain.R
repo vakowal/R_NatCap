@@ -87,7 +87,7 @@ pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRU
 studies <- c('Shem_et_al_1995')
 sim_l <- list()
 for(study in studies){
-  sim_dat <- read.csv(paste(data_dir, study, "summary.csv", sep="/"), header=TRUE,
+  sim_dat <- read.csv(paste(data_dir, study, "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv", sep="/"), header=TRUE,
                       stringsAsFactors=FALSE)
   sim_l[[study]] <- sim_dat
 }
@@ -116,7 +116,7 @@ gpi_test <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, met
 gpi_test[['estimate']]
 gpi_test[['p.value']]
 
-figdir <- paste(data_dir, study, 'with_supplement', sep='/')
+figdir <- paste(data_dir, study, 'unsupplemented', sep='/')
 
 p <- ggplot(combined, aes(x=intake_forage, y=sim_intake_forage))
 p <- p + geom_point() + print_theme
@@ -125,7 +125,7 @@ min_val <- min(c(combined$intake_forage, combined$sim_intake_forage))
 max_val <- max(c(combined$intake_forage, combined$sim_intake_forage))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "intake.png", sep="/")
+pngname <- paste(figdir, "intake_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
 dev.off()
@@ -137,7 +137,7 @@ min_val <- min(c(combined$daily_gain, combined$sim_daily_gain))
 max_val <- max(c(combined$daily_gain, combined$sim_daily_gain))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "gain.png", sep="/")
+pngname <- paste(figdir, "gain_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
 dev.off()
@@ -149,7 +149,23 @@ min_val <- min(c(combined$gain_per_intake, combined$sim_gain_per_intake))
 max_val <- max(c(combined$gain_per_intake, combined$sim_gain_per_intake))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "gain_per_kg_intake.png", sep="/")
+pngname <- paste(figdir, "gain_per_kg_intake_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
 dev.off()
+
+### Rubanza et al simple test
+study <- 'Rubanza_et_al_2005'
+sim_dat <- read.csv(paste(data_dir, study, "summary_force_supp_force_intake.csv", sep="/"), header=TRUE,
+                    stringsAsFactors=FALSE)
+df <- sim_dat
+sim_mean_intake <- aggregate(df$intake_forage~df$supp_level, FUN=mean)
+sim_CPI <- aggregate(df$CPI_forage~df$supp_level, FUN=mean)
+sim_MEI <- aggregate(df$ME_intake_total~df$supp_level, FUN=mean)
+sim_gain <- aggregate(df$daily_gain~df$supp_level, FUN=mean)
+gain_t1 <- aggregate(df$daily_gain_t1~df$supp_level, FUN=mean)
+gain_t1
+sim_mean_intake
+sim_CPI
+sim_MEI
+sim_gain

@@ -139,11 +139,17 @@ write_marginal_table <- function(outerdir, sd_table, save_as){
   write.csv(marginal_table, save_as, row.names=FALSE)
 }
 
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_3.15.16"
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_4.11.16"
 sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_3.15.16.csv"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_4.11.16.csv"
 write_marginal_table(outerdir, sd_table, save_as)
 
+marginal_table <- read.csv(save_as)
+anova_fit <- aov(perc_gain ~ soil_zone + clim_zone + animal + density, data=marginal_table)
+summary(anova_fit)
+
+lm_fit <- lm(perc_gain ~ soil_zone + clim_zone + animal + density, data=marginal_table)
+summary(lm_fit)
 
 ################# empirical stocking density test
 fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/Figures"
