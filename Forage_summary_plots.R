@@ -151,6 +151,90 @@ summary(anova_fit)
 lm_fit <- lm(perc_gain ~ soil_zone + clim_zone + animal + density, data=marginal_table)
 summary(lm_fit)
 
+################ forage model results for SWAT
+SWAT_inputs <- function(outerdir, sd_table, swat_dir, save_as){
+  sd_df <- read.csv(sd_table)
+  folders <- list.files(outerdir)
+  valid_folders <- c()
+  for(folder in folders){
+    if(file.exists(paste(outerdir, folder, 'summary_results.csv', sep="/"))){
+      valid_folders <- c(valid_folders, folder)
+    }
+  }
+  rows = length(valid_folders)
+  marginal_table <- data.frame('subbasin'=numeric(rows), 'animal'=character(rows),
+                               'density'=character(rows), 'perc_gain'=numeric(rows), 
+                               'total_delta_weight_kg'= numeric(rows),
+                                stringsAsFactors=FALSE)
+  for(i in 1:length(valid_folders)){
+    folder <- valid_folders[i]
+    basin <- substr(unlist(strsplit(folder, "_"))[1], 2, 3)
+    anim <- unlist(strsplit(folder, "_"))[2]
+    density <- unlist(strsplit(folder, "_"))[3]
+    sd <- sd_df[which(sd_df$animal_level == paste(anim, density, sep="_")),
+                'stocking_density']
+    summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"),
+                        stringsAsFactors=FALSE)
+    summary[, paste(anim, '_intake_forage_per_indiv_kg', sep="")] = as.numeric(
+            summary[, paste(anim, '_intake_forage_per_indiv_kg', sep="")])
+    summary[, paste(anim, '_kg', sep="")] = as.numeric(
+      summary[, paste(anim, '_kg', sep="")])
+    summary[, paste(anim, '_gain_kg', sep="")] <- as.numeric(
+      summary[, paste(anim, '_gain_kg', sep="")])
+    num_y = length(unique(summary$year))
+    rows = num_y * 12
+    SWAT_input_table <- data.frame('year'=numeric(rows), 'month'=numeric(rows),
+                                   'day_initiated'=numeric(rows), 'grz_days'=numeric(rows),
+                                   'bio_eat'=numeric(rows), 'manure_kg'=numeric(rows))
+    start_wt <- summary[1, paste(anim, '_kg', sep="")] - summary[1, paste(anim, '_gain_kg', sep="")]
+    total_gain = 0
+    for(year in 1:num_y){
+        end_wt <- summary[(year * 12), paste(anim, '_kg', sep="")]
+        if (is.na(end_wt)){
+          r <- 1
+            while(is.na(end_wt)){
+              end_wt <- summary[(year * 12) - r, paste(anim, '_kg', sep="")]
+              r <- r + 1
+            }
+        }
+        total_gain = total_gain + (end_wt - start_wt)
+    }
+    delta_wt = total_gain / num_y
+    perc_gain = (delta_wt / start_wt) * 100
+    delta_wt_herd = delta_wt * sd
+    marginal_table[i, ] <- c(basin, anim, density, perc_gain, delta_wt_herd)
+    r <- 1
+    for(year in unique(summary$year)){
+        for(month in 1:12){
+            if(month %in% c(1,3,5,7,8,10,12)){
+                num_days = 31
+            }
+            else if(month %in% c(4,6,9,11)){
+                num_days = 30
+            }
+            else{
+                num_days = 29.5  # TODO how does SWAT treat leap year?
+            }
+            bio_eat = summary[which(summary$year == year & summary$month == month), 
+                              paste(anim, '_intake_forage_per_indiv_kg', sep="")] * sd / 30.4
+            manure_kg = (bio_eat / 2.5) * 2.27 * 0.3
+            SWAT_input_table[r, ] <- c(year, month, 1, num_days, bio_eat, manure_kg)
+            r <- r + 1
+        }
+    }
+    SWAT_table_name <- paste(swat_dir, paste("subbasin", basin, anim, density,
+                             'SWAT_inputs.csv', sep="_"), sep="/")
+    write.csv(SWAT_input_table, SWAT_table_name, row.names=FALSE)
+  }
+  write.csv(marginal_table, save_as, row.names=FALSE)
+}
+
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_5.2.16"
+save_as  <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_5.2.16.csv"
+sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
+swat_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/SWAT_inputs_5.2.16"
+SWAT_inputs(outerdir, sd_table, swat_dir, save_as)
+
 ################# empirical stocking density test
 fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/Figures"
 
