@@ -152,13 +152,18 @@ lm_fit <- lm(perc_gain ~ soil_zone + clim_zone + animal + density, data=marginal
 summary(lm_fit)
 
 ################ forage model results for SWAT
-SWAT_inputs <- function(outerdir, sd_table, swat_dir, save_as){
+SWAT_inputs <- function(outerdir, sd_table, swat_dir, save_as, known_rows){
   sd_df <- read.csv(sd_table)
   folders <- list.files(outerdir)
   valid_folders <- c()
   for(folder in folders){
     if(file.exists(paste(outerdir, folder, 'summary_results.csv', sep="/"))){
-      valid_folders <- c(valid_folders, folder)
+      summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"),
+                          stringsAsFactors=FALSE)
+      rows <- dim(summary)[1]
+      if(rows == known_rows){
+        valid_folders <- c(valid_folders, folder)
+      }
     }
   }
   rows = length(valid_folders)
@@ -233,7 +238,36 @@ outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_resul
 save_as  <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_5.2.16.csv"
 sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
 swat_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/SWAT_inputs_5.2.16"
-SWAT_inputs(outerdir, sd_table, swat_dir, save_as)
+known_rows <- 204
+SWAT_inputs(outerdir, sd_table, swat_dir, save_as, known_rows)
+
+################# facilitation tests
+sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/test_segregation2.csv"
+df <- read.csv(sum_csv)
+df$total_biomass <- as.factor(df$total_biomass)
+biomass_levels <- levels(df$total_biomass)[c(1:4, 8:10)]
+df$cp_mean <- as.factor(df$cp_mean)
+cp_levels <- levels(df$cp_mean)[c(1:3, 10)]
+sub <- subset(df, df$abundance_ratio == 10
+              & df$cp_ratio == 10 & df$abundance_cp_same == 0
+              & df$cp_mean %in% cp_levels)
+              # & df$total_biomass %in% biomass_levels)
+              # )
+p <- ggplot(sub, aes(x=total_biomass, y=segregation, group=cp_mean))
+p <- p + geom_line(aes(colour=cp_mean))
+p <- p + xlab('total biomass (kg / ha)')
+print(p)
+p <- ggplot(sub, aes(x=cp_mean, y=segregation, group=total_biomass))
+p <- p + geom_line(aes(colour=total_biomass))
+print(p)
+
+p <- ggplot(df, aes(x=total_biomass, y=segregation, group=weight_1))
+p <- p + geom_point(aes(colour=weight_1))
+print(p)
+p <- ggplot(df, aes(x=weight_1, y=segregation))
+p <- p + geom_point()
+print(p)
+
 
 ################# empirical stocking density test
 fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Output/Stocking_density_test/Figures"
