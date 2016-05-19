@@ -13,6 +13,7 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 summary_plots <- function(model_results_folder, imgpath){
+  dir.create(file.path(imgpath))
   lines <- c("solid", "longdash", "dotted", "twodash")
   
   summary_file <- read.csv(paste(model_results_folder,
@@ -20,9 +21,8 @@ summary_plots <- function(model_results_folder, imgpath){
   grass_type_cols <- grep("kgha", colnames(summary_file), value=TRUE)
   grass_types <- gsub("_kgha", "", grass_type_cols)
   summary_file$total_grass <- rowSums(summary_file[, grass_type_cols])
-  # calculate total biomass of each grass type?
-  animal_type_cols <- grep("offtake", colnames(summary_file), value=TRUE)
-  animal_types <- gsub("_offtake", "", animal_type_cols)
+  animal_type_cols <- grep("gain_kg", colnames(summary_file), value=TRUE)
+  animal_types <- gsub("_gain_kg", "", animal_type_cols)
   animal_types <- animal_types[animal_types != "total"]
   summary_list = list()
   for(grass in grass_types){
@@ -48,7 +48,7 @@ summary_plots <- function(model_results_folder, imgpath){
                            'year'=summary_file$year,
                            'month'=summary_file$month,
                            'biomass'=summary_file[, paste(animal, '_kg', sep="")],
-                           'offtake'=summary_file[, paste(animal, '_offtake', sep="")],
+                           'offtake'=summary_file[, paste(animal, '_intake_forage_per_indiv_kg', sep="")],
                            'label'=rep(animal, length(summary_file$step)),
                            'type'=rep('animal', length(summary_file$step)))
       summary_list[[animal]] <- one_df  
@@ -58,7 +58,7 @@ summary_plots <- function(model_results_folder, imgpath){
   biomass_subset <- summary_df[(summary_df$label %in% c('total_grass', animal_types)), ]
   p <- ggplot(biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Total biomass")
-  pngname <- paste(imgpath, "Biomass_summary.png", sep="")
+  pngname <- paste(imgpath, "Biomass_summary.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
   print(p)
   dev.off()
@@ -66,7 +66,7 @@ summary_plots <- function(model_results_folder, imgpath){
   grass_biomass_subset <- summary_df[(summary_df$label %in% c('total_grass', grass_types)), ]
   p <- ggplot(grass_biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Grass biomass")
-  pngname <- paste(imgpath, "Grass_biomass.png", sep="")
+  pngname <- paste(imgpath, "Grass_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
   print(p)
   dev.off()
@@ -75,7 +75,7 @@ summary_plots <- function(model_results_folder, imgpath){
   p <- ggplot(animal_biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Herbivore biomass")
   p <- p + scale_linetype_manual(values = lines, name = "")
-  pngname <- paste(imgpath, "Herbivore_biomass.png", sep="")
+  pngname <- paste(imgpath, "Herbivore_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
   print(p)
   dev.off()
@@ -83,11 +83,38 @@ summary_plots <- function(model_results_folder, imgpath){
   p <- ggplot(animal_biomass_subset, aes(x=month, y=offtake, group=label, linetype=label))
   p <- p + geom_line() + ylab("offtake (kg)") + ggtitle("Herbivore offtake")
   p <- p + scale_linetype_manual(values = lines, name = "")
-  pngname <- paste(imgpath, "Herbivore_offtake.png", sep="")
+  pngname <- paste(imgpath, "Herbivore_offtake.png", sep="/")
+  png(file=pngname, units="in", res=300, width=7.5, height=5)
+  print(p)
+  dev.off()
+  # proportions of each grass type
+  prop_list <- list()
+  grass_labels <- gsub("_green", "", grep("_green", grass_types, value=TRUE))
+  for(label in grass_labels){
+    prop <- (summary_file[, paste(label, '_green_kgha', sep="")] + 
+               summary_file[, paste(label, '_dead_kgha', sep="")]) / summary_file$total_grass
+    prop_df <- data.frame('step'=summary_file$step,
+                          'year'=summary_file$year,
+                          'month'=summary_file$month,
+                          'label'=rep(label, length(summary_file$step)),
+                          'proportion_biomass'=prop)
+    prop_list[[label]] <- prop_df
+  }
+  prop_df <- do.call(rbind, prop_list)
+  
+  p <- ggplot(prop_df, aes(x=month, y=proportion_biomass, group=label, linetype=label))
+  p <- p + geom_line() + ylab("percentage of total biomass") + 
+    ggtitle("Proportion of total biomass by grass type")
+  p <- p + scale_linetype_manual(values = lines, name = "")
+  pngname <- paste(imgpath, "Grass_proportion.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
   print(p)
   dev.off()
 }
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/sd_0.4/weights_10_5.19.16"
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs/sd_0.4_weights_10_5.19.16"
+summary_plots(model_results_folder, imgpath)
 
 for(suf in c('low', 'med', 'high')){
   model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/cattle_", suf, sep="")
