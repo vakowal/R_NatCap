@@ -112,18 +112,112 @@ summary_plots <- function(model_results_folder, imgpath){
   dev.off()
 }
 
-model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/sd_0.4/weights_10_5.19.16"
-imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs/sd_0.4_weights_10_5.19.16"
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/cattle_zebra"
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs/cattle_zebra"
 summary_plots(model_results_folder, imgpath)
 
-for(suf in c('low', 'med', 'high')){
-  model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/cattle_", suf, sep="")
-  imgpath <- paste(model_results_folder, "summary_figs/", sep="/")
-  if(file.exists(imgpath) == FALSE){
-    dir.create(imgpath, showWarnings = FALSE)
-  }
+for(suf in levels(df$suf)){
+  folder_name <- suf
+  model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/",
+                                folder_name, sep="")
+  imgpath <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs/",
+                   folder_name, sep="")
   summary_plots(model_results_folder, imgpath)
 }
+
+## grass composition plots
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
+diff_sum <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/asymmetric_weight_effects_grass_proportions.csv"
+df <- read.csv(diff_sum)
+df$weight <- as.factor(df$weight)
+p <- ggplot(df, aes(x=step, y=diff_abs, group=weight))
+p <- p + geom_line(aes(colour=weight))
+pngname <- paste(imgpath, "Grass_abundance_digest_abun_same.png", sep="")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+p <- ggplot(df, aes(x=step, y=diff_proportion, group=weight))
+p <- p + geom_line(aes(colour=weight))
+p <- p + xlab('month') + ylab('grass1 / total - grass2 / total') + ggtitle("Grass proportions")
+pngname <- paste(imgpath, "Grass_proportions_digest_abun_same.png", sep="")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+## facilitation plots
+df_list <- list()
+for(suf in c('cattle', 'cattle_zebra')){
+  summary_df <- data.frame('month'=c(1:12), 'weight_kg'=numeric(12), 'gain'=numeric(12),
+                           'suf'=character(12))
+  model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs",
+                                paste(suf, "_equal_density_GH_CP_vary", sep=""), sep="/")
+  # imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"  # ", suf, sep="/")
+  # summary_plots(model_results_folder, imgpath)
+  summary <- read.csv(paste(model_results_folder, 'summary_results.csv', sep="/"),
+                      stringsAsFactors=FALSE)
+  summary[, 'cattle_kg'] = as.numeric(summary[, 'cattle_kg'])
+  summary_df$weight_kg <- summary$cattle_kg
+  summary[, 'cattle_gain_kg'] = as.numeric(summary[, 'cattle_gain_kg'])
+  summary_df$gain <- summary$cattle_gain_kg
+  summary_df$suf <- suf
+  df_list[[suf]] <- summary_df
+  start_wt <- summary[1, 'cattle_kg'] - summary[1, 'cattle_gain_kg']
+  end_wt <- summary[dim(summary)[1], 'cattle_kg']
+  delta_wt <- end_wt - start_wt
+  # delta_wt_list[[suf]] <- delta_wt
+}
+summary_df <- do.call(rbind, df_list)
+summary_df$label <- factor(summary_df$suf, levels=c('cattle', 'cattle_zebra'),
+                              labels=c('alone', 'with second herbivore'))
+p <- ggplot(summary_df, aes(x=month, y=weight_kg, group=label))
+p <- p + geom_line(aes(linetype=label))
+p <- p + xlab('month') + ylab('weight (kg)')
+pngname <- paste(imgpath, "Focal_weight_gain_cp_abun_opposite_unequal_sd_GH.png", sep="/")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+diff_weight <- summary_df[summary_df$suf == 'cattle_zebra', 'weight_kg'] - 
+  summary_df[summary_df$suf == 'cattle', 'weight_kg']
+diff_gain <- summary_df[summary_df$suf == 'cattle_zebra', 'gain'] - 
+  summary_df[summary_df$suf == 'cattle', 'gain']
+
+##### crude protein between treatments
+setup_l <- c("_equal_sd_opposite_grass_varying_CP",
+             "_equal_sd_opposite_grass",
+             "_unequal_sd_opposite_grass_GH_varying_CP",
+             "_unequal_sd_opposite_grass_GH")
+treatment_l <- c("herb1", "herb2")
+df_list <- list()
+for(setup in setup_l){
+  for(treatment in treatment_l){
+    summary_df <- data.frame('month'=c(1:12), 'CPI_f'=numeric(12), 'DMD_f'=numeric(12),
+                             'treatment'=rep(treatment, 12), 'setup'=rep(setup, 12))
+    model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs",
+                                  paste(treatment, setup, sep=""), sep="/")
+    diet_csv <- paste(model_results_folder, "herb_1diet.csv", sep="/")
+    diet_df <- read.csv(diet_csv)
+    summary_df$CPI_f <- diet_df$CPIf
+    summary_df$DMD_f <- diet_df$DMDf
+    df_list[[paste(setup, treatment, sep="-")]] <- summary_df
+  }
+}
+summary_df <- do.call(rbind, df_list)
+
+diff_df_list <- list()
+for(s in setup_l){
+  diff_df <- data.frame('month'=c(1:12), 'setup'=rep(s, 12), 'diff_CPI'=numeric(12),
+                        'diff_DMD'=numeric(12))
+  dat <- subset(summary_df, setup == s)
+  dif_CP <- dat[which(dat$treatment == 'herb2'), 'CPI_f'] - dat[which(dat$treatment == 'herb1'), 'CPI_f']
+  dif_DMD <- dat[which(dat$treatment == 'herb2'), 'DMD_f'] - dat[which(dat$treatment == 'herb1'), 'DMD_f']
+  diff_df$diff_CPI <- dif_CP
+  diff_df$diff_DMD <- dif_DMD
+  diff_df_list[[s]] <- diff_df
+}
+diff_df <- do.call(rbind, diff_df_list)
+write.csv(diff_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/facilitation_exploration/diet_diff_summary.csv",
+            row.names=FALSE)
 
 write_marginal_table <- function(outerdir, sd_table, save_as){
   sd_df <- read.csv(sd_table)
