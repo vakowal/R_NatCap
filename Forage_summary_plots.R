@@ -219,6 +219,35 @@ diff_df <- do.call(rbind, diff_df_list)
 write.csv(diff_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/facilitation_exploration/diet_diff_summary.csv",
             row.names=FALSE)
 
+# new growth
+# an example file structure
+outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs"
+run_folder <- "herb1_equal_sd_opposite_grass"
+grasses <- c("grass1", "grass2")
+summary_df <- data.frame('month'=c(1:12), 'context'=rep(c, 12),
+                         'treatment'=rep(t, 12), 'grass'=rep('total', 12),
+                         'new_growth'=numeric(12), 'perc_new_growth'=numeric(12))
+new_growth_t <- rep(0, 12)
+biomass_t <- rep(0, 12)
+for(gr in grasses){
+  file <- paste(outer_dir, run_folder, cent_dir, paste(gr, '.lis', sep=""), sep="/")
+  gr_df <- read.table(file, header=TRUE)
+  year <- 2015
+  y_sub <- subset(gr_df, gr_df$time > year & gr_df$time <= year + 1)[, c('time', 'agcacc', 'aglivc')]
+  y_sub <- y_sub[!duplicated(y_sub), ]
+  growth_v <- as.vector(y_sub[, 'agcacc'])
+  biomass_v <- as.vector(y_sub[, 'aglivc'])
+  new_growth <- growth_v[1]
+  for(idx in c(2:12)){
+    new_growth <- c(new_growth, growth_v[idx] - growth_v[idx - 1])
+  }
+  new_growth_t <- new_growth_t + new_growth
+  biomass_t <- biomass_t + biomass_v
+}
+new_gr_perc_t <- new_growth_t / biomass_t
+
+
+## write marginal table for input to optimizer
 write_marginal_table <- function(outerdir, sd_table, save_as){
   sd_df <- read.csv(sd_table)
   folders <- list.files(outerdir)
