@@ -246,6 +246,24 @@ for(gr in grasses){
 }
 new_gr_perc_t <- new_growth_t / biomass_t
 
+# calculated in script
+lines <- c("solid", "dotted", "longdash")
+growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/sd_new_growth/cattle_new_growth_summary.csv"
+gr_df <- read.csv(growth_file)
+gr_df$stocking_density <- as.factor(gr_df$stocking_density)
+gr_df$label <- factor(gr_df$label, levels=c("total_biomass", "new_growth", "perc_new_growth"),
+                      labels=c("Total biomass", "New growth", "New growth / total biomass"))
+gr_df_sub <- subset(gr_df, gr_df$stocking_density %in% c("0.1", "0.75", "1.25"))
+p <- ggplot(gr_df_sub, aes(x=month, y=biomass, group=stocking_density))
+p <- p + geom_line(aes(linetype=stocking_density))
+p <- p + scale_linetype_manual(values=lines)
+p <- p + facet_wrap(~label, nrow=2, scales="free")
+p <- p + ylab("")
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
+pngname <- paste(imgpath, "New_growth~stocking_density.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=5)
+print(p)
+dev.off()
 
 ## write marginal table for input to optimizer
 write_marginal_table <- function(outerdir, sd_table, save_as){
