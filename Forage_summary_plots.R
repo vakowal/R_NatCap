@@ -144,35 +144,90 @@ png(file=pngname, units="in", res=300, width=7.5, height=5)
 print(p)
 dev.off()
 
+comp_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/asymmetric_weight_effects_grass_proportions_6.21.16.csv"
+comp_df <- read.csv(comp_file)
+comp_df <- comp_df[which(comp_df$step < 11), ]
+comp_df$grass_type <- factor(comp_df$grass_type, levels=c('grass_1', 'grass_2'),
+                             labels=c('grass 1', 'grass 2'))
+p <- ggplot(comp_df, aes(x=step, y=prop, group=grass_type))
+p <- p + geom_line(aes(linetype=grass_type))
+p <- p + scale_linetype_manual(values=lines)
+p <- p + xlab("Step") + ylab("Proportion of total biomass")
+p <- p + print_theme + theme(legend.title=element_blank()) + theme(legend.key = element_blank())
+p <- p + scale_x_continuous(breaks=c(0, 2, 4, 6, 8, 10))
+pngname <- paste(imgpath, "Grass_proportions_from_50.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
 ## facilitation plots
 df_list <- list()
-for(suf in c('cattle', 'cattle_zebra')){
+for(suf in c('herb1_0.2', 'herb1_2_0.3', 'herb1_2_0.2')){
   summary_df <- data.frame('month'=c(1:12), 'weight_kg'=numeric(12), 'gain'=numeric(12),
                            'suf'=character(12))
   model_results_folder <- paste("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs",
-                                paste(suf, "_equal_density_GH_CP_vary", sep=""), sep="/")
+                                paste(suf, "_grass1_grass2", sep=""), sep="/")
   # imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"  # ", suf, sep="/")
   # summary_plots(model_results_folder, imgpath)
   summary <- read.csv(paste(model_results_folder, 'summary_results.csv', sep="/"),
                       stringsAsFactors=FALSE)
-  summary[, 'cattle_kg'] = as.numeric(summary[, 'cattle_kg'])
-  summary_df$weight_kg <- summary$cattle_kg
-  summary[, 'cattle_gain_kg'] = as.numeric(summary[, 'cattle_gain_kg'])
-  summary_df$gain <- summary$cattle_gain_kg
+  summary[, 'herb_1_kg'] = as.numeric(summary[, 'herb_1_kg'])
+  summary_df$weight_kg <- summary$herb_1_kg
+  summary[, 'herb_1_gain_kg'] = as.numeric(summary[, 'herb_1_gain_kg'])
+  summary_df$gain <- summary$herb_1_gain_kg
   summary_df$suf <- suf
   df_list[[suf]] <- summary_df
-  start_wt <- summary[1, 'cattle_kg'] - summary[1, 'cattle_gain_kg']
-  end_wt <- summary[dim(summary)[1], 'cattle_kg']
+  start_wt <- summary[1, 'herb_1_kg'] - summary[1, 'herb_1_gain_kg']
+  end_wt <- summary[dim(summary)[1], 'herb_1_kg']
   delta_wt <- end_wt - start_wt
   # delta_wt_list[[suf]] <- delta_wt
 }
 summary_df <- do.call(rbind, df_list)
-summary_df$label <- factor(summary_df$suf, levels=c('cattle', 'cattle_zebra'),
-                              labels=c('alone', 'with second herbivore'))
+summary_df$label <- factor(summary_df$suf, levels=c('herb1_0.2', 'herb1_2_0.3', 'herb1_2_0.2'),
+                              labels=c('Alone', 'Mixed increased density', 'Mixed equal density'))
 p <- ggplot(summary_df, aes(x=month, y=weight_kg, group=label))
 p <- p + geom_line(aes(linetype=label))
+p <- p + scale_linetype_manual(values=lines)
 p <- p + xlab('month') + ylab('weight (kg)')
-pngname <- paste(imgpath, "Focal_weight_gain_cp_abun_opposite_unequal_sd_GH.png", sep="/")
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
+pngname <- paste(imgpath, "Direct_contrast_cumulative_gain.png", sep="/")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+# boxplot: monthly individual gain by treatment
+p <- ggplot(summary_df, aes(factor(label), gain))
+p <- p + geom_boxplot()
+p <- p + ylab("Monthly individual gain (kg)") + xlab("")
+print(p)
+pngname <- paste(imgpath, "Direct_contrast_indiv_gain.png", sep="/")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+summary_df$herd_weight <- 0
+summary_df[which(summary_df$suf == 'herb1_0.2'), 'herd_weight'] <- summary_df[which(summary_df$suf == 'herb1_0.2'), 'weight_kg'] * 0.2
+summary_df[which(summary_df$suf == 'herb1_2_0.3'), 'herd_weight'] <- summary_df[which(summary_df$suf == 'herb1_2_0.3'), 'weight_kg'] * 0.2
+summary_df[which(summary_df$suf == 'herb1_2_0.2'), 'herd_weight'] <- summary_df[which(summary_df$suf == 'herb1_2_0.2'), 'weight_kg'] * 0.1
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/direct_contrast_summary.csv"
+write.csv(summary_df, file=save_as, row.names=FALSE)
+
+p <- ggplot(summary_df, aes(x=month, y=herd_weight, group=label))
+p <- p + geom_line(aes(linetype=label))
+p <- p + scale_linetype_manual(values=lines)
+p <- p + ylab("Herb1 herd weight (kg)")
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
+pngname <- paste(imgpath, "Direct_contrast_cumulative_gain_herd.png", sep="/")
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(summary_df, aes(x=month, y=weight_kg, group=label))
+p <- p + geom_line(aes(linetype=label))
+p <- p + scale_linetype_manual(values=lines)
+p <- p + xlab('month') + ylab('weight (kg)')
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
+pngname <- paste(imgpath, "Cattle_weight_gain_generic_grasses.png", sep="/")
 png(file=pngname, units="in", res=300, width=7.5, height=5)
 print(p)
 dev.off()
