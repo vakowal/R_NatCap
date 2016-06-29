@@ -72,6 +72,8 @@ print(p)
 dev.off()
 
 # scatterplot: PDM vs biomass
+sc_df <- data.frame('PDM_norm'=PDM_plot_df$norm_value, 'biomass_norm'=biomass_plot_df$norm_mean,
+                    'PDM_raw'=PDM_plot_df$raw_val, 'biomass_raw'=biomass_plot_df$raw_val)
 p <- ggplot(sc_df, aes(x=PDM_norm, y=biomass_norm))
 p <- p + geom_point()
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
@@ -114,3 +116,30 @@ p <- ggplot(sc_df_s, aes(x=PDM_raw, y=biomass_raw))
 p <- p + geom_point(color="red")
 p <- p + geom_point(aes(x=sc_df_s$PDM_raw, y=sc_df_s$fitted_values))
 print(p)
+
+# regression line and points
+# just points used to fit the regression
+p <- ggplot(sc_df_s, aes(x=PDM_raw, y=biomass_raw))
+p <- p + geom_point() + print_theme
+p <- p + geom_abline(slope=coef(summary(fit))["PDM_raw","Estimate"],
+                     intercept=coef(summary(fit))["(Intercept)","Estimate"],
+                     linetype=2)
+p <- p + xlab("PDM (cm)") + ylab("Biomass (g)")
+pngname <- paste(imgpath, "PDM_biomass_point_regression.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
+# all points
+p <- ggplot(sc_df, aes(x=PDM_raw, y=biomass_raw))
+p <- p + geom_point() + print_theme
+p <- p + geom_abline(slope=coef(summary(fit))["PDM_raw","Estimate"],
+                     intercept=coef(summary(fit))["(Intercept)","Estimate"],
+                     linetype=2)
+p <- p + xlab("PDM (cm)") + ylab("Biomass (g)")
+pngname <- paste(imgpath, "PDM_biomass_point_regression_all_points.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
+
