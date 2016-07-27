@@ -142,4 +142,23 @@ png(file=pngname, units="in", res=300, width=4, height=4)
 print(p)
 dev.off()
 
+# compare empirical to simulated biomass
+PDM_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/PDM_records.csv"
+PDM_df <- read.csv(PDM_file)
 
+simulated_val_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/calibration_results.csv"
+sim_df <- read.csv(simulated_val_file)
+
+ungrazed_sub <- subset(PDM_df, Polygon_id %in% sim_df$polygon)
+p <- ggplot(ungrazed_sub, aes(factor(Polygon_id), biomass_kg_ha))
+p <- p + geom_boxplot()
+p <- p + xlab("Polygon") + ylab("Biomass (kg/ha)")
+p <- p + geom_point(data=sim_df, aes(x=factor(polygon),
+                                     y=biomass_kg_ha, group=source,
+                                     color=source))
+print(p)
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/figs"
+pngname <- paste(imgpath, "biomass_calibration_comparison.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=4)
+print(p)
+dev.off()
