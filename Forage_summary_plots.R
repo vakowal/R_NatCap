@@ -326,16 +326,15 @@ write_marginal_table <- function(outerdir, sd_table, save_as){
   sd_df <- read.csv(sd_table)
   folders <- list.files(outerdir)
   rows = length(folders)
-  marginal_table <- data.frame('soil_zone'=numeric(rows), 'clim_zone'=numeric(rows),
+  marginal_table <- data.frame('subbasin'=numeric(rows),
                                'animal'=character(rows), 'density'=character(rows),
                                'perc_gain'=numeric(rows), 'total_delta_weight_kg'=
                                  numeric(rows), stringsAsFactors=FALSE)
   for(i in 1:length(folders)){
     folder <- folders[i]
-    s_zone <- substr(unlist(strsplit(folder, "_"))[1], 2, 2)
-    c_zone <- substr(unlist(strsplit(folder, "_"))[2], 2, 2)
-    anim <- unlist(strsplit(folder, "_"))[3]
-    density <- unlist(strsplit(folder, "_"))[4]
+    subbasin <- substr(unlist(strsplit(folder, "_"))[1], 2, 3)
+    anim <- unlist(strsplit(folder, "_"))[2]
+    density <- unlist(strsplit(folder, "_"))[3]
     sd <- sd_df[which(sd_df$animal_level == paste(anim, density, sep="_")),
                 'stocking_density']
     summary <- read.csv(paste(outerdir, folder, 'summary_results.csv', sep="/"),
@@ -357,15 +356,15 @@ write_marginal_table <- function(outerdir, sd_table, save_as){
     delta_wt <- end_wt - start_wt
     delta_wt_herd <- delta_wt * sd
     perc_gain <- (delta_wt / start_wt) * 100
-    marginal_table[i, ] <- c(s_zone, c_zone, anim, density, perc_gain,
+    marginal_table[i, ] <- c(subbasin, anim, density, perc_gain,
                              delta_wt_herd)
   }
   write.csv(marginal_table, save_as, row.names=FALSE)
 }
 
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_4.11.16"
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/raw_5.2.16"
 sd_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Stocking_density_table.csv"
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_4.11.16.csv"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_7.26.16.csv"
 write_marginal_table(outerdir, sd_table, save_as)
 
 marginal_table <- read.csv(save_as)
