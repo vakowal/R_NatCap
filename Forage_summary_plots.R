@@ -659,4 +659,55 @@ print(bplot)
 pngname <- paste(fig_dir, "animals_veg_transect_vs_weather_station.png", sep = "/")
 png(file = pngname, units="in", res = 150, width=5, height=4)
 print(bplot)
-dev.off() 
+dev.off()
+
+#### weight gain consequences 8.3.16
+gain_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/diet_summary.csv"
+gain_df <- read.csv(gain_csv)
+
+# exploratory scatterplots
+p <- ggplot(gain_df, aes(x=total_biomass, y=gain_kg_one_month))
+p <- p + geom_point() + xlab("Total biomass (g/m2)") + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/total_biomass_v_gain.png"
+png(file=pngname, units="in", res=150, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(gain_df, aes(x=Green_biomass, y=gain_kg_one_month))
+p <- p + geom_point() + xlab("Green biomass (g/m2)") + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/green_biomass_v_gain.png"
+png(file=pngname, units="in", res=150, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(gain_df, aes(x=percent_green, y=gain_kg_one_month))
+p <- p + geom_point() + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/percent_green_v_gain.png"
+png(file=pngname, units="in", res=150, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(gain_df, aes(x=total_intake, y=gain_kg_one_month))
+p <- p + geom_point() + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/total_intake_v_gain.png"
+png(file=pngname, units="in", res=150, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(gain_df, aes(x=total_intake, y=total_intake))
+p <- p + geom_point() + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/total_intake_v_gain.png"
+png(file=pngname, units="in", res=150, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(gain_df, aes(x=factor(Ecological_Classification), y=gain_kg_one_month,
+                         group=Year))
+p <- p + geom_point(aes(shape=factor(Year)))
+p <- p + xlab("Ecological classification") + ylab("Gain in one month (kg)")
+p <- p + print_theme
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/gain_summary__.png"
+png(file=pngname, units="in", res=150, width=5, height=3)
+print(p)
+dev.off()
+
