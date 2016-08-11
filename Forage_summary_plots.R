@@ -665,6 +665,11 @@ dev.off()
 gain_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/diet_summary.csv"
 gain_df <- read.csv(gain_csv)
 
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/weight_gain_consequences/figs/scatter_matrix.png"
+png(file=pngname, units="in", res=150, width=8, height=8)
+pairs(gain_df[c(12,10,11,4,5,1,2,8)], upper.panel=NULL)
+dev.off()
+
 # exploratory scatterplots
 p <- ggplot(gain_df, aes(x=total_biomass, y=gain_kg_one_month))
 p <- p + geom_point() + xlab("Total biomass (g/m2)") + print_theme
