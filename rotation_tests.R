@@ -14,10 +14,10 @@ print_theme <- theme(strip.text.y=element_text(size=10),
 sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/test_rotation/comparison_8.9.16.csv"
 sum_df <- read.csv(sum_csv)
 
-sum_df$avg_monthly_gain <- sum_df$gain_kg / sum_df$duration
-metrics <- c('avg_biomass', "gain_kg", "total_biomass", "avg_monthly_gain")
+metrics <- c('avg_biomass', "total_biomass", "avg_monthly_gain")
 
 rotated <- subset(sum_df, duration < 24)
+rotated$avg_monthly_gain <- rotated$gain_kg / 12
 
 # precipitation
 precip_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/test_rotation/avg_precip"
@@ -54,15 +54,16 @@ for(metric in metrics){
                                     group="duration"))
     p <- p + geom_point(aes(colour=as.factor(duration)))
     p <- p + print_theme
-    pngname <- paste(img_dir, "/", metric, "~", pr, ".png", sep="")
+    pngname <- paste(img_dir, "/diff_", metric, "~", pr, ".png", sep="")
     png(file=pngname, units="in", res=150, width=7, height=3)
     print(p)
     dev.off()
   }
 }
 
-# mean of rotated schedules vs non-rotated schedule
+# mean of metrics within rotated schedules, vs non-rotated (full-year) schedule
 constant <- subset(sum_df, duration == 24)
+constant$avg_monthly_gain <- constant$gain_kg / 24
 mean_df <- aggregate(rotated[, metrics], by=list(
                      rotated$subbasin, rotated$duration),
                      mean)
@@ -74,7 +75,6 @@ for(metric in metrics){
   for(pr in precip_descrips){
     p <- ggplot(mean_df, aes_string(x=pr, y=metric,
                                        group="duration"))
-    # p <- p + geom_point()
     p <- p + geom_jitter(aes(colour=as.factor(duration)))
     p <- p + geom_point(data=constant_df, aes_string(
                         x=pr, y=metric))
@@ -87,10 +87,10 @@ for(metric in metrics){
   }
 }
 
+# means by subbasin instead of precip descriptors
 for(metric in metrics){
   p <- ggplot(mean_df, aes_string(x="subbasin", y=metric,
                                   group="duration"))
-  # p <- p + geom_point()
   p <- p + geom_jitter(aes(colour=as.factor(duration)),
                        width=0.3)
   p <- p + geom_point(data=constant_df, aes_string(
@@ -103,12 +103,11 @@ for(metric in metrics){
   dev.off()
 }
 
+# raw values: rotational schedules vs non-rotated (full-year) schedule
 rotated_df <- merge(rotated, precip_df, by="subbasin")
-metric_subset <- c("avg_biomass", "avg_monthly_gain")
-for(metric in metric_subset){
+for(metric in metrics){
   p <- ggplot(rotated_df, aes_string(x="subbasin", y=metric,
                                   group="duration"))
-  # p <- p + geom_point()
   p <- p + geom_jitter(aes(colour=as.factor(duration)),
                        width=0.3)
   p <- p + geom_point(data=constant_df, aes_string(
