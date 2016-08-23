@@ -119,3 +119,80 @@ for(metric in metrics){
   print(p)
   dev.off()
 }
+
+###### differences in rotated schedules vs differences between interventions
+sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/rotation_high_sd/comparison_8.22.16.csv"
+sum_df <- read.csv(sum_csv)
+
+ids <- unique(sum_df[, c('subbasin', 'duration', 'sd_level', 'animal_type')])
+sum_df$id <- paste(sum_df$subbasin, sum_df$duration, sum_df$sd_level, sum_df$animal_type, sep=".")
+biomass_means <- aggregate(sum_df$avg_biomass, by=list(sum_df$id), FUN=mean)
+colnames(biomass_means) <- c('id', 'avg_biomass')
+sum_df_sub <- unique(sum_df[, colnames(sum_df)[c(1, 5, 8, 9, 10)]])
+biomass_means <- merge(sum_df_sub, biomass_means, by='id')
+biomass_means[(biomass_means$duration == 204 & 
+                 biomass_means$sd_level == 'rechigh'), 'level'] <- 'high'
+biomass_means[(biomass_means$duration == 4 & 
+                 biomass_means$sd_level == 'rechigh'), 'level'] <- 'high-rot'
+biomass_means[(biomass_means$duration == 204 & 
+                 biomass_means$sd_level == 'low'), 'level'] <- 'low'
+biomass_means[(biomass_means$duration == 4 & 
+                 biomass_means$sd_level == 'low'), 'level'] <- 'low-rot'
+biomass_means$intervention <- paste(biomass_means$animal_type, biomass_means$level, sep="-")
+
+## calculate all pairwise differences between interventions within subbasin
+diff_list <- list()
+sb <- unique(biomass_means$subbasin)
+for(sbasin in sb){
+  subs <- biomass_means[which(biomass_means$subbasin == sbasin), 'avg_biomass']
+  diffs <- c(dist(subs))
+  df <- data.frame('subbasin'=rep(sbasin, length(diffs)), 'diff'=diffs)
+  diff_list[[sbasin]] <- df
+}
+diff_df <- do.call(rbind, diff_list)
+diff_df$difference_type <- 'intervention'
+
+# calculate all differences between schedules of the same intervention type
+sbasins <- unique(sum_df$subbasin)
+rotated <- subset(sum_df, duration < 204)
+diff <- data.frame(abs(diff(as.matrix(rotated[, c('avg_yearly_gain', 'avg_biomass')]))))
+odd_diff <- diff[seq(1, dim(diff)[1], 2), ]
+odd_diff <- cbind(odd_diff, sbasins)
+odd_diff <- odd_diff[, c('sbasins', 'avg_biomass')]
+odd_diff$difference_type <- 'schedule'
+
+colnames(odd_diff) <- colnames(diff_df)
+plot_df <- rbind(diff_df, odd_diff)
+
+p <- ggplot(plot_df, aes(x=subbasin, y=diff, colour=difference_type))
+p <- p + geom_point() + ylab('diff: avg monthly biomass')
+pngname <- "C:/Users/Ginger/Desktop/diff_avg_biomass_intervention_v_schedule.png"
+png(file=pngname, units="in", res=150, width=9, height=5)
+print(p)
+dev.off()
+
+# how does difference between schedules vary by intervention?
+rotated <- subset(sum_df, duration < 204)
+ids <- unique(rotated[, c('animal_type', 'subbasin', 'sd_level')])
+diff <- data.frame(abs(diff(as.matrix(rotated[, c('avg_yearly_gain', 'avg_biomass')]))))
+odd_diff <- diff[seq(1, dim(diff)[1], 2), ]
+odd_diff <- cbind(odd_diff, ids)
+odd_diff$intervention <- paste(odd_diff$animal_type, odd_diff$sd_level, sep="-")
+odd_diff$subbasin <- as.factor(odd_diff$subbasin)
+
+p <- ggplot(odd_diff, aes(x=intervention, y=avg_biomass))
+p <- p + geom_point(aes(colour=as.factor(subbasin)))
+p <- p + ylab("diff avg monthly biomass between schedules")
+pngname <- "C:/Users/Ginger/Desktop/diff_avg_biomass_by_intervention.png"
+png(file=pngname, units="in", res=150, width=9, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(odd_diff, aes(x=intervention, y=avg_yearly_gain))
+p <- p + geom_point(aes(colour=as.factor(subbasin)))
+p <- p + ylab("diff avg yearly gain between schedules")
+pngname <- "C:/Users/Ginger/Desktop/diff_avg_yearly_gain_by_intervention.png"
+png(file=pngname, units="in", res=150, width=9, height=5)
+print(p)
+dev.off()
+
