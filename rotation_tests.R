@@ -121,6 +121,7 @@ for(metric in metrics){
 }
 
 ###### differences in rotated schedules vs differences between interventions
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/test_rotation/figs"
 sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/rotation_high_sd/comparison_8.22.16.csv"
 sum_df <- read.csv(sum_csv)
 
@@ -165,8 +166,9 @@ colnames(odd_diff) <- colnames(diff_df)
 plot_df <- rbind(diff_df, odd_diff)
 
 p <- ggplot(plot_df, aes(x=subbasin, y=diff, colour=difference_type))
-p <- p + geom_point() + ylab('diff: avg monthly biomass')
-pngname <- "C:/Users/Ginger/Desktop/diff_avg_biomass_intervention_v_schedule.png"
+p <- p + geom_jitter(position = position_jitter(width=0.1))
+p <- p + ylab('diff: avg monthly biomass (kg/ha)')
+pngname <- paste(imgpath, "diff_avg_biomass_intervention_v_schedule.png", sep="/")
 png(file=pngname, units="in", res=150, width=9, height=5)
 print(p)
 dev.off()
@@ -196,3 +198,68 @@ png(file=pngname, units="in", res=150, width=9, height=5)
 print(p)
 dev.off()
 
+## how does average monthly gain differ between rotated and non-rotated schedules?
+sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/rotation_high_sd/comparison_8.22.16.csv"
+sum_df <- read.csv(sum_csv)
+
+sum_df$id <- paste(sum_df$subbasin, sum_df$sd_level, sum_df$animal_type, sep=".")
+rotated <- subset(sum_df, duration < 204)
+full <- subset(sum_df, duration == 204)
+monthly_gain_means <- aggregate(rotated$avg_gain_kg, by=list(rotated$id), FUN=mean)
+colnames(monthly_gain_means) <- c('id', 'avg_monthly_gain')
+sum_df_sub <- unique(rotated[, colnames(rotated)[c(1, 8, 9, 10)]])
+monthly_gain_rotated <- merge(sum_df_sub, monthly_gain_means, by='id')
+monthly_gain_rotated$schedule <- 'rotation'
+full_sub <- full[, colnames(full)[c(10, 1, 8, 9, 3)]]
+colnames(full_sub)[5] <- 'avg_monthly_gain'
+full_sub$schedule <- 'full'
+plot_df <- rbind(monthly_gain_rotated, full_sub)
+levels(plot_df$sd_level) <- c("low density", "high density")
+
+p <- ggplot(plot_df, aes(x=subbasin, y=avg_monthly_gain, colour=schedule))
+p <- p + geom_point()
+p <- p + facet_grid(animal_type~sd_level, scales='free')
+pngname <- paste(imgpath, "avg_monthly_gain_rotated_vs_not.png", sep="/")
+png(file=pngname, units="in", res=150, width=6, height=6)
+print(p)
+dev.off()
+
+## avg monthly biomass
+ids <- unique(sum_df[, c('subbasin', 'duration', 'sd_level', 'animal_type')])
+sum_df$id <- paste(sum_df$subbasin, sum_df$duration, sum_df$sd_level, sum_df$animal_type, sep=".")
+biomass_means <- aggregate(sum_df$avg_biomass, by=list(sum_df$id), FUN=mean)
+colnames(biomass_means) <- c('id', 'avg_biomass')
+sum_df_sub <- unique(sum_df[, colnames(sum_df)[c(1, 5, 8, 9, 10)]])
+biomass_means <- merge(sum_df_sub, biomass_means, by='id')
+biomass_means[which(biomass_means$duration == 4), 'schedule'] <- "rotation"
+biomass_means[which(biomass_means$duration == 204), 'schedule'] <- "full"
+biomass_means[which(biomass_means$sd_level == 'rechigh'), 'stocking_density'] <- "high"
+biomass_means[which(biomass_means$sd_level == 'low'), 'stocking_density'] <- "low"
+
+p <- ggplot(biomass_means, aes(x=subbasin, y=avg_biomass, colour=schedule))
+p <- p + geom_jitter(position = position_jitter(width=0.1))
+p <- p + facet_grid(animal_type~stocking_density, scales='free')
+p <- p + ylab("avg monthly biomass (kg/ha)")
+pngname <- paste(imgpath, "avg_biomass_rotated_vs_not.png", sep="/")
+png(file=pngname, units="in", res=150, width=6, height=6)
+print(p)
+dev.off()
+
+## total yearly gain
+marginal_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_8.22.16.csv"
+marg_df <- read.csv(marginal_table)
+marg_df$schedule <- "full"
+marg_df[which(marg_df$density == 'ighrot'), 'schedule'] <- "rotation"
+marg_df[which(marg_df$density == 'lowrot'), 'schedule'] <- "rotation"
+marg_df$stocking_density <- marg_df$density
+marg_df[which(marg_df$density == 'ighrot'), 'stocking_density'] <- "high"
+marg_df[which(marg_df$density == 'lowrot'), 'stocking_density'] <- "low"
+
+p <- ggplot(marg_df, aes(x=subbasin, y=total_delta_weight_kg, colour=schedule))
+p <- p + geom_jitter(position = position_jitter(width=0.1))
+p <- p + facet_grid(animal~stocking_density, scales='free')
+p <- p + ylab("total yearly gain (kg)")
+pngname <- paste(imgpath, "total_yearly_gain_rotated_vs_not.png", sep="/")
+png(file=pngname, units="in", res=150, width=6, height=6)
+print(p)
+dev.off()
