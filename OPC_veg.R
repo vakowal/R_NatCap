@@ -1,4 +1,4 @@
-## what is the variability in biomass within and between transects at OPC?
+# various summary plots: vegetation at Ol Pejeta Conservancy
 library(ggplot2)
 print_theme <- theme(strip.text.y=element_text(size=10), 
                      strip.text.x=element_text(size=9), 
@@ -9,6 +9,93 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# back-calculated management of Jenny's sites (33 sites, 9.14.16)
+summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary.csv"
+sum_df = read.csv(summary_csv)
+
+failed <- c('N4', 'M10', 'W06', 'GO', 'LO3', 'LO4')
+
+p <- ggplot(sum_df, aes(x=date, y=biomass, group=sim_vs_emp))
+p <- p + geom_point(aes(colour=sim_vs_emp)) + geom_line(aes(colour=sim_vs_emp))
+p <- p + facet_wrap(~site, ncol=10, scales='free')
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/summary.png"
+png(file=pngname, units="in", res=300, width=18, height=8)
+print(p)
+dev.off()
+
+# linear interpolation
+df_list = list()
+diff_df_list = list()
+i <- 1
+for(site in unique(sum_df$site)){
+  subs <- sum_df[which(sum_df$site == site), ]
+  sim <- subs[which(subs$sim_vs_emp == 'simulated'), ]
+  emp <- subs[which(subs$sim_vs_emp == 'empirical'), ]
+  empinterp <- approx(x=emp$date, y=emp$biomass,
+                      xout=seq(min(sim$date), max(sim$date), length.out=12))
+  siminterp <- approx(x=sim$date, y=sim$biomass,
+                      xout=seq(min(sim$date), max(sim$date), length.out=12))
+  sumdiff <- sum(abs(siminterp$y - empinterp$y))
+  interpdf <- rbind(data.frame('date'=siminterp$x, 'biomass'=siminterp$y,
+                               'sim_vs_emp'=rep('simulated', 12),
+                               'site'=rep(site, 12)),
+                    data.frame('date'=empinterp$x, 'biomass'=empinterp$y,
+                               'sim_vs_emp'=rep('empirical', 12),
+                               'site'=rep(site, 12)))
+  diff_df_list[[i]] <- data.frame('site'=site, 'sum_diff'=sumdiff)
+  df_list[[i]] <- interpdf
+  i <- i + 1
+}
+interpdf <- do.call(rbind, df_list)
+diff_df <- do.call(rbind, diff_df_list)
+
+p <- ggplot(interpdf, aes(x=date, y=biomass, group=sim_vs_emp))
+p <- p + geom_point(aes(colour=sim_vs_emp))
+p <- p + facet_wrap(~site, ncol=10, scales='free')
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_all.png"
+png(file=pngname, units="in", res=300, width=18, height=8)
+print(p)
+dev.off()
+
+succeeded <- setdiff(interpdf$site, failed)
+succ_interp <- interpdf[which(interpdf$site %in% succeeded), ]
+p <- ggplot(succ_interp, aes(x=date, y=biomass, group=sim_vs_emp))
+p <- p + geom_point(aes(colour=sim_vs_emp))
+p <- p + geom_line(aes(colour=sim_vs_emp))
+p <- p + facet_wrap(~site, ncol=4, scales='free')
+p <- p + ylab("Biomass (g/m2)")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded.png"
+png(file=pngname, units="in", res=300, width=10, height=12)
+print(p)
+dev.off()
+
+diff_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/sum_diff.csv"
+write.csv(diff_df, diff_csv)
+
+# joined sum_diff to site summary csv manually
+site_summary_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/jenny_site_summary_open.csv"
+site_summary_df = read.csv(site_summary_csv)
+
+p <- ggplot(site_summary_df, aes(x=weather_distance_m, y=sum_weekly_diff))
+p <- p + geom_point() + xlab("distance to nearest weather station (m)")
+p <- p + ylab("sum(abs(simulated - empirical))")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/distance_to_weather_vs_diff.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+succeeded <- setdiff(site_summary_df$site, failed)
+succ_subs <- site_summary_df[which(site_summary_df$site %in% succeeded), ]
+p <- ggplot(succ_subs, aes(x=year, y=sum_weekly_diff))
+p <- p + geom_point()
+p <- p + geom_point() + xlab("distance to nearest weather station (m)")
+p <- p + ylab("sum(abs(simulated - empirical))")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/distance_to_weather_vs_diff.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+## what is the variability in biomass within and between transects at OPC?
 coeff_var <- function(values){
   cv <- sd(values) / mean(values) * 100
   return(cv)
