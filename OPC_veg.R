@@ -9,6 +9,32 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# regional veg summary
+veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
+veg_df <- read.csv(veg_csv)
+
+veg_df[is.na(veg_df)] <- 0
+
+spp_list <- unique(sapply(colnames(veg_df)[22:29], substr, start=5, stop=6))
+prop_g_list <- paste("Prop", spp_list, "G", sep="")
+prop_b_list <- paste("Prop", spp_list, "B", sep="")
+
+for(i in c(1:length(spp_list))){
+  veg_df[, (paste("prop_total_", spp_list[i], sep=""))] <- 
+    veg_df[, prop_g_list[i]] + veg_df[, prop_b_list[i]]
+}
+
+fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/regional_veg_composition_plots"
+for(spp in spp_list){
+  col <- paste("prop_total_", spp, sep="")
+  p <- ggplot(veg_df, aes_string(x="X", y=col))
+  p <- p + geom_point() + ggtitle(spp) + xlab("Property index")
+  filename <- paste(fig_dir, paste("prop_", spp, "_by_property.png", sep=""), sep="/")
+  png(file=filename, units="in", res=300, width=7, height=5)
+  print(p)
+  dev.off()
+}
+
 # back-calculated management of Jenny's sites (33 sites, 9.14.16)
 summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary.csv"
 sum_df = read.csv(summary_csv)
@@ -86,11 +112,11 @@ dev.off()
 
 succeeded <- setdiff(site_summary_df$site, failed)
 succ_subs <- site_summary_df[which(site_summary_df$site %in% succeeded), ]
-p <- ggplot(succ_subs, aes(x=year, y=sum_weekly_diff))
+p <- ggplot(succ_subs, aes(x=closest_weather, y=sum_weekly_diff))
 p <- p + geom_point()
-p <- p + geom_point() + xlab("distance to nearest weather station (m)")
+p <- p + xlab("Weather station")
 p <- p + ylab("sum(abs(simulated - empirical))")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/distance_to_weather_vs_diff.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/weather_stn_vs_diff.png"
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
