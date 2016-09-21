@@ -73,10 +73,22 @@ join_df$run <- rep('empirical mean', dim(join_df)[1])
 fig_df <- rbind(sim_df, join_df)
 
 p <- ggplot(fig_df, aes(x=date, y=cattle_kg, group=run))
-p <- p + geom_line(aes(colour=run))
+p <- p + geom_line(aes(linetype=run))
 print(p)
 
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Suyian_cattle_weights/run_comparison.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Suyian_cattle_weights/sensitivity_run_comparison.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+calib_set <- c(9:11, 'empirical mean')
+calib_df <- fig_df[which(fig_df$run %in% calib_set), ]
+
+p <- ggplot(calib_df, aes(x=date, y=cattle_kg, group=run))
+p <- p + geom_line(aes(linetype=run))
+print(p)
+
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Suyian_cattle_weights/calibration_run_comparison.png"
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
