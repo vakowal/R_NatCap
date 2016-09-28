@@ -162,3 +162,34 @@ pngname <- paste(imgpath, "biomass_calibration_comparison.png", sep="/")
 png(file=pngname, units="in", res=300, width=6, height=4)
 print(p)
 dev.off()
+
+#### compare SWAT to CENTURY biomass
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/SWAT_biomass_comparison/time_series_comparison.csv"
+comp_df <- read.csv(comparison_csv)
+
+df_list <- list()
+for(sb in c(1,2,3,4,5,6,7,9)){
+  subdf <- comp_df[which(comp_df$subbasin == sb), ]
+  SWAT_fesc_means <- aggregate(subdf$SWAT_FESC_mean, by=list(subdf$month), FUN=mean)
+  SWAT_ryeg_means <- aggregate(subdf$SWAT_RYEG_mean, by=list(subdf$month), FUN=mean)
+  CENTURY_means <- aggregate(subdf$biomass_kgha_CENTURY, by=list(subdf$month), FUN=mean)
+  
+  means_df <- data.frame('month'=rep(c(1:12), 3),
+                         'kg_ha'=c(SWAT_fesc_means$x, SWAT_ryeg_means$x, CENTURY_means$x),
+                         'model_source'=c(rep('SWAT_FESC', 12), rep('SWAT_RYEG', 12), rep('CENTURY', 12)),
+                         'subbasin'=rep(sb, 36))
+  df_list[[sb]] <- means_df
+}
+plot_df <- do.call(rbind, df_list)
+
+p <- ggplot(plot_df, aes(x=month, y=kg_ha, group=model_source))
+p <- p + geom_point(aes(colour=model_source))
+p <- p + geom_line(aes(colour=model_source))
+# p <- p + geom_ribbon(aes(ymin=SWAT_min_mean, ymax=SWAT_max_mean), alpha=0.2)
+p <- p + facet_wrap(~subbasin)  #, scales='free')
+print(p)
+
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/SWAT_biomass_comparison/summary_SWAT_CENTURY_biomass_by_lulc.png"
+png(file=pngname, units="in", res=300, width=8, height=9)
+print(p)
+dev.off()
