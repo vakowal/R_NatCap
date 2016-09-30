@@ -77,7 +77,7 @@ diff_df <- do.call(rbind, diff_df_list)
 
 p <- ggplot(interpdf, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
-p <- p + facet_wrap(~site, ncol=10, scales='free')
+p <- p + facet_wrap(~site, ncol=10, scales='free_x')
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_all.png"
 png(file=pngname, units="in", res=300, width=18, height=8)
 print(p)
@@ -88,7 +88,7 @@ succ_interp <- interpdf[which(interpdf$site %in% succeeded), ]
 p <- ggplot(succ_interp, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
 p <- p + geom_line(aes(colour=sim_vs_emp))
-p <- p + facet_wrap(~site, ncol=4, scales='free')
+p <- p + facet_wrap(~site, ncol=4, scales='free_x')
 p <- p + ylab("Biomass (g/m2)")
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded.png"
 png(file=pngname, units="in", res=300, width=10, height=12)
@@ -121,7 +121,7 @@ png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
 
-## what is the variability in biomass within and between transects at OPC?
+## OPC veg analysis
 coeff_var <- function(values){
   cv <- sd(values) / mean(values) * 100
   return(cv)
@@ -131,22 +131,119 @@ count <- function(values){
   return(length(values))
 }
 
-outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_11.25.15_by_weather_stn"
+# analysis of veg data 9.30.16
+metadata_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_metadata.csv"
+PDM_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_PDM.csv"
+
+meta_df <- read.csv(metadata_csv)
+veg_df <- read.csv(PDM_csv)
+
+# look for issues matching up PDM records with site lat/long
+veg_ids <- unique(veg_df[, c("Date", "Site")])
+veg_ids <- paste(veg_ids$Date, veg_ids$Site, sep="-")
+meta_ids <- unique(meta_df[ , c("Date", "Site")])
+meta_ids <- paste(meta_ids$Date, meta_ids$Site, sep="-")
+
+mismatch <- c()
+for (id in veg_ids){
+  if (!is.element(id, meta_ids)){
+    mismatch <- c(mismatch, id)
+  }
+}
+in_veg_not_meta <- mismatch
+
+mismatch <- c()
+for (id in meta_ids){
+  if (!is.element(id, veg_ids)){
+    mismatch <- c(mismatch, id)
+  }
+}
+in_meta_not_veg <- mismatch
+mismatch_df <- data.frame("in_meta_not_veg"=in_meta_not_veg,
+                          "in_veg_not_meta"=c(in_veg_not_meta, "NA"))
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_mismatch.csv"
+write.csv(mismatch_df, file=save_as)
+
+PDM_count <- aggregate(PDM~Date + Site, data=veg_df, FUN=count)
+trouble <- PDM_count[which(PDM_count$PDM != 11), ]
+
+# calculate average PDM and sum of tree and shrub counts
+# within transects
+PDM_avg <- aggregate(PDM~Date + Site, data=veg_df, FUN=mean)
+tree_sum <- aggregate(Tree~Date + Site, data=veg_df, FUN=sum)
+shrub_sum <- aggregate(Shrub~Date + Site, data=veg_df, FUN=sum)
+veg_summarized <- PDM_avg
+veg_summarized$biomass_kgha <- veg_summarized$PDM * 332.35 + 15.857
+veg_summarized$tree_sum <- tree_sum$Tree
+veg_summarized$shrub_sum <- shrub_sum$Shrub
+veg_summarized$month = rep("NA", NROW(veg_summarized))
+for (r in (1:NROW(veg_summarized))){
+  date_list <- unlist(strsplit(as.character(
+    veg_summarized[r, "Date"]), split="-"))
+  veg_summarized[r, 'month_year'] <- paste(date_list[2], date_list[3], sep="_")
+}
+
+meta_df$id <- paste(meta_df$Date, meta_df$Site, sep="_")
+veg_summarized$id <- paste(veg_summarized$Date, veg_summarized$Site, sep="_")
+
+# summarize biomass by month
+site_list <- c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')
+nrows <- length(site_list)
+diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
+                            'restricted_by_shrubs_trees'=numeric(nrows),
+                            'site'=character(nrows), stringsAsFactors=FALSE)
+df_list <- list()
+i <- 1
+for(site in site_list){
+  meta_sub <- meta_df[which(meta_df$weather_2km == site), ]
+  veg_sub <- veg_summarized[which(veg_summarized$id %in% meta_sub$id), ]
+  total <- NROW(veg_sub)
+  veg_sub <- veg_sub[which(veg_sub$tree_sum <= 12), ]
+  veg_sub <- veg_sub[which(veg_sub$shrub_sum <= 14), ]
+  restr <- NROW(veg_sub)
+  diagnostic_df[i, 'total_measurements'] <- total
+  diagnostic_df[i, 'restricted_by_shrubs_trees'] <- restr
+  diagnostic_df[i, 'site'] <- as.character(site)
+  mean_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=mean)
+  n_meas <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=count)
+  cv <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=coeff_var)
+  sum_df <- cbind(mean_biomass, n_meas$biomass_kgha, cv$biomass_kgha)
+  colnames(sum_df) <- c('month_year', 'biomass_kgha', 'num_measurements', 'cv')
+  sum_df$site <- rep(site, NROW(sum_df))
+  df_list[[site]] <- sum_df
+  i <- i + 1
+}
+summary_df <- do.call(rbind, df_list)
+
+# analysis of veg data 11.25.15
+outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
 file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_11.25.15.csv"
 
 data <- read.csv(file)
+# restrict empirical biomass measurements to sites with few trees and shrubs
+hist(data$Tree, breaks=50)
+hist(data$Shrub, breaks=50)
+treeperc <- quantile(data$Tree, probs=seq(0, 1, by=0.1))
+shrubperc <- quantile(data$Shrub, probs=seq(0, 1, by=0.1))
+
+df_list <- list()
 data$date <- paste(data$Year, "-", data$Month, sep="")
 for(site in c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')){
   sub <- data[which(data$X2km_weat == site), ]
+  sub <- sub[which(sub$Tree <=6), ]
+  sub <- sub[which(sub$Shrub <= 8), ]
   summary <- aggregate(sub$Biomass, by=list(sub$date), FUN='mean')
-  summary_2 <- aggregate(sub$Biomass, by=list(sub$date), FUN=count)
+  summary_2 <- aggregate(sub$Biomass, by=list(sub$date), FUN=length)
   summary_3 <- aggregate(sub$Biomass, by=list(sub$date), FUN=coeff_var)
   summary <- merge(summary, summary_2, by='Group.1')
   summary <- merge(summary, summary_3, by='Group.1')
   colnames(summary) <- c("date", "biomass (kg/ha)", "num_obs", "cv")
-  outfile <- paste(outdir, '/', site, '_summary.csv', sep="")
-  write.csv(summary, file=outfile)
+  summary$site <- rep(site, NROW(summary))
+  df_list[[site]] <- summary
 }
+sum_df <- do.call(rbind, df_list)
+outfile <- paste(outdir, 'summary_9.29.16.csv', sep="/")
+write.csv(sum_df, outfile, row.names=FALSE)
 
 locations <- unique(data[c("Lat", "Long")])
 areas <- unique(data[c('Area')])
