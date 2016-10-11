@@ -9,6 +9,20 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# integrated test: empirical stocking density simulations compared to empirical biomass measurements
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_with_empirical_measurements.csv"
+df <- read.csv(comparison_csv)
+
+p <- ggplot(df, aes(x=month, y=biomass_kg_ha, group=sim_vs_emp))
+p <- p + geom_point(aes(colour=sim_vs_emp))
+p <- p + geom_line(aes(colour=sim_vs_emp))
+p <- p + facet_wrap(~site, scales='free_x')
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
 # regional veg summary
 veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
 veg_df <- read.csv(veg_csv)
@@ -159,10 +173,6 @@ for (id in meta_ids){
   }
 }
 in_meta_not_veg <- mismatch
-mismatch_df <- data.frame("in_meta_not_veg"=in_meta_not_veg,
-                          "in_veg_not_meta"=c(in_veg_not_meta, "NA"))
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_mismatch.csv"
-write.csv(mismatch_df, file=save_as)
 
 PDM_count <- aggregate(PDM~Date + Site, data=veg_df, FUN=count)
 trouble <- PDM_count[which(PDM_count$PDM != 11), ]
@@ -214,6 +224,12 @@ for(site in site_list){
   i <- i + 1
 }
 summary_df <- do.call(rbind, df_list)
+
+diagnostic_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_sample_size.csv"
+veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather.csv"
+
+write.csv(diagnostic_df, file=diagnostic_csv, row.names=FALSE)
+write.csv(summary_df, file=veg_csv, row.names=FALSE)
 
 # analysis of veg data 11.25.15
 outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
