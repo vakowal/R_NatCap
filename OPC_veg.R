@@ -10,18 +10,31 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # integrated test: empirical stocking density simulations compared to empirical biomass measurements
-comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_with_empirical_measurements.csv"
-df <- read.csv(comparison_csv)
+suf_list <- c('', '_unrestricted_by_trees_shrubs')
+comp_csv_base <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_OPC_veg_9.30.16_by_weather"
+veg_csv_base <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather"
+for(suf in suf_list){
+  comparison_csv <- paste(comp_csv_base, suf, '.csv', sep="")
+  veg_csv <- paste(veg_csv_base, suf, '.csv', sep="")
+  comp_df <- read.csv(comparison_csv)
+  veg_df <- read.csv(veg_csv)
+  veg_df <- veg_df[which(veg_df$year == 15), ]
+  
+  p <- ggplot(veg_df, aes(x=month, y=mean_biomass_kgha))
+  p <- p + geom_ribbon(aes(ymin=min_biomass_kgha, ymax=max_biomass_kgha), alpha=0.2)
+  p <- p + facet_wrap(~site, scales='free_x')
+  p <- p + geom_point(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
+                      data=comp_df)
+  p <- p + geom_line(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
+                     data=comp_df)
+  print(p)
+  pngbase <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison"
+  pngname <- paste(pngbase, suf, '.png', sep="")
+  png(file=pngname, units="in", res=300, width=8, height=5)
+  print(p)
+  dev.off()
+}
 
-p <- ggplot(df, aes(x=month, y=biomass_kg_ha, group=sim_vs_emp))
-p <- p + geom_point(aes(colour=sim_vs_emp))
-p <- p + geom_line(aes(colour=sim_vs_emp))
-p <- p + facet_wrap(~site, scales='free_x')
-print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison.png"
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
 
 # regional veg summary
 veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
@@ -146,8 +159,8 @@ count <- function(values){
 }
 
 # analysis of veg data 9.30.16
-metadata_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_metadata.csv"
-PDM_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_9.30.16_PDM.csv"
+metadata_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_metadata.csv"
+PDM_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_PDM.csv"
 
 meta_df <- read.csv(metadata_csv)
 veg_df <- read.csv(PDM_csv)
@@ -199,9 +212,9 @@ veg_summarized$id <- paste(veg_summarized$Date, veg_summarized$Site, sep="_")
 # summarize biomass by month
 site_list <- c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')
 nrows <- length(site_list)
-diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
-                            'restricted_by_shrubs_trees'=numeric(nrows),
-                            'site'=character(nrows), stringsAsFactors=FALSE)
+# diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
+  #                          'restricted_by_shrubs_trees'=numeric(nrows),
+   #                         'site'=character(nrows), stringsAsFactors=FALSE)
 df_list <- list()
 i <- 1
 for(site in site_list){
@@ -210,15 +223,19 @@ for(site in site_list){
   total <- NROW(veg_sub)
   veg_sub <- veg_sub[which(veg_sub$tree_sum <= 12), ]
   veg_sub <- veg_sub[which(veg_sub$shrub_sum <= 14), ]
-  restr <- NROW(veg_sub)
-  diagnostic_df[i, 'total_measurements'] <- total
-  diagnostic_df[i, 'restricted_by_shrubs_trees'] <- restr
-  diagnostic_df[i, 'site'] <- as.character(site)
+  # restr <- NROW(veg_sub)
+  # diagnostic_df[i, 'total_measurements'] <- total
+  # diagnostic_df[i, 'restricted_by_shrubs_trees'] <- restr
+  # diagnostic_df[i, 'site'] <- as.character(site)
   mean_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=mean)
+  min_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=min)
+  max_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=max)
   n_meas <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=count)
   cv <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=coeff_var)
-  sum_df <- cbind(mean_biomass, n_meas$biomass_kgha, cv$biomass_kgha)
-  colnames(sum_df) <- c('month_year', 'biomass_kgha', 'num_measurements', 'cv')
+  sum_df <- cbind(mean_biomass, min_biomass$biomass_kgha, max_biomass$biomass_kgha,
+                  n_meas$biomass_kgha, cv$biomass_kgha)
+  colnames(sum_df) <- c('month_year', 'mean_biomass_kgha', 'min_biomass_kgha',
+                        'max_biomass_kgha', 'num_measurements', 'cv')
   sum_df$site <- rep(site, NROW(sum_df))
   df_list[[site]] <- sum_df
   i <- i + 1
