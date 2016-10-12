@@ -10,31 +10,45 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # integrated test: empirical stocking density simulations compared to empirical biomass measurements
-suf_list <- c('', '_unrestricted_by_trees_shrubs')
-comp_csv_base <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_OPC_veg_9.30.16_by_weather"
-veg_csv_base <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather"
-for(suf in suf_list){
-  comparison_csv <- paste(comp_csv_base, suf, '.csv', sep="")
-  veg_csv <- paste(veg_csv_base, suf, '.csv', sep="")
-  comp_df <- read.csv(comparison_csv)
-  veg_df <- read.csv(veg_csv)
-  veg_df <- veg_df[which(veg_df$year == 15), ]
-  
-  p <- ggplot(veg_df, aes(x=month, y=mean_biomass_kgha))
-  p <- p + geom_ribbon(aes(ymin=min_biomass_kgha, ymax=max_biomass_kgha), alpha=0.2)
-  p <- p + facet_wrap(~site, scales='free_x')
-  p <- p + geom_point(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
-                      data=comp_df)
-  p <- p + geom_line(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
-                     data=comp_df)
-  print(p)
-  pngbase <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison"
-  pngname <- paste(pngbase, suf, '.png', sep="")
-  png(file=pngname, units="in", res=300, width=8, height=5)
-  print(p)
-  dev.off()
-}
+x10_comp_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_x10_OPC_veg_9.30.16_by_weather.csv"
+x10df <- read.csv(x10_comp_csv)
+x10df <- x10df[which(x10df$sim_vs_emp == 'sim'), ]
+x10df$multiplier <- '10'
 
+grz_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/grazing_months.csv")
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_OPC_veg_9.30.16_by_weather.csv"
+veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather.csv"
+comp_df <- read.csv(comparison_csv)
+veg_df <- read.csv(veg_csv)
+veg_df <- veg_df[which(veg_df$year == 15), ]
+
+p <- ggplot(veg_df, aes(x=month, y=mean_biomass_kgha))
+p <- p + geom_ribbon(aes(ymin=min_biomass_kgha, ymax=max_biomass_kgha), alpha=0.2)
+p <- p + facet_wrap(~site, scales='free_x')
+p <- p + geom_point(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
+                    data=comp_df)
+p <- p + geom_line(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
+                   data=comp_df)
+p <- p + geom_point(aes(x=month, y=mean_biomass_kgha), data=grz_months)
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+comp_df = comp_df[which(comp_df$sim_vs_emp == 'sim'), ]
+comp_df$multiplier <- '1'
+comp_df = rbind(comp_df, x10df)
+p <- ggplot(comp_df, aes(x=month, y=biomass_kg_ha))
+p <- p + geom_point(aes(x=month, y=biomass_kg_ha, colour=multiplier))
+p <- p + geom_line(aes(colour=multiplier))
+p <- p + geom_point(aes(x=month, y=mean_biomass_kgha), data=grz_months)
+p <- p + facet_wrap(~site, scales='free_x')
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/empirical_density_vs_10x_empirical_density.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
 
 # regional veg summary
 veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
