@@ -9,6 +9,87 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# how much does biomass in absence of grazing differ btw 6 weather stations?
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens/combined_summary.csv")
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens"
+
+sum_df$site <- factor(sum_df$site, levels=c('Loirugu', 'Rongai',
+                                            'Kamok', 'Loidien', 
+                                            'Serat', 'Research'))
+p <- ggplot(sum_df, aes(x=site, y=total_kgha))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'total_kgha_2015_boxplot.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+sum_2015 <- sum_df[which(sum_df$year == 2015), ]
+p <- ggplot(sum_2015, aes(x=month, y=total_kgha, group=site))
+p <- p + geom_line(aes(colour=site))
+p <- p + geom_point(aes(colour=site))
+print(p)
+pngname <- paste(img_dir, 'total_kgha_line.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+# how much does precipitation differ between 6 weather stations?
+indir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input/integrated_test"
+sites <- c('kamok', 'loidien', 'Loirugu', 'research', 'rongai', 'Serat')
+widths <- c(6, 6, rep(7, 12))
+df_list <- list()
+for(s in sites){
+  fwf <- paste(indir, "/", s, ".wth", sep="")
+  df <- read.fwf(fwf, widths=widths)
+  prec_df <- df[which(df$V1 == 'prec  '), ]
+  prec_df <- prec_df[, c(-1, -2)]
+  colnames(prec_df) <- seq(1, 12)
+  df_list[[s]] <- prec_df
+}
+
+# plot average monthly precipitation by site
+ave_monthly_precip <- do.call(rbind, (lapply(df_list, colMeans)))
+trans_list <- list()
+for(r in seq(1, dim(ave_monthly_precip)[1])){
+  site <- rownames(ave_monthly_precip)[r]
+  df <- data.frame('site'=rep(site, 12),
+                   'ave_precip'=ave_monthly_precip[r, ],
+                   'month'=seq(1,12))
+  trans_list[[r]] <- df
+}
+plot_df <- do.call(rbind, trans_list)
+
+p <- ggplot(plot_df, aes(x=month, y=ave_precip, group=site))
+p <- p + geom_point(aes(colour=site))
+p <- p + geom_line(aes(colour=site)) + ylab("average monthly precipitation (cm)")
+print(p)
+pngname <- "C:/Users/Ginger/Desktop/OPC_precip_line.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+# plot yearly precipitation by site
+yearly_precip <- do.call(rbind, lapply(df_list, rowSums))
+trans_list <- list()
+for(r in seq(1, dim(yearly_precip)[1])){
+  site <- rownames(yearly_precip)[r]
+  df <- data.frame('site'=rep(site, 18),
+                   'yearly_precip'=yearly_precip[r, ],
+                   'year'=seq(1998, 2015))
+  trans_list[[r]] <- df
+}
+plot_df <- do.call(rbind, trans_list)
+
+p <- ggplot(plot_df, aes(x=site, y=yearly_precip))
+p <- p + geom_boxplot() + ylab("annual precipitation (cm)")
+print(p)
+pngname <- "C:/Users/Ginger/Desktop/OPC_boxplot.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+
 # integrated test: empirical stocking density simulations compared to empirical biomass measurements
 x10_comp_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_x10_OPC_veg_9.30.16_by_weather.csv"
 x10df <- read.csv(x10_comp_csv)
@@ -39,6 +120,7 @@ dev.off()
 comp_df = comp_df[which(comp_df$sim_vs_emp == 'sim'), ]
 comp_df$multiplier <- '1'
 comp_df = rbind(comp_df, x10df)
+comp_df$multiplier <- factor(comp_df$multiplier, levels=c('10', '1'))
 p <- ggplot(comp_df, aes(x=month, y=biomass_kg_ha))
 p <- p + geom_point(aes(x=month, y=biomass_kg_ha, colour=multiplier))
 p <- p + geom_line(aes(colour=multiplier))
@@ -213,18 +295,52 @@ veg_summarized <- PDM_avg
 veg_summarized$biomass_kgha <- veg_summarized$PDM * 332.35 + 15.857
 veg_summarized$tree_sum <- tree_sum$Tree
 veg_summarized$shrub_sum <- shrub_sum$Shrub
-veg_summarized$month = rep("NA", NROW(veg_summarized))
+veg_summarized$month <- 'NA'
+veg_summarized$year <- 'NA'
 for (r in (1:NROW(veg_summarized))){
   date_list <- unlist(strsplit(as.character(
     veg_summarized[r, "Date"]), split="-"))
   veg_summarized[r, 'month_year'] <- paste(date_list[2], date_list[3], sep="_")
+  veg_summarized[r, 'year'] <- date_list[3]
 }
 
 meta_df$id <- paste(meta_df$Date, meta_df$Site, sep="_")
 veg_summarized$id <- paste(veg_summarized$Date, veg_summarized$Site, sep="_")
 
-# summarize biomass by month
 site_list <- c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')
+
+# plot biomass measurements by site
+veg_summarized$weather_stn <- 'NA'
+for(site in site_list){
+  meta_sub <- meta_df[which(meta_df$weather_2km == site), ]
+  veg_summarized[which(veg_summarized$id %in% meta_sub$id), 'weather_stn'] <- site
+}
+veg_by_site <- veg_summarized[which(veg_summarized$weather_stn != 'NA'), ]
+veg_by_site <- veg_by_site[which(veg_by_site$year == 15), ]
+veg_site_date_avg <- aggregate(biomass_kgha~Date + weather_stn, data=veg_by_site, FUN=mean)
+veg_site_date_avg$Date <- as.Date(veg_site_date_avg$Date, format="%d-%b-%y")
+veg_site_date_avg$weather_stn <- factor(veg_site_date_avg$weather_stn,
+                                        levels=c('Loirugurugu', 'Rongai',
+                                                 'Kamok', 'Loidien', 
+                                                 'Serat', 'Research'))
+p <- ggplot(veg_site_date_avg, aes(x=Date, y=biomass_kgha, group=weather_stn))
+p <- p + geom_line(aes(colour=weather_stn))
+p <- p + geom_point(aes(colour=weather_stn))
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_biomass_by_weather_stn.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(veg_site_date_avg, aes(x=weather_stn, y=biomass_kgha))
+p <- p + geom_boxplot()
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_biomass_by_weather_stn_boxplot.png"
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+# summarize biomass by month
 nrows <- length(site_list)
 # diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
   #                          'restricted_by_shrubs_trees'=numeric(nrows),
