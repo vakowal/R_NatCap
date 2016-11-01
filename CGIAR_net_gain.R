@@ -79,3 +79,44 @@ pngname <- paste(imgdir, "Camelids.png", sep="/")
 png(file=pngname, units="in", res=300, width=5, height=4)
 print(p)
 dev.off()
+
+
+#### marginal values measured by economic gain vs strictly kg gained
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_value_comparisons_10.18.16"
+marg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_10.18.16.csv"
+marg_df <- read.csv(marg_csv)
+marg_df$intervention <- paste(marg_df$animal, marg_df$density, sep="*")
+marg_df$subbasin <- as.factor(marg_df$subbasin)
+
+p <- ggplot(marg_df, aes(x=intervention, y=total_delta_weight_kg, group=subbasin))
+p <- p + geom_point(aes(colour=subbasin)) + ggtitle("Delta weight")
+print(p)
+pngname <- paste(imgpath, "Delta_weight_by_subbasin.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(marg_df, aes(x=intervention, y=total_delta_weight_kg))
+p <- p + geom_boxplot() + ggtitle("Delta weight")
+print(p)
+pngname <- paste(imgpath, "Delta_weight_boxplot.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(marg_df, aes(x=intervention, y=delta.soles, group=subbasin))
+p <- p + geom_point(aes(colour=subbasin)) + ggtitle("Delta soles")
+print(p)
+pngname <- paste(imgpath, "Delta_soles_by_subbasin.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(marg_df, aes(x=intervention, y=delta.soles))
+p <- p + geom_boxplot() + ggtitle("Delta soles")
+print(p)
+pngname <- paste(imgpath, "Delta_soles_boxplot.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=4)
+print(p)
+dev.off()
+
