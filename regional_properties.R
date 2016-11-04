@@ -11,6 +11,86 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# summarize productivity of regional properties
+zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
+# calib <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens/gain_summary.csv")
+varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated/gain_summary.csv")
+constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated_constant_cp/gain_summary.csv")
+
+zero_dens_sum <- aggregate(total_kgha~site, data=zero_dens, FUN=mean)
+colnames(zero_dens_sum)[2] <- 'kgha_monthly_mean'
+varying_cp_m <- varying_cp[, c('density', 'site', 'avg_yearly_gain')]
+colnames(varying_cp_m)[3] <- 'perc_gain_varying_cp'
+constant_cp_m <- constant_cp[, c('density', 'site', 'avg_yearly_gain')]
+colnames(constant_cp_m)[3] <- 'perc_gain_constant_cp'
+
+comb_df <- merge(constant_cp_m, varying_cp_m, by=c('site', 'density'))
+comb_df <- merge(comb_df, zero_dens_sum, by='site')
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=perc_gain_constant_cp))
+p <- p + geom_point()
+p <- p + facet_wrap(~density, scales="free")
+p <- p + xlab("Average monthly biomass (kg/ha)")
+p <- p + ylab("Average yearly liveweight gain (kg)")
+# print(p)
+pngname <- paste(imgdir, "npp_vs_gain_constant_cp.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=perc_gain_varying_cp))
+p <- p + geom_point()
+p <- p + facet_wrap(~density, scales="free")
+p <- p + xlab("Average monthly biomass (kg/ha)")
+p <- p + ylab("Average yearly liveweight gain (kg)")
+# print(p)
+pngname <- paste(imgdir, "npp_vs_gain_varying_cp.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+t1 <- cor.test(comb_df$perc_gain_calibrated, comb_df$perc_gain_uncalibrated,
+               method="spearman")
+t2 <- cor.test(comb_df$perc_gain_calibrated, comb_df$kgha_monthly_mean,
+               method="spearman")
+t3 <- cor.test(comb_df$kgha_monthly_mean, comb_df$perc_gain_uncalibrated,
+               method="spearman")
+
+# summarize match by back-calc management routine
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_match_summary.csv")
+
+p <- ggplot(sum_df, aes(x=site, y=g_m2, group=sim_vs_emp))
+p <- p + geom_point(aes(colour=sim_vs_emp))
+p <- p + geom_line(aes(group=site))
+p <- p + facet_wrap(~year + live_or_total, scales="free")
+p <- p + ylab('biomass (grams per square m)')
+print(p)
+
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis"
+pngname <- paste(img_dir, "back_calc_match_summary.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+# compare grazing intensity in back-calc history and reported cattle density
+back_calc_intensity <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/back_calc_intensity_summary.csv")
+emp_intensity <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Brian/est_cattle_density_10_Jul_2016.csv")
+intensity_df <- merge(back_calc_intensity, emp_intensity, by="FID")
+
+p <- ggplot(intensity_df, aes(x=CattleDensity, y=total_rem_2014_total))
+p <- p + geom_point() + xlab("Estimated density (cattle / ha)")
+p <- p + xlim(c(0, 0.7))
+p <- p + ylab("Simulated average monthly biomass removed (g/m2)")
+print(p)
+pngname <- paste(imgdir, 'back-calc_intensity_vs_empirical_density.png', sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+intensity_cor <- cor.test(intensity_df$CattleDensity,
+                          intensity_df$total_rem_2014_total, method="spearman")
+
 # empirical biomass: regional properties
 hits_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv")
 metadata <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RS_vegetation_2014_2015_metadata.csv")
@@ -89,10 +169,40 @@ p <- p + facet_wrap(~Year, scales="free")
 print(p)
 
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/results_analysis"
+pngname <- paste(img_dir, "empirical_vs_sim_by_date-zero_dens.png", sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(combined_df, aes(x=sim_vs_emp, y=kgha, group=id))
+p <- p + geom_point(aes(colour=sim_vs_emp), size=5)
+p <- p + geom_line() + xlab("") + ylab("Biomass (kg/ha)")
+p <- p + facet_wrap(~Year, scales="free")
+p <- p + theme(legend.position="none")
+print(p)
+
 pngname <- paste(img_dir, "empirical_vs_sim-zero_dens.png", sep="/")
 png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
+
+sim_cor <- combined_df[which(combined_df$sim_vs_emp == 'simulated'),
+                       c('id', 'kgha', 'Year')]
+colnames(sim_cor)[2] <- 'simulated_biomass'
+emp_cor <- combined_df[which(combined_df$sim_vs_emp == 'empirical'),
+                       c('id', 'kgha', 'Year')]
+colnames(emp_cor)[2] <- 'empirical_biomass'
+cor_df <- merge(sim_cor, emp_cor, by=c('id', 'Year'))
+
+p <- ggplot(cor_df, aes(x=empirical_biomass, y=simulated_biomass))
+p <- p + geom_point()
+print(p)
+pngname <- paste(img_dir, "empirical_vs_sim-zero_dens_scatterplot.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+cor_test <- cor.test(cor_df$simulated_biomass, cor_df$empirical_biomass, method="spearman")
 
 # sim only by date
 sub_sim <- sim_df[which((sim_df$date > as.Date("2014-06-27") &
