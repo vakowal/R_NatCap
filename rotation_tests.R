@@ -199,7 +199,7 @@ print(p)
 dev.off()
 
 ## how does average monthly gain differ between rotated and non-rotated schedules?
-sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/rotation_high_sd/comparison_8.22.16.csv"
+sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/rotation_high_sd/comparison_8.25.16.csv"
 sum_df <- read.csv(sum_csv)
 
 sum_df$id <- paste(sum_df$subbasin, sum_df$sd_level, sum_df$animal_type, sep=".")
@@ -214,12 +214,12 @@ full_sub <- full[, colnames(full)[c(10, 1, 8, 9, 3)]]
 colnames(full_sub)[5] <- 'avg_monthly_gain'
 full_sub$schedule <- 'full'
 plot_df <- rbind(monthly_gain_rotated, full_sub)
-levels(plot_df$sd_level) <- c("low density", "high density")
+levels(plot_df$sd_level) <- c("high density", "low density")
 
 p <- ggplot(plot_df, aes(x=subbasin, y=avg_monthly_gain, colour=schedule))
 p <- p + geom_point()
 p <- p + facet_grid(animal_type~sd_level, scales='free')
-pngname <- paste(imgpath, "avg_monthly_gain_rotated_vs_not.png", sep="/")
+pngname <- paste(imgpath, "avg_monthly_gain_rotated_vs_not_reclow.png", sep="/")
 png(file=pngname, units="in", res=150, width=6, height=6)
 print(p)
 dev.off()
@@ -234,19 +234,19 @@ biomass_means <- merge(sum_df_sub, biomass_means, by='id')
 biomass_means[which(biomass_means$duration == 4), 'schedule'] <- "rotation"
 biomass_means[which(biomass_means$duration == 204), 'schedule'] <- "full"
 biomass_means[which(biomass_means$sd_level == 'rechigh'), 'stocking_density'] <- "high"
-biomass_means[which(biomass_means$sd_level == 'low'), 'stocking_density'] <- "low"
+biomass_means[which(biomass_means$sd_level == 'reclow'), 'stocking_density'] <- "low"
 
 p <- ggplot(biomass_means, aes(x=subbasin, y=avg_biomass, colour=schedule))
 p <- p + geom_jitter(position = position_jitter(width=0.1))
 p <- p + facet_grid(animal_type~stocking_density, scales='free')
 p <- p + ylab("avg monthly biomass (kg/ha)")
-pngname <- paste(imgpath, "avg_biomass_rotated_vs_not.png", sep="/")
+pngname <- paste(imgpath, "avg_biomass_rotated_vs_not_reclow.png", sep="/")
 png(file=pngname, units="in", res=150, width=6, height=6)
 print(p)
 dev.off()
 
 ## total yearly gain
-marginal_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_8.22.16.csv"
+marginal_table <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/marginal_table_8.25.16.csv"
 marg_df <- read.csv(marginal_table)
 marg_df$schedule <- "full"
 marg_df[which(marg_df$density == 'ighrot'), 'schedule'] <- "rotation"
@@ -259,7 +259,7 @@ p <- ggplot(marg_df, aes(x=subbasin, y=total_delta_weight_kg, colour=schedule))
 p <- p + geom_jitter(position = position_jitter(width=0.1))
 p <- p + facet_grid(animal~stocking_density, scales='free')
 p <- p + ylab("total yearly gain (kg)")
-pngname <- paste(imgpath, "total_yearly_gain_rotated_vs_not.png", sep="/")
+pngname <- paste(imgpath, "total_yearly_gain_rotated_vs_not_reclow.png", sep="/")
 png(file=pngname, units="in", res=150, width=6, height=6)
 print(p)
 dev.off()
