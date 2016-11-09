@@ -17,6 +17,7 @@ zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage
 varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated/gain_summary.csv")
 constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated_constant_cp/gain_summary.csv")
 
+# compare primary productivity to individual livestock weight gain
 zero_dens_sum <- aggregate(total_kgha~site, data=zero_dens, FUN=mean)
 colnames(zero_dens_sum)[2] <- 'kgha_monthly_mean'
 varying_cp_m <- varying_cp[, c('density', 'site', 'avg_yearly_gain')]
@@ -56,6 +57,40 @@ t2 <- cor.test(comb_df$perc_gain_calibrated, comb_df$kgha_monthly_mean,
                method="spearman")
 t3 <- cor.test(comb_df$kgha_monthly_mean, comb_df$perc_gain_uncalibrated,
                method="spearman")
+
+# total herd-level weight gain instead of individual
+zero_dens_sum <- aggregate(total_kgha~site, data=zero_dens, FUN=mean)
+colnames(zero_dens_sum)[2] <- 'kgha_monthly_mean'
+varying_cp_m <- varying_cp[, c('density', 'site', 'total_delta_weight_kg')]
+colnames(varying_cp_m)[3] <- 'total_gain_varying_cp'
+constant_cp_m <- constant_cp[, c('density', 'site', 'total_delta_weight_kg')]
+colnames(constant_cp_m)[3] <- 'total_gain_constant_cp'
+
+comb_df <- merge(constant_cp_m, varying_cp_m, by=c('site', 'density'))
+comb_df <- merge(comb_df, zero_dens_sum, by='site')
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=total_gain_constant_cp))
+p <- p + geom_point()
+p <- p + facet_wrap(~density, scales="free")
+p <- p + xlab("Average monthly biomass in absence of grazing (kg/ha)")
+p <- p + ylab("Average yearly liveweight gain (kg)")
+# print(p)
+pngname <- paste(imgdir, "npp_vs_herd_gain_constant_cp.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=total_gain_varying_cp))
+p <- p + geom_point()
+p <- p + facet_wrap(~density, scales="free")
+p <- p + xlab("Average monthly biomass in absence of grazing (kg/ha)")
+p <- p + ylab("Average yearly liveweight gain (kg)")
+# print(p)
+pngname <- paste(imgdir, "npp_vs_herd_gain_varying_cp.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
 
 # summarize match by back-calc management routine
 sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_match_summary.csv")
