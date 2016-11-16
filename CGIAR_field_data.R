@@ -1,4 +1,4 @@
-# PDM records: Peru field data
+# Peru field data and remote sensing products
 
 library(ggplot2)
 print_theme <- theme(strip.text.y=element_text(size=10), 
@@ -15,6 +15,62 @@ norm <- function(vec){
   return(normalized)
 }
 
+# compare remotely sensed biomass to modeled
+remote_sens_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/remote_sensing_products/Summary_11.15.16.csv")
+mean_cor <- cor.test(remote_sens_df$MEAN_S2Rf, remote_sens_df$MEAN_L8Rf, method="spearman")
+max_cor <- cor.test(remote_sens_df$MAX_S2Rf, remote_sens_df$MAX_L8Rf, method="spearman")
+
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/biomass_time_series_zero_sd_11.16.16"
+df_list <- list()
+for(sub in c(1,2,3,4,5,6,7,9)){
+  df <- read.csv(paste(outerdir, paste('s', sub, '_zero_sd.csv', sep=""), sep="/"))
+  df$total_g_m2 <- (df[, paste('sub_', sub, '_dead_kgha', sep="")] + 
+                    df[, paste('sub_', sub, '_green_kgha', sep="")]) / 10
+  df_sub <- df[which(df$month == 5 | df$month == 6), c('month', 'year', 'total_g_m2')]
+  df_sub$subbasin <- rep(sub, NROW(df_sub))
+  df_list[[sub]] <- df_sub
+}
+sim_biomass <- do.call(rbind, df_list)
+sim_biomass$month <- as.factor(sim_biomass$month)
+
+# reshape remote sensing data to plot with simulated data
+reshape1 <- remote_sens_df[, c('SUBBASIN', 'MIN_S2Rf', 'MAX_S2Rf', 'RANGE_S2Rf',
+                                          'MEAN_S2Rf', 'STD_S2Rf')]
+colnames(reshape1) <- c('subbasin', 'MIN', 'MAX', 'RANGE',
+                                   'MEAN', 'STD')
+reshape1$dataset <- rep('S2Rf', NROW(reshape1))
+reshape2 <- remote_sens_df[, c('SUBBASIN', 'MIN_L8Rf', 'MAX_L8Rf', 'RANGE_L8Rf',
+                               'MEAN_L8Rf', 'STD_L8Rf')]
+colnames(reshape2) <- c('subbasin', 'MIN', 'MAX', 'RANGE',
+                        'MEAN', 'STD')
+reshape2$dataset <- rep('_L8Rf', NROW(reshape2))
+remote_sens_reshape <- rbind(reshape1, reshape2)
+remote_sens_reshape$month <- as.factor(rep(5.5, NROW(remote_sens_reshape)))
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/remote_sensing_products/1115_results/comparisons_with_zero_sd_simulations"
+p <- ggplot(sim_biomass, aes(x=month, y=total_g_m2))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~subbasin)
+p <- p + geom_point(data=remote_sens_reshape, aes(x=month, y=MEAN, colour=dataset))
+p <- p + ggtitle("simulated biomass vs mean remotely sensed biomass")
+print(p)
+pngname <- paste(imgdir, "zero_sd_simulated_vs_mean_remotesens.png", sep='/')
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(sim_biomass, aes(x=month, y=total_g_m2))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~subbasin)
+p <- p + geom_point(data=remote_sens_reshape, aes(x=month, y=MAX, colour=dataset))
+p <- p + ggtitle("simulated biomass vs max remotely sensed biomass")
+print(p)
+pngname <- paste(imgdir, "zero_sd_simulated_vs_max_remotesens.png", sep='/')
+png(file=pngname, units="in", res=300, width=7.5, height=5)
+print(p)
+dev.off()
+
+## field data
 PDM_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/PDM_records.csv"
 PDM_df <- read.csv(PDM_file)
 biomass_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/field_data/clipped_biomass_g.csv"
