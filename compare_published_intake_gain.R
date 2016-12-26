@@ -12,6 +12,8 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      plot.title=element_text(size=10, face="bold"),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
+print_theme_l <- theme_bw() + theme(axis.title=element_text(size=22),
+                       axis.text=element_text(size=22))
 
 data_dir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations'
   
@@ -131,14 +133,14 @@ print(p)
 dev.off()
 
 p <- ggplot(combined, aes(x=daily_gain, y=sim_daily_gain))
-p <- p + geom_point() + print_theme
+p <- p + geom_point(aes(size=5)) + print_theme_l
 p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
 min_val <- min(c(combined$daily_gain, combined$sim_daily_gain))
 max_val <- max(c(combined$daily_gain, combined$sim_daily_gain))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "gain_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
-png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+pngname <- paste(figdir, "gain_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce_large.png", sep="/")
+png(file=pngname, units="in", res=150, width=9, height=8)
 print(p)
 dev.off()
 
