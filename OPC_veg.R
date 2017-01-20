@@ -133,6 +133,7 @@ print(p)
 dev.off()
 
 # regional veg summary
+## pin hits summarized by Felicia
 veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
 veg_df <- read.csv(veg_csv)
 
@@ -289,8 +290,9 @@ trouble <- PDM_count[which(PDM_count$PDM != 11), ]
 # calculate average PDM and sum of tree and shrub counts
 # within transects
 PDM_avg <- aggregate(PDM~Date + Site, data=veg_df, FUN=mean)
-tree_sum <- aggregate(Tree~Date + Site, data=veg_df, FUN=sum)
-shrub_sum <- aggregate(Shrub~Date + Site, data=veg_df, FUN=sum)
+veg_df_res <- veg_df[which(veg_df$Position_m != 0), ]
+tree_sum <- aggregate(Tree~Date + Site, data=veg_df_res, FUN=sum)
+shrub_sum <- aggregate(Shrub~Date + Site, data=veg_df_res, FUN=sum)
 veg_summarized <- PDM_avg
 veg_summarized$biomass_kgha <- veg_summarized$PDM * 332.35 + 15.857
 veg_summarized$tree_sum <- tree_sum$Tree
@@ -307,7 +309,7 @@ for (r in (1:NROW(veg_summarized))){
 meta_df$id <- paste(meta_df$Date, meta_df$Site, sep="_")
 veg_summarized$id <- paste(veg_summarized$Date, veg_summarized$Site, sep="_")
 
-site_list <- c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat')
+site_list <- c('Loirugurugu', 'Loidien', 'Research', 'Kamok', 'Rongai', 'Serat', 'Simira', 'Golf 7')
 
 # plot biomass measurements by site
 veg_summarized$weather_stn <- 'NA'
@@ -315,48 +317,31 @@ for(site in site_list){
   meta_sub <- meta_df[which(meta_df$weather_2km == site), ]
   veg_summarized[which(veg_summarized$id %in% meta_sub$id), 'weather_stn'] <- site
 }
-veg_by_site <- veg_summarized[which(veg_summarized$weather_stn != 'NA'), ]
-veg_by_site <- veg_by_site[which(veg_by_site$year == 15), ]
-veg_site_date_avg <- aggregate(biomass_kgha~Date + weather_stn, data=veg_by_site, FUN=mean)
-veg_site_date_avg$Date <- as.Date(veg_site_date_avg$Date, format="%d-%b-%y")
-veg_site_date_avg$weather_stn <- factor(veg_site_date_avg$weather_stn,
-                                        levels=c('Loirugurugu', 'Rongai',
-                                                 'Kamok', 'Loidien', 
-                                                 'Serat', 'Research'))
-p <- ggplot(veg_site_date_avg, aes(x=Date, y=biomass_kgha, group=weather_stn))
-p <- p + geom_line(aes(colour=weather_stn))
-p <- p + geom_point(aes(colour=weather_stn))
-print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_biomass_by_weather_stn.png"
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
-
-p <- ggplot(veg_site_date_avg, aes(x=weather_stn, y=biomass_kgha))
-p <- p + geom_boxplot()
-print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_biomass_by_weather_stn_boxplot.png"
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
+veg_by_site <- veg_summarized[which(veg_summarized$weather_stn %in% site_list), ]
 
 # summarize biomass by month
-nrows <- length(site_list)
-# diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
-  #                          'restricted_by_shrubs_trees'=numeric(nrows),
-   #                         'site'=character(nrows), stringsAsFactors=FALSE)
+nrows <- length(site_list) * 2
+diagnostic_df <- data.frame('total_measurements'=numeric(nrows),
+                            'restricted_by_shrubs_trees'=numeric(nrows),
+                            'site'=character(nrows), stringsAsFactors=FALSE)
 df_list <- list()
 i <- 1
 for(site in site_list){
   meta_sub <- meta_df[which(meta_df$weather_2km == site), ]
   veg_sub <- veg_summarized[which(veg_summarized$id %in% meta_sub$id), ]
+  if(NROW(veg_sub) == 0){
+    next
+  }
   total <- NROW(veg_sub)
-  veg_sub <- veg_sub[which(veg_sub$tree_sum <= 12), ]
-  veg_sub <- veg_sub[which(veg_sub$shrub_sum <= 14), ]
-  # restr <- NROW(veg_sub)
-  # diagnostic_df[i, 'total_measurements'] <- total
-  # diagnostic_df[i, 'restricted_by_shrubs_trees'] <- restr
-  # diagnostic_df[i, 'site'] <- as.character(site)
+  # veg_sub <- veg_sub[which(veg_sub$tree_sum <= 6), ]
+  # veg_sub <- veg_sub[which(veg_sub$shrub_sum <= 8), ]
+  restr <- NROW(veg_sub)
+  if(restr == 0){
+    next
+  }
+  diagnostic_df[i, 'total_measurements'] <- total
+  diagnostic_df[i, 'restricted_by_shrubs_trees'] <- restr
+  diagnostic_df[i, 'site'] <- as.character(site)
   mean_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=mean)
   min_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=min)
   max_biomass <- aggregate(biomass_kgha~month_year, data=veg_sub, FUN=max)
@@ -373,8 +358,7 @@ for(site in site_list){
 summary_df <- do.call(rbind, df_list)
 
 diagnostic_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_sample_size.csv"
-veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather.csv"
-
+veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather_unrestricted_by_trees_shrubs.csv"
 write.csv(diagnostic_df, file=diagnostic_csv, row.names=FALSE)
 write.csv(summary_df, file=veg_csv, row.names=FALSE)
 

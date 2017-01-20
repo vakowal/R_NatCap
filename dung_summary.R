@@ -5,20 +5,22 @@ count <- function(values){
   return(length(values))
 }
 
+# OPC data
 metadata_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_metadata.csv"
 PDM_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_PDM.csv"
 
 meta_df <- read.csv(metadata_csv)
 dung_df <- read.csv(PDM_csv)
+dung_df <- dung_df[which(dung_df$Position_m > 0), ]
 
 dung_df[, 9:32][is.na(dung_df[, 9:32])] <- 0
 
 dung_ids <- unique(dung_df[, c("Date", "Site")])
 
 dung_df$transect <- paste(dung_df$Date, dung_df$Site, sep="_")
-# make sure there are 11 samples in each transect
+# make sure there are 10 samples in each transect
 sample_count <- aggregate(dung_df$PDM, by=list(dung_df$transect), FUN=count)
-trouble <- sample_count[which(sample_count$PDM != 11), ]  # should be 0 row
+trouble <- sample_count[which(sample_count$PDM != 10), ]  # should be 0 rows
 
 dung_sum <- aggregate(dung_df[, 9:32], by=list(dung_df$transect), FUN=sum)
 colnames(dung_sum)[1] <- 'transect'
@@ -30,7 +32,7 @@ date_only <- date_only[!duplicated(date_only[, 'transect']), ]
 
 comb_df <- merge(dung_sum, meta_subs, by='transect')
 comb_df <- merge(comb_df, date_only, by='transect')
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_dung_analysis/dung_summary.csv"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv"
 write.csv(comb_df, file=save_as, row.names=TRUE)
 
 # dung around weather stations summarized in python 
@@ -44,7 +46,7 @@ df_list <- list()
 for(stn in points_df$Name){
   dung_file <- paste(outerdir, paste("dung_2.0km_", stn, ".csv", sep=""), sep="/")
   df <- read.csv(dung_file)
-  df_sub <- df[which(df$Year == 2015), c(3:26)]
+  df_sub <- df[, c(3:26)]
   df_means <- as.data.frame.list(colMeans(df_sub))
   df_means$site <- stn
   df_means$n_transect <- dim(df_sub)[1]
@@ -52,16 +54,26 @@ for(stn in points_df$Name){
 }
 combined <- do.call(rbind, df_list)
 
-means_t <- as.data.frame(t(combined[, c(1:24)]))
-means_t$Abbrev <- rownames(means_t)
+# test combining buffalo and cattle
+combined$bovid <- combined$Buf + combined$Cow
 
-gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group2')]
+means_t <- as.data.frame(t(combined[, c(1:24, 27)]))
+means_t$Abbrev <- rownames(means_t)
+colnames(means_t)[which(colnames(means_t) == ' Serat gate')] <- "Serat"
+colnames(means_t)[which(colnames(means_t) == 'Loirugurugu')] <- "Loirugu"
+colnames(means_t)[which(colnames(means_t) == 'Rongai gate')] <- "Rongai"
+colnames(means_t)[which(colnames(means_t) == 'Golf 7')] <- "Golf_7"
+colnames(means_t)[which(colnames(means_t) == 'Simira')] <- "Sirima"
+
+gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group4', 'Group3')]
 comb <- merge(means_t, gr_subs, by='Abbrev')
 
-gr1_means <- aggregate(comb[, 2:11], by=list(comb$Group1), FUN=mean)
-gr2_means <- aggregate(comb[, 2:11], by=list(comb$Group2), FUN=mean)
+gr1_means <- aggregate(comb[, 2:11], by=list(comb$Group1), FUN=sum)
+gr2_means <- aggregate(comb[, 2:11], by=list(comb$Group4), FUN=sum)
+gr3_means <- aggregate(comb[, 2:11], by=list(comb$Group3), FUN=sum)
 colnames(gr1_means)[1] <- "group"
 colnames(gr2_means)[1] <- "group"
+colnames(gr3_means)[1] <- "group"
 
 # reshape for plotting
 gr1_res <- reshape(gr1_means, idvar="group", varying=list(2:11), timevar='site',
@@ -69,6 +81,9 @@ gr1_res <- reshape(gr1_means, idvar="group", varying=list(2:11), timevar='site',
                    new.row.names=1:1000)
 gr2_res <- reshape(gr2_means, idvar="group", varying=list(2:11), timevar='site',
                    v.names="mean_dung", times=colnames(gr1_means)[2:11], direction="long",
+                   new.row.names=1:1000)
+gr3_res <- reshape(gr3_means, idvar="group", varying=list(2:11), timevar='site',
+                   v.names="mean_dung", times=colnames(gr3_means)[2:11], direction="long",
                    new.row.names=1:1000)
 
 gr1_plot <- gr1_res[which(gr1_res$group == 'non-cattle'), ]
@@ -87,6 +102,62 @@ p <- ggplot(gr2_plot, aes(x=site, y=mean_dung, group=group))
 p <- p + geom_point(aes(colour=group))
 print(p)
 
+# compare different functional groups to back-calculated grazing intensity
+result_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/correlation_w_back_calc_intensity"
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC_integrated_test/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
+c_df <- read.csv(comparison_csv)
+
+g1_df <- gr1_res[which(gr1_res$group %in% c('browser', 'grazer', 'carnivore', 'mixed')), ]
+g2_df <- gr2_res
+g3_df <- gr3_res
+
+fig_dir <- paste(result_dir, "figs", sep="/")
+sum_df <- data.frame('group'=character(), 'spearman_rho'=numeric(),
+                     'spearman_pval'=numeric(), 'pearson_cor'=numeric(),
+                     'pearson_pval'=numeric(), stringsAsFactors=FALSE)
+i <- 1
+dung_join_df <- g3_df
+for(gr in unique(dung_join_df$group)){
+  sub_df <- dung_join_df[which(dung_join_df$group == gr), ]
+  joined <- merge(sub_df, c_df, by="site")
+  p <- ggplot(joined, aes(x=total_rem, y=mean_dung))
+  p <- p + geom_point()
+  p <- p + xlab("Back-calc grazing intensity") + ylab(paste(gr, " dung per transect", sep=""))
+  pngname <- paste(fig_dir, paste(gr, "_x_back_calc.png", sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=5, height=5)
+  print(p)
+  dev.off()
+  sp_test <- cor.test(joined$mean_dung, joined$total_rem, method="spearman")
+  pe_test <- cor.test(joined$mean_dung, joined$total_rem, method="pearson")
+  sum_df[i, 'group'] <- gr
+  sum_df[i, 'spearman_rho'] <- sp_test[[4]]
+  sum_df[i, 'spearman_pval'] <- sp_test[[3]]
+  sum_df[i, 'pearson_cor'] <- pe_test[[4]]
+  sum_df[i, 'pearson_pval'] <- pe_test[[3]]
+  i <- i + 1
+}
+save_as <- paste(result_dir, "correlation_summary.csv", sep="/")
+write.csv(sum_df, save_as, row.names=FALSE)
+
+p <- ggplot(c_df, aes(x=total_rem_back.calc, y=average_monthly_GPS_density))
+p <- p + geom_point()
+p <- p + xlab("Back-calc grazing intensity") + ylab("GPS-derived cattle density")
+pngname <- paste(fig_dir, "GPS_density_x_back_calc.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+test <- cor.test(c_df$average_monthly_GPS_density, c_df$total_rem_back.calc, method="spearman")
+sum_df[6, 'group'] <- 'GPS-derived cattle density'
+sum_df[6, 'rho'] <- test[[4]]
+sum_df[6, 'p'] <- test[[3]]
+  
+test <- cor.test(joined$mean_dung, joined$total_rem_back.calc, method="spearman")
+sum_df[7, 'group'] <- 'cattle'
+sum_df[7, 'rho'] <- test[[4]]
+sum_df[7, 'p'] <- test[[3]]
+
+filename <- paste(result_dir, "correlation_summary.csv", sep="/")
+write.csv(sum_df, filename, row.names=FALSE)
 
 # summarize OPC dung data for calculating correlation with GPS-derived stocking density
 dung_subs <- dung_sum[, c('transect', 'Buf', 'Cow')]
@@ -105,12 +176,14 @@ comb_df <- read.csv(save_as)
 comb_df$bovid <- rowSums(comb_df[, c(3, 4)])
 
 # cattle density calculated from GPS
-density_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_dung_analysis/correlation_with_GPS_records"
+density_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/correlation_with_GPS_records"
 
 # summarize comparison between dung and GPS-derived density
-summary_df <- data.frame('distance'=numeric(6), 'days_lag'=numeric(6),
+summary_df <- data.frame('distance (km)'=numeric(6), 'days_lag'=numeric(6),
                          'num_obs_densities'=numeric(6), 'rho_cow'=numeric(6),
-                         'rho_bovid'=numeric(6))
+                         'rho_bovid'=numeric(6), 'p_cow'=numeric(6),
+                         'p_bovid'=numeric(6), 'rho_buf'=numeric(6),
+                         'p_buf'=numeric(6))
 i <- 1
 for(distance in c(0.1, 0.3, 0.5)){
   for(days_lag in c(28, 35)){
@@ -121,9 +194,10 @@ for(distance in c(0.1, 0.3, 0.5)){
     dens_df$total_anim <- rowSums(dens_df[, c(1:6, 8)])
     cor_df <- merge(comb_df, dens_df, by='row_id', all=TRUE)
     num_non_na <- dim(cor_df[!is.na(cor_df$total_anim), ])[1]
-    cor_df[, 9:17][is.na(cor_df[, 9:17])] <- 0
+    cor_df[, 9:16][is.na(cor_df[, 9:16])] <- 0
     if(num_non_na > 1){
       rho_cow = cor.test(cor_df$Cow, cor_df$total_anim, method='spearman')[[4]]
+      p_cow = cor.test(cor_df$Cow, cor_df$total_anim, method='spearman')[[3]]
       p <- ggplot(cor_df, aes(x=Cow, y=total_anim))
       p <- p + geom_point()
       p <- p + xlab("Cattle dung") + ylab("GPS-derived animal density")
@@ -134,7 +208,11 @@ for(distance in c(0.1, 0.3, 0.5)){
       print(p)
       dev.off()
       
+      rho_buf = cor.test(cor_df$Buf, cor_df$total_anim, method='spearman')[[4]]
+      p_buf = cor.test(cor_df$Buf, cor_df$total_anim, method='spearman')[[3]]
+      
       rho_bovid = cor.test(cor_df$bovid, cor_df$total_anim, method='spearman')[[4]]
+      p_bovid = cor.test(cor_df$bovid, cor_df$total_anim, method='spearman')[[3]]
     }
     else{
       rho_cow = NA
@@ -145,6 +223,10 @@ for(distance in c(0.1, 0.3, 0.5)){
     summary_df[i, 'num_obs_densities'] <- num_non_na
     summary_df[i, 'rho_cow'] <- rho_cow
     summary_df[i, 'rho_bovid'] <- rho_bovid
+    summary_df[i, 'rho_buf'] <- rho_buf
+    summary_df[i, 'p_cow'] <- p_cow
+    summary_df[i, 'p_bovid'] <- p_bovid
+    summary_df[i, 'p_buf'] <- p_buf
     i <- i + 1
   }
 }
@@ -160,7 +242,7 @@ dens_df <- read.csv(density_file)
 dens_df$total_anim <- rowSums(dens_df[, c(1:6, 8)])
 cor_df <- merge(comb_df, dens_df, by='row_id', all=TRUE)
 num_non_na <- dim(cor_df[!is.na(cor_df$total_anim), ])[1]
-cor_df[, 9:17][is.na(cor_df[, 9:17])] <- 0
+cor_df[, 9:16][is.na(cor_df[, 9:16])] <- 0
 
 p <- ggplot(cor_df, aes(x=total_anim, y=Buf))
 p <- p + geom_point()
@@ -174,3 +256,210 @@ pngname <- paste(density_dir, 'figs', 'buf_dung_vs_GPS_density_0.5_km_35_days.pn
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
+
+# comparing grazer density from dung, GPS, and back-calc management
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC_integrated_test/density_summary_GPS_dung_back-calc.csv"
+c_df <- read.csv(comparison_csv)
+
+# pairwise correlations
+t1 <- cor.test(c_df$total_rem_back.calc, c_df$total_dung, method="spearman")
+t2 <- cor.test(c_df$mean_cattle_dung_density_per_transect, c_df$average_monthly_GPS_density,
+               method="spearman")
+t3 <- cor.test(c_df$total_rem_back.calc, c_df$mean_cattle_dung_density_per_transect,
+               method="spearman")
+
+p <- ggplot(c_df, aes(x=total_rem_back.calc, y=total_dung))
+p <- p + geom_point()
+print(p)
+
+p <- ggplot(c_df, aes(x=mean_cattle_dung_density_per_transect,
+                      y=average_monthly_GPS_density))
+p <- p + geom_point()
+print(p)
+
+p <- ggplot(c_df, aes(x=total_rem_back.calc, y=mean_cattle_dung_density_per_transect))
+p <- p + geom_point()
+print(p)
+
+### Regional properties: dung
+dung_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015.csv"
+rdung_df <- read.csv(dung_csv)
+rdung_df <- rdung_df[which(rdung_df$Position_m > 0), ]
+rdung_df <- rdung_df[, c(1:4, 6:29)]
+rdung_df[, 5:28][is.na(rdung_df[, 5:28])] <- 0
+rdung_df$Date <- as.Date(rdung_df$Date, format="%d-%b-%y")
+
+# make sure there are 10 samples in each transect
+rdung_df$unique_id <- paste(rdung_df$Property, rdung_df$Transect, sep="-")
+sample_count <- aggregate(Buf~unique_id, data=rdung_df, FUN=count)
+trouble <- sample_count[which(sample_count$Buf != 10), ]  # should be 0 rows
+
+# sum within transect
+# combine cow and buffalo into bovid
+rdung_df$bovid <- rdung_df$Buf + rdung_df$Cow
+rdung_df <- rdung_df[ , -which(names(rdung_df) %in% c("Cow","Buf"))]
+dung_sum <- aggregate(rdung_df[, c(5:26, 28)], by=list(rdung_df$unique_id), FUN=sum)
+colnames(dung_sum)[1] <- 'transect'
+
+# average across transect within property
+for (r in (1:NROW(dung_sum))){
+  a_list <- unlist(strsplit(dung_sum[r, "transect"], split="-"))
+  dung_sum[r, 'property'] <- a_list[1]
+}
+property_means <- aggregate(dung_sum[, 2:24], by=list(dung_sum$property), FUN=mean)
+colnames(property_means)[1] <- "Property"
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
+write.csv(property_means, save_as, row.names=FALSE)
+
+property_means <- read.csv(save_as)
+FID_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv"
+FID_list <- read.csv(FID_csv)
+property_means <- merge(property_means, FID_list, by.x="Property",
+                        by.y="NAME", all.x=TRUE)[, 2:25]
+
+group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+
+propmeans_t <- as.data.frame(t(property_means[1:24]))
+colnames(propmeans_t) <- property_means$FID
+propmeans_t$Abbrev <- rownames(propmeans_t)
+
+gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group2', 'Group3')]
+comb <- merge(propmeans_t, gr_subs, by='Abbrev')
+comb <- comb[which(comb$Abbrev != "UK"), ]
+
+gr1_means <- aggregate(comb[, 2:25], by=list(comb$Group1), FUN=sum)
+colnames(gr1_means)[1] <- "group"
+gr3_means <- aggregate(comb[, 2:25], by=list(comb$Group3), FUN=sum)
+colnames(gr3_means)[1] <- "group"
+
+# reshape for plotting
+gr1_res <- reshape(gr1_means, idvar="group", varying=list(2:25), timevar='site',
+                   v.names="mean_dung", times=colnames(gr1_means)[2:25], direction="long",
+                   new.row.names=1:1000)
+gr3_res <- reshape(gr3_means, idvar="group", varying=list(2:25), timevar='site',
+                   v.names="mean_dung", times=colnames(gr1_means)[2:25], direction="long",
+                   new.row.names=1:1000)
+
+# summary of back-calc intensity
+bc_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/match_2015_intensity_summary.csv"
+bc_summary <- read.csv(bc_csv)
+
+# correlations and scatterplots out the wazoo
+results_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/Regional_properties_dung_analysis/comparison_with_back_calc_mgmt"
+dung_df <-  gr3_res # gr1_res
+
+nrows <- length(unique(dung_df$group)) * 2 * 2
+cor_record <- data.frame('bc_source'=character(nrows), 'time_period'=numeric(nrows),
+                     'animal_type'=numeric(nrows), 'spearman_rho'=numeric(nrows),
+                     'spearman_p_val'=numeric(nrows), 'pearson_cor'=numeric(nrows),
+                     'pearson_p_val'=numeric(nrows), stringsAsFactors=FALSE)
+i <- 1
+for(bc_source in c('constrained', 'unconstrained')){
+  for(per in c(6, 12)){
+    bc_subs <- bc_summary[which(bc_summary$bc_source == bc_source), ]
+    bc_subs <- bc_subs[which(bc_subs$time_period == per), ]
+    for(animal in unique(dung_df$group)){
+      dung_subs <- dung_df[which(dung_df$group == animal), ]
+      cor_df <- merge(bc_subs, dung_subs, by='site')
+      sp_test <- cor.test(cor_df$average_gm2_removed, cor_df$mean_dung,
+                       method="spearman")
+      sp_rho = sp_test[[4]]
+      sp_p_val = sp_test[[3]]
+      pe_test <- cor.test(cor_df$average_gm2_removed, cor_df$mean_dung,
+                          method="pearson")
+      pe_cor = pe_test[[4]]
+      pe_p_val = pe_test[[3]]
+      p <- ggplot(cor_df, aes(x=average_gm2_removed, y=mean_dung))
+      p <- p + geom_point()
+      p <- p + xlab("Back-calc intensity") + ylab("Mean dung per transect")
+      pngname <- paste(results_dir,
+                       paste(paste("back-calc_intensity_v", animal, "dung", per, "mos", bc_source, sep="_"),
+                             '.png', sep=""),
+                       sep="/")
+      png(file=pngname, units="in", res=300, width=5, height=5)
+      print(p)
+      dev.off()
+      cor_record[i, 'bc_source'] <- bc_source
+      cor_record[i, 'time_period'] <- per
+      cor_record[i, 'animal_type'] <- animal
+      cor_record[i, 'spearman_rho'] <- sp_rho
+      cor_record[i, 'spearman_p_val'] <- sp_p_val
+      cor_record[i, 'pearson_cor'] <- pe_cor
+      cor_record[i, 'pearson_p_val'] <- pe_p_val
+      i <- i + 1
+    }
+  }
+}
+cor_r1 <- cor_record
+cor_r3 <- cor_record
+
+cor_record <- rbind(cor_r3, cor_r1)
+save_as <- paste(results_dir, 'correlation_summary.csv', sep='/')
+write.csv(cor_record, save_as, row.names=FALSE)
+
+# ratio of bovid to other dung on each property
+ratio_df <- data.frame('site'=numeric(24), 'bovid_to_non_bovid_ratio'=numeric(24))
+for(i in c(1:24)){
+  site <- colnames(gr3_means)[i + 1]
+  ratio = gr3_means[1, site] / gr3_means[2, site]
+  ratio_df[i, 'site'] <- site
+  ratio_df[i, 'bovid_to_non_bovid_ratio'] <- ratio
+}
+
+# reported cattle
+est_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/Regional_properties_dung_analysis/reg_cattle_estimates_11.30.16.csv"
+est_df <- read.csv(est_csv)
+est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
+est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
+est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
+est_df$prop_density <- est_df$property_cattle / est_df$LwfPropSizeHa
+est_df$prop_non_density <- est_df$property_non_property_cattle / est_df$LwfPropSizeHa
+est_df <- merge(est_df, FID_list, by.x="Property", by.y="NAME", all.x=TRUE) # [, 2:25]
+est_df[which(est_df$Confirmed == 'yes'), 'Confirmed'] <- 'Yes'
+est_df[which(est_df$Confirmed == 'no'), 'Confirmed'] <- 'No'
+
+# try with only confirmed cattle
+est_subs <- est_df[which(est_df$Confirmed == "Yes"),
+                   c("Property", "FID", "prop_density", "prop_non_density")]
+# est_subs <- est_df[, c("Property", "FID", "prop_density", "prop_non_density")]
+bovid_dung <- gr3_res[which(gr3_res$group == 'bovid'), ]
+bovid_est <- merge(bovid_dung, est_subs, by.x="site", by.y="FID")
+
+p <- ggplot(bovid_est, aes(x=mean_dung, y=prop_density, label=Property))
+p <- p + geom_point()
+p <- p + geom_text(check_overlap=TRUE)
+p <- p + xlab("mean bovid dung per transect")
+p <- p + ylab("property cattle per ha")
+print(p)
+
+pngname <- "C:/Users/Ginger/Desktop/property_cattle_vs_bovid_dung_GK.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(bovid_est, aes(x=mean_dung, y=prop_non_density, label=Property))
+p <- p + geom_point()
+p <- p + geom_text(check_overlap=TRUE)
+print(p)
+
+t1 <- cor.test(bovid_est$mean_dung, bovid_est$prop_density, method="pearson")
+t2 <- cor.test(bovid_est$mean_dung, bovid_est$prop_non_density, method="pearson")
+
+# ratio of bovid to all other dung v reported numbers
+ratio_est <- merge(ratio_df, est_df, by.x="site", by.y="FID")
+ratio_subs <- ratio_est[which(ratio_est$Property != "Makurian"), ]
+p <- ggplot(ratio_subs, aes(x=bovid_to_non_bovid_ratio, y=prop_density))
+p <- p + geom_point()
+p <- p + xlab("ratio of bovid to non-bovid dung") + ylab("property cattle per ha")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/Regional_properties_dung_analysis/bovid_dung_ratio_vs_density.png"
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(ratio_subs, aes(x=bovid_to_non_bovid_ratio, y=prop_non_density))
+p <- p + geom_point()
+p <- p + xlab("ratio of bovid to non-bovid dung") + ylab("property + non-property cattle per ha")
+print(p)
+
