@@ -1,5 +1,15 @@
 # summarize dung data for Kenya Ticks
 library(ggplot2)
+print_theme <- theme(strip.text.y=element_text(size=10), 
+                     strip.text.x=element_text(size=9), 
+                     axis.title.x=element_text(size=10), 
+                     axis.title.y=element_text(size=10),
+                     axis.text=element_text(size=10),
+                     plot.title=element_text(size=10, face="bold"),
+                     legend.text=element_text(size=10),
+                     legend.title=element_text(size=10)) + theme_bw()
+print_theme_l <- theme_bw() + theme(axis.title=element_text(size=22),
+                                    axis.text=element_text(size=22))
 
 count <- function(values){
   return(length(values))
@@ -103,8 +113,8 @@ p <- p + geom_point(aes(colour=group))
 print(p)
 
 # compare different functional groups to back-calculated grazing intensity
-result_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/correlation_w_back_calc_intensity"
-comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC_integrated_test/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
+result_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/comparison_w_empirical_density/correlation_w_dung"
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
 c_df <- read.csv(comparison_csv)
 
 g1_df <- gr1_res[which(gr1_res$group %in% c('browser', 'grazer', 'carnivore', 'mixed')), ]
@@ -117,12 +127,15 @@ sum_df <- data.frame('group'=character(), 'spearman_rho'=numeric(),
                      'pearson_pval'=numeric(), stringsAsFactors=FALSE)
 i <- 1
 dung_join_df <- g3_df
+gr <- 'bovid'
 for(gr in unique(dung_join_df$group)){
   sub_df <- dung_join_df[which(dung_join_df$group == gr), ]
   joined <- merge(sub_df, c_df, by="site")
   p <- ggplot(joined, aes(x=total_rem, y=mean_dung))
   p <- p + geom_point()
-  p <- p + xlab("Back-calc grazing intensity") + ylab(paste(gr, " dung per transect", sep=""))
+  p <- p + xlab("Modeled grazing intensity") # + ylab(paste(gr, " dung per transect", sep=""))
+  p <- p + ylab("Bovid dung per transect")
+  p <- p + print_theme
   pngname <- paste(fig_dir, paste(gr, "_x_back_calc.png", sep=""), sep="/")
   png(file=pngname, units="in", res=300, width=5, height=5)
   print(p)
@@ -138,6 +151,11 @@ for(gr in unique(dung_join_df$group)){
 }
 save_as <- paste(result_dir, "correlation_summary.csv", sep="/")
 write.csv(sum_df, save_as, row.names=FALSE)
+
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/comparison_w_empirical_density/correlation_w_dung/figs/bovid_x_back_calc.png"
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
 
 p <- ggplot(c_df, aes(x=total_rem_back.calc, y=average_monthly_GPS_density))
 p <- p + geom_point()
