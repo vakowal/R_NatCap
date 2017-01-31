@@ -11,87 +11,6 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
-# summarize productivity of regional properties
-zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
-# calib <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens/gain_summary.csv")
-varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated/gain_summary.csv")
-constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/preset_dens_uncalibrated_constant_cp/gain_summary.csv")
-
-# compare primary productivity to individual livestock weight gain
-zero_dens_sum <- aggregate(total_kgha~site, data=zero_dens, FUN=mean)
-colnames(zero_dens_sum)[2] <- 'kgha_monthly_mean'
-varying_cp_m <- varying_cp[, c('density', 'site', 'avg_yearly_gain')]
-colnames(varying_cp_m)[3] <- 'perc_gain_varying_cp'
-constant_cp_m <- constant_cp[, c('density', 'site', 'avg_yearly_gain')]
-colnames(constant_cp_m)[3] <- 'perc_gain_constant_cp'
-
-comb_df <- merge(constant_cp_m, varying_cp_m, by=c('site', 'density'))
-comb_df <- merge(comb_df, zero_dens_sum, by='site')
-
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
-p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=perc_gain_constant_cp))
-p <- p + geom_point()
-p <- p + facet_wrap(~density, scales="free")
-p <- p + xlab("Average monthly biomass (kg/ha)")
-p <- p + ylab("Average yearly liveweight gain (kg)")
-# print(p)
-pngname <- paste(imgdir, "npp_vs_gain_constant_cp.png", sep="/")
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
-
-p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=perc_gain_varying_cp))
-p <- p + geom_point()
-p <- p + facet_wrap(~density, scales="free")
-p <- p + xlab("Average monthly biomass (kg/ha)")
-p <- p + ylab("Average yearly liveweight gain (kg)")
-# print(p)
-pngname <- paste(imgdir, "npp_vs_gain_varying_cp.png", sep="/")
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
-
-t1 <- cor.test(comb_df$perc_gain_calibrated, comb_df$perc_gain_uncalibrated,
-               method="spearman")
-t2 <- cor.test(comb_df$perc_gain_calibrated, comb_df$kgha_monthly_mean,
-               method="spearman")
-t3 <- cor.test(comb_df$kgha_monthly_mean, comb_df$perc_gain_uncalibrated,
-               method="spearman")
-
-# total herd-level weight gain instead of individual
-zero_dens_sum <- aggregate(total_kgha~site, data=zero_dens, FUN=mean)
-colnames(zero_dens_sum)[2] <- 'kgha_monthly_mean'
-varying_cp_m <- varying_cp[, c('density', 'site', 'total_delta_weight_kg')]
-colnames(varying_cp_m)[3] <- 'total_gain_varying_cp'
-constant_cp_m <- constant_cp[, c('density', 'site', 'total_delta_weight_kg')]
-colnames(constant_cp_m)[3] <- 'total_gain_constant_cp'
-
-comb_df <- merge(constant_cp_m, varying_cp_m, by=c('site', 'density'))
-comb_df <- merge(comb_df, zero_dens_sum, by='site')
-
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
-p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=total_gain_constant_cp))
-p <- p + geom_point()
-p <- p + facet_wrap(~density, scales="free")
-p <- p + xlab("Average monthly biomass in absence of grazing (kg/ha)")
-p <- p + ylab("Average yearly liveweight gain (kg)")
-# print(p)
-pngname <- paste(imgdir, "npp_vs_herd_gain_constant_cp.png", sep="/")
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
-
-p <- ggplot(comb_df, aes(x=kgha_monthly_mean, y=total_gain_varying_cp))
-p <- p + geom_point()
-p <- p + facet_wrap(~density, scales="free")
-p <- p + xlab("Average monthly biomass in absence of grazing (kg/ha)")
-p <- p + ylab("Average yearly liveweight gain (kg)")
-# print(p)
-pngname <- paste(imgdir, "npp_vs_herd_gain_varying_cp.png", sep="/")
-png(file=pngname, units="in", res=300, width=8, height=5)
-print(p)
-dev.off()
-
 # summarize match by back-calc management routine
 sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match_summary_2015.csv")
 
@@ -258,7 +177,7 @@ colnames(intensity_df)[2] <- 'average_monthly_gm2_removed'
 
 # compare grazing intensity in back-calc history and reported cattle density
 results_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/comparison_with_reported_density"
-est_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/Regional_properties_dung_analysis/reg_cattle_estimates_11.30.16.csv")
+est_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
 FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
 est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
@@ -526,3 +445,97 @@ pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climat
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
+
+# npp vs precip
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
+precip_npp <- merge(zero_dens_sum, precip_df, by.x="site", by.y="FID")
+p <- ggplot(precip_npp, aes(x=avg_annual_rainfall, y=kgha_monthly_mean))
+p <- p + geom_point()
+print(p)
+      
+# productivity vs precip
+# one stocking density (mean across properties)
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
+outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties"
+df_list <- list()
+for(cp_opt in c('constant', 'varying')){
+  produc_dir <- paste(outer_dir, paste("herd_avg_uncalibrated_0.3_", cp_opt, "_cp_GL", sep=""), sep="/")
+  produc_df <- read.csv(paste(produc_dir, "gain_summary.csv", sep="/"))
+  produc_df$cp_treatment <- cp_opt
+  df_list[[cp_opt]] <- produc_df
+}
+produc_df <- do.call(rbind, df_list)
+plot_df <- merge(precip_df, produc_df, by.x="FID", by.y="site")
+plot_df$cp_treatment <- factor(plot_df$cp_treatment, levels=c('constant', 'varying'),
+                               labels=c('Constant % crude protein', 'Varying % crude protein'))
+
+p <- ggplot(plot_df, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
+p <- p + geom_point()
+p <- p + xlab("Average annual rainfall (mm)") + ylab("Average annual liveweight gain (kg)")
+p <- p + print_theme
+p <- p + facet_wrap(~cp_treatment)
+print(p)
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+pngname = paste(imgdir, "gain_v_rainfall_constant_vs_varying_cp_GL_0.3.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p)
+dev.off()
+
+offtake_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/offtake_summary.csv")
+offtake_df <- merge(offtake_df, precip_df, by.x="site", by.y="FID")
+p <- ggplot(offtake_df, aes(x=avg_offtake_constant_cp, y=avg_offtake_varying_cp))
+p <- p + geom_point()
+minval <- min(min(offtake_df$avg_offtake_constant_cp), min(offtake_df$avg_offtake_varying_cp))
+maxval <- max(max(offtake_df$avg_offtake_constant_cp), max(offtake_df$avg_offtake_varying_cp))
+p <- p + xlim(c(minval, maxval)) + ylim(c(minval, maxval))
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+p <- p + print_theme + xlab("Offtake (kg/ha): fixed % crude protein")
+p <- p + ylab("Offtake (kg/ha): varying % crude protein")
+print(p)
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+pngname = paste(imgdir, "offtake_constant_vs_varying_cp_GL_0.3.png", sep="/")
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(offtake_df, aes(x=avg_annual_rainfall, y=avg_offtake_varying_cp))
+p <- p + geom_point() + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_varying_cp_GL/offtake_v_rainfall.png"
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(offtake_df, aes(x=avg_annual_rainfall, y=avg_offtake_constant_cp))
+p <- p + geom_point() + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/offtake_v_rainfall.png"
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+# range of stocking densities
+zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
+varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL/gain_summary.csv")
+constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL/gain_summary.csv")
+
+varying_cp$cp_opt <- 'varying'
+constant_cp$cp_opt <- 'constant'
+produc_df <- rbind(varying_cp, constant_cp)
+produc_df <- merge(produc_df, precip_df, by.x='site', by.y='FID')
+produc_df$cp_opt <- factor(produc_df$cp_opt, levels=c('constant', 'varying'),
+                           labels=c('Fixed % crude protein', 'Varying % crude protein'))
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+p <- ggplot(produc_df, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
+p <- p + geom_point()
+p <- p + facet_grid(density ~ cp_opt, scales="free")
+p <- p + xlab("Average annual rainfall (mm)")
+p <- p + ylab("Average yearly liveweight gain (kg)")
+print(p)
+pngname <- paste(imgdir, "precip_vs_gain.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=8)
+print(p)
+dev.off()
+
