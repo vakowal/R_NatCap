@@ -43,7 +43,7 @@ date_only <- date_only[!duplicated(date_only[, 'transect']), ]
 comb_df <- merge(dung_sum, meta_subs, by='transect')
 comb_df <- merge(comb_df, date_only, by='transect')
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv"
-write.csv(comb_df, file=save_as, row.names=TRUE)
+write.csv(comb_df, file=save_as, row.names=FALSE)
 
 # dung around weather stations summarized in python 
 outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/OPC_weather_stations"
@@ -51,6 +51,22 @@ points_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Cl
 group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
 gr_key_df <- read.csv(group_key)
 
+# bovids, all transects around weather station 2.15.17
+points_df <- read.csv(points_file)
+df_list <- list()
+for(stn in points_df$Name){
+  dung_file <- paste(outerdir, paste("dung_2.0km_", stn, ".csv", sep=""), sep="/")
+  df <- read.csv(dung_file)
+  df$bovid <- df$Buf + df$Cow
+  df_sub <- df[, c('transect', 'Date', 'bovid')]
+  df_sub$site <- stn
+  df_list[[stn]] <- df_sub
+}
+combined <- do.call(rbind, df_list)
+write.csv(combined, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/bovid_dung_weather_2km.csv",
+          row.names=FALSE)
+
+# weather station means
 points_df <- read.csv(points_file)
 df_list <- list()
 for(stn in points_df$Name){
@@ -63,6 +79,10 @@ for(stn in points_df$Name){
   df_list[[stn]] <- df_means
 }
 combined <- do.call(rbind, df_list)
+
+# test excluding buffalo and cattle
+combined <- combined[, c(-1, -3)]
+means_t <- as.data.frame(t(combined[, c(1:22)]))
 
 # test combining buffalo and cattle
 combined$bovid <- combined$Buf + combined$Cow
@@ -114,7 +134,7 @@ print(p)
 
 # compare different functional groups to back-calculated grazing intensity
 result_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/comparison_w_empirical_density/correlation_w_dung"
-comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/bc_12_mo_intensity.csv"
 c_df <- read.csv(comparison_csv)
 
 g1_df <- gr1_res[which(gr1_res$group %in% c('browser', 'grazer', 'carnivore', 'mixed')), ]
@@ -126,17 +146,17 @@ sum_df <- data.frame('group'=character(), 'spearman_rho'=numeric(),
                      'spearman_pval'=numeric(), 'pearson_cor'=numeric(),
                      'pearson_pval'=numeric(), stringsAsFactors=FALSE)
 i <- 1
-dung_join_df <- g3_df
-gr <- 'bovid'
+dung_join_df <- g1_df
+gr <- 'grazer'
 for(gr in unique(dung_join_df$group)){
   sub_df <- dung_join_df[which(dung_join_df$group == gr), ]
   joined <- merge(sub_df, c_df, by="site")
   p <- ggplot(joined, aes(x=total_rem, y=mean_dung))
   p <- p + geom_point()
   p <- p + xlab("Modeled grazing intensity") # + ylab(paste(gr, " dung per transect", sep=""))
-  p <- p + ylab("Bovid dung per transect")
+  p <- p + ylab("Grazer (ex. bovid) dung per transect")
   p <- p + print_theme
-  pngname <- paste(fig_dir, paste(gr, "_x_back_calc.png", sep=""), sep="/")
+  pngname <- paste(fig_dir, paste(gr, "ex_bovid_x_back_calc.png", sep=""), sep="/")
   png(file=pngname, units="in", res=300, width=5, height=5)
   print(p)
   dev.off()

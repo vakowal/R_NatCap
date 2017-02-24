@@ -303,21 +303,119 @@ new_gr_perc_t <- new_growth_t / biomass_t
 
 # calculated in script
 lines <- c("solid", "dotted", "longdash")
-growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/sd_new_growth/cattle_new_growth_summary.csv"
+growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/summary_n_mult.csv"
+gr_df <- read.csv(growth_file)
+gr_df$date <- paste('01', gr_df$month, gr_df$year, sep="-")
+gr_df$date <- as.Date(gr_df$date, format="%d-%m-%Y")
+gr_df$year_month <- format(gr_df$date, "%Y_%m")
+gr_df <- gr_df[which(gr_df$year_month %in% sim_months), ]
+gr_df$stocking_density <- as.factor(gr_df$stocking_density)
+gr_df[which(gr_df$label == 'n_content_live'), 'biomass'] <- gr_df[which(gr_df$label == 'n_content_live'), 'biomass'] * 100
+gr_df$label <- factor(gr_df$label, levels=c("liveweight_gain", "total_biomass", "live_biomass", "new_growth", 
+                                            "n_content_live", 'liveweight_gain_herd'),
+                      labels=c("liveweight_gain", "Total biomass (g/m2)", "Live biomass (g/m2)",
+                               "New growth (g/m2)", "Crude protein in live biomass (%)",
+                               "Herd liveweight gain (kg/ha)"))
+gr_df_sub <- subset(gr_df, gr_df$label %in% c("liveweight_gain", "Total biomass (g/m2)", "Live biomass (g/m2)", 
+                                              "New growth (g/m2)",
+                                              "Herd liveweight gain (kg/ha)",
+                                              "Crude protein in live biomass (%)"))
+gr_df_sub <- gr_df_sub[order(gr_df_sub$stocking_density, gr_df_sub$label,
+                             gr_df_sub$year, gr_df_sub$month), ]
+labs <- gr_df_sub$month
+p <- ggplot(gr_df_sub, aes(x=year_month, y=biomass, group=stocking_density))
+p <- p + geom_line(aes(linetype=stocking_density))
+p <- p + scale_linetype_manual(values=lines, guide=guide_legend(title="Stocking density"))
+p <- p + facet_wrap(~label, nrow=2, scales="free")
+p <- p + print_theme + scale_x_discrete(labels=labs)
+p <- p + xlab("Month") + ylab("")
+p <- p + theme(legend.key=element_blank(), legend.title=element_blank())
+p <- p + theme(legend.key.width=unit(3.7, "line"))
+p <- p + theme(legend.margin=unit(-0.7,"cm")) 
+p <- p + theme(legend.position="bottom")
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult"
+pngname <- paste(imgpath, "New_growth_live_biomass~stocking_density_restart_monthly.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+# diff between high and low density treatments in % green
+low_sd_live <- gr_df[which(gr_df$stocking_density == '0.1' &
+                        gr_df$label == 'live_biomass'), 
+                c('biomass', 'label', 'year', 'month', 'year_month',
+                  'stocking_density')]
+low_sd_live$live_biomass <- low_sd_live$biomass
+low_sd_total <- gr_df[which(gr_df$stocking_density == '0.1' &
+                             gr_df$label == 'total_biomass'), 
+                     c('biomass', 'label', 'year', 'month', 'year_month',
+                       'stocking_density')]
+low_sd_total$total_biomass <- low_sd_total$biomass
+low_sd <- merge(low_sd_total, low_sd_live, by=c('year', 'month', 'year_month'))
+low_sd$perc_live_low_sd <- low_sd$live_biomass / low_sd$total_biomass * 100
+low_sd <- low_sd[, c('year', 'month', 'year_month', 'perc_live_low_sd')]
+
+high_sd_live <- gr_df[which(gr_df$stocking_density == '0.8' &
+                             gr_df$label == 'live_biomass'), 
+                     c('biomass', 'label', 'year', 'month', 'year_month',
+                       'stocking_density')]
+high_sd_live$live_biomass <- high_sd_live$biomass
+high_sd_total <- gr_df[which(gr_df$stocking_density == '0.1' &
+                              gr_df$label == 'total_biomass'), 
+                      c('biomass', 'label', 'year', 'month', 'year_month',
+                        'stocking_density')]
+high_sd_total$total_biomass <- high_sd_total$biomass
+high_sd <- merge(high_sd_total, high_sd_live, by=c('year', 'month', 'year_month'))
+high_sd$perc_live_high_sd <- high_sd$live_biomass / high_sd$total_biomass * 100
+high_sd <- high_sd[, c('year', 'month', 'year_month', 'perc_live_high_sd')]
+comb <- merge(low_sd, high_sd)
+comb$diff <- comb$perc_live_high_sd - comb$perc_live_low_sd
+comb <- comb[which(comb$year_month %in% emp_months), ]
+labs <- comb$month
+p <- ggplot(comb, aes(x=year_month, y=diff))
+p <- p + geom_point()
+p <- p + scale_x_discrete(labels=labs) + xlab("")
+p <- p + ylab("Difference in % green") + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult/diff_perc_green_high_low_sd.png"
+png(file=pngname, units="in", res=300, width=2, height=2)
+print(p)
+dev.off()
+
+# messing around, extra results for MS
+lines <- c("solid", "dotted", "longdash")
+growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/summary_old_herb_csv_old_sd.csv"
 gr_df <- read.csv(growth_file)
 gr_df$stocking_density <- as.factor(gr_df$stocking_density)
-gr_df$label <- factor(gr_df$label, levels=c("total_biomass", "new_growth", "perc_new_growth"),
-                      labels=c("Total biomass", "New growth", "New growth / total biomass"))
-gr_df_sub <- subset(gr_df, gr_df$stocking_density %in% c("0.1", "0.75", "1.25"))
+perc_live <- gr_df[which(gr_df$label == 'live_biomass'), 'biomass'] / 
+  gr_df[which(gr_df$label == 'total_biomass'), 'biomass']
+subs <- gr_df[which(gr_df$label == 'live_biomass'), ]
+subs$biomass <- perc_live * 100
+
+p <- ggplot(subs, aes(x=month, y=biomass, group=stocking_density))
+p <- p + geom_line(aes(linetype=stocking_density))
+p <- p + scale_linetype_manual(values=lines, guide=guide_legend(title="Stocking density"))
+p <- p + xlab("Month") + ylab("% live biomass")
+p <- p + ggtitle("Old herb params")
+print(p)
+imgpath <- "C:/Users/Ginger/Desktop"
+pngname <- paste(imgpath, "perc_live_old_herb_no_restart.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=6)
+print(p)
+dev.off()
+
 p <- ggplot(gr_df_sub, aes(x=month, y=biomass, group=stocking_density))
 p <- p + geom_line(aes(linetype=stocking_density))
 p <- p + scale_linetype_manual(values=lines, guide=guide_legend(title="Stocking density"))
 p <- p + facet_wrap(~label, nrow=2, scales="free")
 p <- p + print_theme + scale_x_continuous(breaks=c(2,4,6,8,10,12))
-p <- p + ylab("") + theme(legend.key = element_blank())
-imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs"
-pngname <- paste(imgpath, "Fig10_New_growth~stocking_density.png", sep="/")
-png(file=pngname, units="in", res=300, width=6, height=5)
+p <- p + xlab("Month") + ylab("")
+p <- p + theme(legend.key=element_blank(), legend.title=element_blank())
+p <- p + theme(legend.key.width=unit(3.7, "line"))
+p <- p + theme(legend.margin=unit(-0.7,"cm")) 
+p <- p + theme(legend.position="bottom")
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult"
+pngname <- paste(imgpath, "New_growth_live_biomass~stocking_density_restart_monthly.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 

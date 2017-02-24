@@ -9,6 +9,406 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# pin frame data
+pin_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_pinframe.csv")
+pin_df <- pin_df[, (1:59)]
+
+pin_df$trans_pos <- paste(pin_df$Date, pin_df$Site, pin_df$Position_m, sep="_")
+pin_pos_sum <- aggregate(pin_df[, 6:59], by=list(pin_df$trans_pos), FUN=sum)
+pin_pos_sum <- data.frame(pin_pos_sum,
+                          do.call(rbind, strsplit(as.character(pin_pos_sum$Group.1),'_')))
+pin_pos_sum$transect <- paste(pin_pos_sum$X1, pin_pos_sum$X2, sep="_")
+
+pin_mean <- aggregate(pin_pos_sum[, 2:55], by=list(pin_pos_sum$transect), FUN=mean)
+colnames(pin_mean)[1] <- 'transect'
+
+find_green <- function(val){
+  letters <- strsplit(val, split="")
+  if(length(letters[[1]]) > 3){
+    test_letter <- letters[[1]][4]
+  }
+  else{
+    test_letter <- letters[[1]][3]
+  }
+  if(test_letter == 'G'){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+green_col_idx <- sapply(colnames(pin_mean), find_green, USE.NAMES=FALSE)
+brown_cols <- pin_mean[, (!green_col_idx)]
+green_brown_summary <- data.frame(pin_mean[, 1])
+colnames(green_brown_summary) <- 'transect'
+green_brown_summary$green_sum <- rowSums(pin_mean[, (green_col_idx)])
+green_brown_summary$brown_sum <- rowSums(brown_cols[, -1])
+green_brown_summary$perc_green <- green_brown_summary$green_sum / (green_brown_summary$green_sum + green_brown_summary$brown_sum)
+write.csv(green_brown_summary, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+          row.names=FALSE)
+
+# compare with all groups' dung
+green_brown_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+                                stringsAsFactors=FALSE)
+dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv",
+                     stringsAsFactors=FALSE)
+dung_sum$bovid <- dung_sum$Buf + dung_sum$Cow
+
+group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group5', 'Group3', 'Group6')]
+means_t <- as.data.frame(t(dung_sum[, c(2:24, 29)]))
+means_t$Abbrev <- rownames(means_t)
+
+comb <- merge(means_t, gr_subs, by='Abbrev')
+gr1_means <- aggregate(comb[, 2:287], by=list(comb$Group1), FUN=sum)
+colnames(gr1_means) <- c('group', dung_sum$transect)
+tr1 <- as.data.frame(t(gr1_means[, 2:287]))
+colnames(tr1) <- gr1_means$group
+tr1$transect <- rownames(tr1)
+
+gr5_means <- aggregate(comb[, 2:287], by=list(comb$Group5), FUN=sum)
+colnames(gr5_means) <- c('group', dung_sum$transect)
+tr5 <- as.data.frame(t(gr5_means[, 2:287]))
+colnames(tr5) <- gr5_means$group
+tr5$transect <- rownames(tr5)
+
+gr3_means <- aggregate(comb[, 2:287], by=list(comb$Group3), FUN=sum)
+colnames(gr3_means) <- c('group', dung_sum$transect)
+tr3 <- as.data.frame(t(gr3_means[, 2:287]))
+colnames(tr3) <- gr3_means$group
+tr3$transect <- rownames(tr3)
+
+gr6_means <- aggregate(comb[, 2:287], by=list(comb$Group6), FUN=sum)
+colnames(gr6_means) <- c('group', dung_sum$transect)
+tr6 <- as.data.frame(t(gr6_means[, 2:287]))
+colnames(tr6) <- gr6_means$group
+tr6$transect <- rownames(tr6)
+
+grouped <- merge(tr1, tr3)
+grouped <- merge(grouped, tr5)
+grouped <- merge(grouped, tr6)
+
+dung_gr_br <- merge(grouped, green_brown_summary, by='transect')
+for (r in (1:NROW(dung_gr_br))){
+  date <- unlist(strsplit(as.character(dung_gr_br[r, 'transect']), split="_"))[1]
+  date <- as.Date(date, format="%d-%b-%y")
+  dung_gr_br[r, 'date'] <- date
+  dung_gr_br[r, 'Year'] <- format(date, "%Y")
+  dung_gr_br[r, 'month'] <- format(date, "%m")
+  dung_gr_br[r, 'year_month'] <- format(date, "%Y_%m")
+}
+
+# month as covariate
+subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid',
+                       'green_sum', 'perc_green', 'transect', 'year_month')]
+summary_list <- list()
+for(gr in c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid')){
+  for(rs in c('green_sum', 'perc_green')){
+    df_copy <- subs
+    df_copy$dung <- df_copy[, gr]
+    df_copy$response <- df_copy[, rs]
+    fit <- lm(response ~ dung*year_month, data=df_copy)
+    label <- paste(gr, rs, sep="-")
+    summary_list[[label]] <- summary(fit)
+  }
+}
+
+# barplot of average precip on OPC, for empirical sampling months
+precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
+precip$date <- as.Date(paste(precip$Year, precip$month, '01', sep="-"),
+                       format='%Y-%m-%d')
+ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
+ave_precip$year_month <- format(ave_precip$date, '%Y_%m')
+ave_precip$month <- format(ave_precip$date, "%m")
+emp_months <- unique(dung_gr_br$year_month)
+precip_res <- ave_precip[which(ave_precip$year_month %in% emp_months), ]
+labs = precip_res$month
+p <- ggplot(precip_res, aes(x=year_month, y=precip_cm))
+p <- p + geom_bar(stat='identity')
+p <- p + scale_x_discrete(labels=labs)
+p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sampling_mos.png"
+png(file=pngname, units="in", res=300, width=3, height=2.5)
+print(p)
+dev.off()
+
+# average precip on OPC for simulated months (Nov 2014 - Dec 2015)
+sim_months <- c("2014_11", "2014_12", "2015_01", "2015_02", "2015_03", "2015_04", "2015_05", "2015_06",
+                "2015_07", "2015_08", "2015_09", "2015_10", "2015_11", "2015_12")
+precip_res <- ave_precip[which(ave_precip$year_month %in% sim_months), ]
+labs = precip_res$month
+p <- ggplot(precip_res, aes(x=year_month, y=precip_cm))
+p <- p + geom_bar(stat='identity')
+p <- p + scale_x_discrete(labels=labs)
+p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sim_mos.png"
+png(file=pngname, units="in", res=300, width=2.87, height=2.37)
+print(p)
+dev.off()
+
+# one regression per month
+subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid',
+                       'green_sum', 'perc_green', 'transect', 'year_month')]
+
+sum_df <- data.frame('animal_group'=c(), 'response'=c(),
+                     'year_month'=c(), 'dung_estimate'=c(),
+                     'dung_p_val'=c(), 'num_transects'=c())
+i <- 1
+for(gr in c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid')){
+  for(rs in c('green_sum', 'perc_green')){
+    for(year_month in unique(subs$year_month)){
+      df_copy <- subs[which(subs$year_month == year_month), ]
+      df_copy$dung <- df_copy[, gr]
+      df_copy$response <- df_copy[, rs]
+      fit <- lm(response ~ dung, data=df_copy)
+      sum_df[i, 'animal_group'] <- gr
+      sum_df[i, 'response'] <- rs
+      sum_df[i, 'year_month'] <- year_month
+      sum_df[i, 'dung_estimate'] <- coef(summary(fit))['dung', 'Estimate']
+      sum_df[i, 'dung_p_val'] <- coef(summary(fit))['dung', 'Pr(>|t|)']
+      sum_df[i, 'num_transects'] <- dim(df_copy)[1]
+      i <- i + 1
+    }
+  }
+}
+
+write.csv(sum_df, file="C:/Users/Ginger/Desktop/sum_df.csv", row.names=FALSE)
+
+for (r in (1:NROW(sum_df))){
+  month <- unlist(strsplit((sum_df[r, 'year_month']), split="_"))[2]
+  sum_df[r, 'month'] <- month
+}
+sum_df <- sum_df[order(sum_df$animal_group, sum_df$response,
+                       sum_df$year_month), ]
+labs <- sum_df$month
+sum_df$sig <- "NS"
+sum_df[which(sum_df$dung_p_val <= 0.05), "sig"] <- "significant"
+
+
+sum_df$animal_group <- factor(sum_df$animal_group,
+                              levels=c('bovid', 'grazer_ex_bovid'),
+                              labels=c('Bovid', 'Grazer (ex. bovid)'))
+sum_df$response <- factor(sum_df$response,
+                          levels=c('perc_green'), labels=c('% green hits'))
+sum_df <- sum_df[which(sum_df$response == '% green hits'), ]
+sum_df <- sum_df[which(sum_df$animal_group %in% c('Bovid', 'Grazer (ex. bovid)')), ]
+
+p <- ggplot(sum_df, aes(x=year_month, y=dung_estimate, group=sig))
+p <- p + geom_point(aes(shape=sig))
+p <- p + scale_shape_manual(values=c(1, 19))
+p <- p + facet_grid(response ~ animal_group, scales="free")
+p <- p + print_theme
+p <- p + scale_x_discrete(labels=labs)
+p <- p + xlab("Month") + ylab("Dung: estimate")
+p <- p + theme(legend.position="none")
+print(p)
+
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/perc_green~dung_by_month_lm_estimate.png"
+png(file=pngname, units="in", res=300, width=4, height=2)
+print(p)
+dev.off()
+
+# how many transects per month of sampling?
+transect_count <- aggregate(dung_gr_br$transect, by=list(dung_gr_br$year_month),
+                            FUN=count)
+write.csv(transect_count, file="C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_transect_count_by_month.csv",
+          row.names=FALSE)
+
+# precip as covariate
+precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
+precip$date <- as.Date(paste(precip$Year, precip$month, '01', sep="-"),
+                       format='%Y-%m-%d')
+ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
+ave_precip$site <- 'site_average'
+precip_df <- precip[, c('date', 'precip_cm', 'site')]
+precip_df <- rbind(precip_df, ave_precip)
+
+p <- ggplot(precip_df, aes(x=date, y=precip_cm, group=site))
+p <- p + geom_line(aes(colour=site))
+print(p)
+
+ave_precip$Year <- format(ave_precip$date, '%Y')
+ave_precip$month <- format(ave_precip$date, '%m')
+ave_precip$year_month <- format(ave_precip$date, '%Y_%m')
+
+ave_precip$date_f <- factor(ave_precip$date)
+p <- ggplot(ave_precip, aes(x=month, y=precip_cm))
+p <- p + geom_bar(stat='identity')
+p <- p + xlab("Month") + ylab("Precipitation (cm)")
+p <- p + facet_wrap(~Year, ncol=1) + print_theme
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_2014_2015.png"
+png(file=pngname, units="in", res=300, width=5, height=6)
+print(p)
+dev.off()
+
+ave_precip <- aggregate(precip_cm ~ Year + month, data=precip, FUN=mean)
+ave_precip$month <- as.numeric(ave_precip$month)
+ave_precip$month <- sprintf("%02d", ave_precip$month)
+pdm_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
+dung_gr_br <- merge(dung_gr_br, ave_precip, by=c('Year', 'month'), all.x=TRUE)
+dung_gr_br <- merge(dung_gr_br, pdm_summary)
+
+dung_gr_br$year_month <- factor(dung_gr_br$year_month)
+
+perc_g_fit <- lm(perc_green ~ all_dung, data=dung_gr_br)
+green_sum_fit <- lm(green_sum ~ all_dung, data=dung_gr_br)
+
+AIC(perc_g_fit)
+AIC(green_sum_fit)
+
+summary(perc_g_fit)
+summary(green_sum_fit)
+
+biomass_fit <- lm(biomass_kgha ~ precip_cm, data=dung_gr_br)
+AIC(biomass_fit)
+summary(biomass_fit)
+
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_v_perc_green_figs"
+for(group in c('bovid', 'grazer_ex_bovid')){ # unique(gr_key_df$Group6)){
+  qs <- quantile(dung_gr_br[, group], probs=c(0.25, 0.75))
+  dung_gr_br$dung_level <- NA
+  dung_gr_br[which(dung_gr_br[, group] <= qs[1]), 'dung_level'] <- 'lower_25%'
+  dung_gr_br[which(dung_gr_br[, group] >= qs[2]), 'dung_level'] <- 'upper_25%'
+  subs <- dung_gr_br[which(!is.na(dung_gr_br$dung_level)), ]
+  p <- ggplot(subs, aes(x=dung_level, y=perc_green))
+  p <- p + geom_boxplot()
+  p <- p + facet_wrap(~year_month)
+  p <- p + ggtitle(group)
+  pngname <- paste(img_dir, paste(group, "_x_perc_green_25perc.png", sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=5, height=6)
+  print(p)
+  dev.off()
+}
+
+
+# compare with bovid dung
+green_brown_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+                                stringsAsFactors=FALSE)
+# restricted to 2 km of weather stations
+dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/bovid_dung_weather_2km.csv",
+                     stringsAsFactors=FALSE)
+dung_gr_br <- merge(dung_sum, green_brown_summary, by='transect')
+dung_gr_br$Date <- as.Date(dung_gr_br$Date, format="%Y-%m-%d")
+dung_gr_br$Year <- format(dung_gr_br$Date, "%Y")
+dung_gr_br$month <- format(dung_gr_br$Date, "%m")
+dung_gr_br[which(dung_gr_br$site == ' Serat gate'), 'site'] <- 'Serat'
+dung_gr_br[which(dung_gr_br$site == 'Golf 7'), 'site'] <- 'Golf_7'
+dung_gr_br[which(dung_gr_br$site == 'Loirugurugu'), 'site'] <- 'Loirugu'
+dung_gr_br[which(dung_gr_br$site == 'Rongai gate'), 'site'] <- 'Rongai'
+dung_gr_br[which(dung_gr_br$site == 'Simira'), 'site'] <- 'Sirima'
+
+precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_precip.csv")
+precip$month <- sprintf("%02d", precip$month)
+sum_df <- merge(dung_gr_br, precip, by=c("site", "Year", "month"), all.x=TRUE)
+write.csv(sum_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/precip_live_dead_dung_summary.csv",
+          row.names=FALSE)
+
+## testing: use previous month's rainfall
+# precip$month_actual <- precip$month
+# for(i in 1:NROW(precip)){
+  # precip[i, 'month'] <- precip[i, 'month'] + 1
+# }
+# precip$month <- precip$month + 1
+
+
+perc_g_fit <- lm(perc_green ~ bovid*precip_cm + site, data=sum_df)
+green_sum_fit <- lm(green_sum ~ bovid*precip_cm + site, data=sum_df)
+
+AIC(perc_g_fit)
+AIC(green_sum_fit)
+
+summary(perc_g_fit)
+summary(green_sum_fit)
+
+dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
+dung_gr_br <- merge(dung_sum, green_brown_summary, by='transect')
+dung_gr_br$bovid <- dung_gr_br$Buf + dung_gr_br$Cow
+dung_gr_br$Date <- as.Date(dung_gr_br$Date, format="%d-%b-%y")
+dung_gr_br$year_month <- format(dung_gr_br$Date, "%Y-%m")
+
+subs <- dung_gr_br[which(dung_gr_br$year_month %in% c("2015-11", "2015-12")), ]
+p <- ggplot(subs, aes(x=bovid, y=perc_green))
+p <- p + geom_point()
+p <- p + xlab("bovid dung density") + ylab("green proportion of biomass")
+print(p)
+subs_test <- cor.test(subs$bovid, subs$green_sum, method="spearman")
+
+opp <- dung_gr_br[which(!dung_gr_br$year_month %in% c("2015-11", "2015-12", "2014-11")), ]
+p <- ggplot(opp, aes(x=bovid, y=perc_green))
+p <- p + geom_point()
+p <- p + xlab("bovid dung density") + ylab("green proportion of biomass")
+print(p)
+opp_test <- cor.test(opp$bovid, opp$green_sum, method="spearman")
+
+p <- ggplot(dung_gr_br, aes(x=bovid, y=perc_green))
+p <- p + geom_point()
+p <- p + xlab("bovid dung density") + ylab("green proportion of biomass")
+p <- p + facet_wrap(~year_month)
+pngname <- paste(img_dir, 'dung_vs_perc_live_by_month.png', sep="/")
+png(file=pngname, units="in", res=300, width=7, height=7)
+print(p)
+dev.off()
+t1 <- cor.test(dung_gr_br$bovid, dung_gr_br$perc_green, method="spearman")
+
+p <- ggplot(dung_gr_br, aes(x=bovid, y=green_sum))
+p <- p + geom_point()
+p <- p + xlab("bovid dung density") + ylab("green biomass")
+p <- p + facet_wrap(~year_month)
+pngname <- paste(img_dir, 'dung_vs_live_biomass_by_month.png', sep="/")
+png(file=pngname, units="in", res=300, width=7, height=7)
+print(p)
+dev.off()
+t2 <- cor.test(dung_gr_br$bovid, dung_gr_br$green_sum, method="spearman")
+
+sum_df <- data.frame('year_month'=c(), 'spearman_rho'=c(), 'p'=c())
+i <- 1
+for(month in unique(dung_gr_br$year_month)){
+  subs <- dung_gr_br[which(dung_gr_br$year_month == month), ]
+  t1 <- cor.test(subs$bovid, subs$green_sum, method="spearman")
+  sum_df[i, 'year_month'] <- month
+  sum_df[i, 'spearman_rho'] <- t1[[4]]
+  sum_df[i, 'p'] <- t1[[3]]
+  i <- i + 1
+}
+
+green_biomass_cor_summary <- sum_df
+perc_gr_cor_summary <- sum_df
+
+# live:dead vs back-calc grazing intensity
+comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
+b_c_intens_df <- read.csv(comparison_csv)
+b_c_live_dead <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/live_dead_summary.csv")
+b_c_df <- merge(b_c_intens_df, b_c_live_dead, by='site')
+
+img_dir <- "C:/Users/Ginger/Desktop"
+p <- ggplot(b_c_df, aes(x=total_rem, y=avg_ratio_live_dead))
+p <- p + geom_point()
+p <- p + xlab("grazing intensity") + ylab("avg live:dead")
+pngname <- paste(img_dir, 'intensity_vs_live_dead.png', sep="/")
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(b_c_df, aes(x=total_rem, y=avg_live))
+p <- p + geom_point()
+p <- p + xlab("grazing intensity") + ylab("avg live biomass")
+pngname <- paste(img_dir, 'intensity_vs_live_biomass.png', sep="/")
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(b_c_df, aes(x=total_rem, y=perc_live))
+p <- p + geom_point()
+p <- p + xlab("grazing intensity") + ylab("avg green proportion of biomass")
+pngname <- paste(img_dir, 'intensity_vs_perc_live.png', sep="/")
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
 # summarize match by back-calc management routine
 id_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
 sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/match_summary.csv")
@@ -49,19 +449,28 @@ png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
-# how much does precipitation differ between 6 weather stations?
-indir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input/integrated_test"
-sites <- c('kamok', 'loidien', 'Loirugu', 'research', 'rongai', 'Serat')
+## precip on OPC 2.15.17
+indir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input"
+sites <- c('Golf_7', 'Sirima', 'Kamok', 'Loidien',
+           'Research', 'Loirugu', 'Serat', 'Rongai')
 widths <- c(6, 6, rep(7, 12))
 df_list <- list()
 for(s in sites){
   fwf <- paste(indir, "/", s, ".wth", sep="")
   df <- read.fwf(fwf, widths=widths)
   prec_df <- df[which(df$V1 == 'prec  '), ]
-  prec_df <- prec_df[, c(-1, -2)]
-  colnames(prec_df) <- seq(1, 12)
+  prec_df <- prec_df[which(prec_df$V2 >= 2014), ]
+  prec_df <- prec_df[, -1]
+  prec_df$site <- s
+  colnames(prec_df) <- c('Year', seq(1, 12), 'site')
   df_list[[s]] <- prec_df
 }
+precip_df <- do.call(rbind, df_list)
+precip_res <- reshape(precip_df, idvar="site", varying=c(2:13),
+                      v.names="precip_cm", direction="long", timevar='month',
+                      new.row.names=1:1000)
+write.csv(precip_res, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/2014_2015_precip.csv",
+          row.names=FALSE)
 
 # plot average monthly precipitation by site
 ave_monthly_precip <- do.call(rbind, (lapply(df_list, colMeans)))
