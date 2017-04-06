@@ -539,3 +539,82 @@ png(file=pngname, units="in", res=300, width=5, height=8)
 print(p)
 dev.off()
 
+# pin frame data: veg composition between 25 properties
+find_sp_id <- function(abbrev){
+  letters <- strsplit(abbrev, split="")[[1]]
+  if(letters[length(letters)] == 'G' ||
+     letters[length(letters)] == 'B'){
+    sp_id <- paste(head(letters, n=-1), sep="", collapse="")
+  }
+  else{
+    sp_id <- paste(head(letters, n=-5), sep="", collapse="")
+  }
+  return(sp_id)
+}
+
+pin_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RegionalPinframe2014_15_7July2016.csv")
+pin_df <- pin_df[, (1:84)]
+
+pin_df$trans_pos <- paste(pin_df$Date, pin_df$Property, pin_df$Position_m, sep="#")
+
+pin_pos_sum <- aggregate(pin_df[, 7:84], by=list(pin_df$trans_pos), FUN=sum)
+pin_pos_sum <- data.frame(pin_pos_sum,
+                          do.call(rbind, strsplit(as.character(pin_pos_sum$Group.1),'#')))
+pin_pos_sum$property <- pin_pos_sum$X2
+pin_mean <- aggregate(pin_pos_sum[, 2:79], by=list(pin_pos_sum$property), FUN=mean)
+colnames(pin_mean)[1] <- 'property'
+rownames(pin_mean) <- pin_mean$property
+pin_mean <- pin_mean[, 2:79]
+pin_mean_t <- as.data.frame(t(pin_mean))
+pin_mean_t$abbrev <- rownames(pin_mean_t)
+for(r in c(1:NROW(pin_mean_t))){
+  pin_mean_t[r, 'sp'] <- find_sp_id(pin_mean_t[r, 'abbrev'])
+}
+
+assert_2 <- aggregate(abbrev~sp, data=pin_mean_t, FUN=length)  # should all be 2
+sp_sum <- aggregate(pin_mean_t[, c(1:26)], by=list(pin_mean_t$sp), FUN=sum)
+rownames(sp_sum) <- sp_sum$Group.1
+sp_sum <- sp_sum[, 2:27]
+summed_by_sp <- t(sp_sum)
+  
+
+library(vegan)
+nmds_res <- metaMDS(summed_by_sp, distance="bray", k=3)
+plot(nmds_res)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/NMDS_by_property_3_axes.png"
+png(file=pngname, units="in", res=300, width=3, height=3)
+plot(nmds_res)
+dev.off()
+
+dominant_spp <- as.data.frame(apply(summed_by_sp, MARGIN=1, FUN=which.max))
+colnames(dominant_spp) <- 'dominant'
+hist(dominant_spp$dominant, breaks=50)
+## dominant spp are "PS" and "TT"
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys"
+proportion_table <- as.data.frame(prop.table(summed_by_sp, 1))
+proportion_table$property <- rownames(proportion_table)
+proportion_table$property <- factor(proportion_table$property,
+                                    levels=proportion_table$property[order(proportion_table$PS)])
+p <- ggplot(proportion_table, aes(x=property, y=PS))
+p <- p + geom_point()
+p <- p + ggtitle("Pennisetum stramineum: Proportion of hits")
+pngname <- paste(img_dir, "PS_proportion_by_property.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=2)
+print(p)
+dev.off()
+
+p <- ggplot(proportion_table, aes(x=property, y=TT))
+p <- p + geom_point()
+p <- p + ggtitle("Themeda triandra: Proportion of hits")
+pngname <- paste(img_dir, "TT_proportion_by_property.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=2)
+print(p)
+dev.off()
+
+p <- ggplot(proportion_table, aes(x=property, y=PM))
+p <- p + geom_point()
+p <- p + ggtitle("Pennisetum mezianum: Proportion of hits")
+pngname <- paste(img_dir, "PM_proportion_by_property.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=2)
+print(p)
+dev.off()
