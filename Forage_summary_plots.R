@@ -274,36 +274,11 @@ diff_df <- do.call(rbind, diff_df_list)
 write.csv(diff_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/facilitation_exploration/diet_diff_summary.csv",
             row.names=FALSE)
 
-# new growth
-# an example file structure
-outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs"
-run_folder <- "herb1_equal_sd_opposite_grass"
-grasses <- c("grass1", "grass2")
-summary_df <- data.frame('month'=c(1:12), 'context'=rep(c, 12),
-                         'treatment'=rep(t, 12), 'grass'=rep('total', 12),
-                         'new_growth'=numeric(12), 'perc_new_growth'=numeric(12))
-new_growth_t <- rep(0, 12)
-biomass_t <- rep(0, 12)
-for(gr in grasses){
-  file <- paste(outer_dir, run_folder, cent_dir, paste(gr, '.lis', sep=""), sep="/")
-  gr_df <- read.table(file, header=TRUE)
-  year <- 2015
-  y_sub <- subset(gr_df, gr_df$time > year & gr_df$time <= year + 1)[, c('time', 'agcacc', 'aglivc')]
-  y_sub <- y_sub[!duplicated(y_sub), ]
-  growth_v <- as.vector(y_sub[, 'agcacc'])
-  biomass_v <- as.vector(y_sub[, 'aglivc'])
-  new_growth <- growth_v[1]
-  for(idx in c(2:12)){
-    new_growth <- c(new_growth, growth_v[idx] - growth_v[idx - 1])
-  }
-  new_growth_t <- new_growth_t + new_growth
-  biomass_t <- biomass_t + biomass_v
-}
-new_gr_perc_t <- new_growth_t / biomass_t
-
-# calculated in script
+# new growth: calculated in script
+sim_months <- c("2014_11", "2014_12", "2015_01", "2015_02", "2015_03", "2015_04", "2015_05", "2015_06",
+                "2015_07", "2015_08", "2015_09", "2015_10", "2015_11", "2015_12")
 lines <- c("solid", "dotted", "longdash")
-growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/summary_n_mult.csv"
+growth_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013/growth_summary.csv"
 gr_df <- read.csv(growth_file)
 gr_df$date <- paste('01', gr_df$month, gr_df$year, sep="-")
 gr_df$date <- as.Date(gr_df$date, format="%d-%m-%Y")
@@ -311,15 +286,17 @@ gr_df$year_month <- format(gr_df$date, "%Y_%m")
 gr_df <- gr_df[which(gr_df$year_month %in% sim_months), ]
 gr_df$stocking_density <- as.factor(gr_df$stocking_density)
 gr_df[which(gr_df$label == 'n_content_live'), 'biomass'] <- gr_df[which(gr_df$label == 'n_content_live'), 'biomass'] * 100
-gr_df$label <- factor(gr_df$label, levels=c("liveweight_gain", "total_biomass", "live_biomass", "new_growth", 
-                                            "n_content_live", 'liveweight_gain_herd'),
-                      labels=c("liveweight_gain", "Total biomass (g/m2)", "Live biomass (g/m2)",
+gr_df[which(gr_df$label == 'perc_green'), 'biomass'] <- gr_df[which(gr_df$label == 'perc_green'), 'biomass'] * 100
+gr_df$label <- factor(gr_df$label, levels=c("weighted_cp_avg", "total_biomass", 'perc_green', "live_biomass", "new_growth", 
+                                            "n_content_live", "liveweight_gain", 'liveweight_gain_herd'),
+                      labels=c("c", "Total biomass (g/m2)", "Percent green biomass (%)", "Live biomass (g/m2)",
                                "New growth (g/m2)", "Crude protein in live biomass (%)",
-                               "Herd liveweight gain (kg/ha)"))
-gr_df_sub <- subset(gr_df, gr_df$label %in% c("liveweight_gain", "Total biomass (g/m2)", "Live biomass (g/m2)", 
-                                              "New growth (g/m2)",
-                                              "Herd liveweight gain (kg/ha)",
-                                              "Crude protein in live biomass (%)"))
+                               "Indiv. liveweight_gain (kg/ha)", "Herd liveweight gain (kg/ha)"))
+gr_df_sub <- subset(gr_df, gr_df$label %in% c("c", "Total biomass (g/m2)", "Percent green biomass (%)", 
+                                               "New growth (g/m2)",
+                                               "Herd liveweight gain (kg/ha)",
+                                               "Crude protein in live biomass (%)"))
+# gr_df_sub <- gr_df
 gr_df_sub <- gr_df_sub[order(gr_df_sub$stocking_density, gr_df_sub$label,
                              gr_df_sub$year, gr_df_sub$month), ]
 labs <- gr_df_sub$month
@@ -333,50 +310,39 @@ p <- p + theme(legend.key=element_blank(), legend.title=element_blank())
 p <- p + theme(legend.key.width=unit(3.7, "line"))
 p <- p + theme(legend.margin=unit(-0.7,"cm")) 
 p <- p + theme(legend.position="bottom")
-imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult"
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013"
 pngname <- paste(imgpath, "New_growth_live_biomass~stocking_density_restart_monthly.png", sep="/")
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
 # diff between high and low density treatments in % green
-low_sd_live <- gr_df[which(gr_df$stocking_density == '0.1' &
-                        gr_df$label == 'live_biomass'), 
+emp_months <- c("2015_04", "2015_11", "2015_05", "2014_11", "2015_09", "2015_06", "2015_02", "2015_03", "2015_12")
+low_sd <- gr_df[which(gr_df$stocking_density == '0.1' &
+                        gr_df$label == 'Percent green biomass (%)'), 
                 c('biomass', 'label', 'year', 'month', 'year_month',
                   'stocking_density')]
-low_sd_live$live_biomass <- low_sd_live$biomass
-low_sd_total <- gr_df[which(gr_df$stocking_density == '0.1' &
-                             gr_df$label == 'total_biomass'), 
-                     c('biomass', 'label', 'year', 'month', 'year_month',
-                       'stocking_density')]
-low_sd_total$total_biomass <- low_sd_total$biomass
-low_sd <- merge(low_sd_total, low_sd_live, by=c('year', 'month', 'year_month'))
-low_sd$perc_live_low_sd <- low_sd$live_biomass / low_sd$total_biomass * 100
-low_sd <- low_sd[, c('year', 'month', 'year_month', 'perc_live_low_sd')]
+colnames(low_sd) <- c('perc_green_low', 'label', 'year', 'month', 'year_month',
+                      'stocking_density')
 
-high_sd_live <- gr_df[which(gr_df$stocking_density == '0.8' &
-                             gr_df$label == 'live_biomass'), 
-                     c('biomass', 'label', 'year', 'month', 'year_month',
-                       'stocking_density')]
-high_sd_live$live_biomass <- high_sd_live$biomass
-high_sd_total <- gr_df[which(gr_df$stocking_density == '0.1' &
-                              gr_df$label == 'total_biomass'), 
-                      c('biomass', 'label', 'year', 'month', 'year_month',
-                        'stocking_density')]
-high_sd_total$total_biomass <- high_sd_total$biomass
-high_sd <- merge(high_sd_total, high_sd_live, by=c('year', 'month', 'year_month'))
-high_sd$perc_live_high_sd <- high_sd$live_biomass / high_sd$total_biomass * 100
-high_sd <- high_sd[, c('year', 'month', 'year_month', 'perc_live_high_sd')]
-comb <- merge(low_sd, high_sd)
-comb$diff <- comb$perc_live_high_sd - comb$perc_live_low_sd
+high_sd <- gr_df[which(gr_df$stocking_density == '0.8' &
+                        gr_df$label == 'Percent green biomass (%)'), 
+                c('biomass', 'label', 'year', 'month', 'year_month',
+                  'stocking_density')]
+colnames(high_sd) <- c('perc_green_high', 'label', 'year', 'month', 'year_month',
+                      'stocking_density')
+
+comb <- merge(low_sd, high_sd, by=c('label', 'year', 'month', 'year_month'))
+comb$diff <- comb$perc_green_high - comb$perc_green_low
 comb <- comb[which(comb$year_month %in% emp_months), ]
+comb <- comb[order(comb$year, comb$month), ]
 labs <- comb$month
 p <- ggplot(comb, aes(x=year_month, y=diff))
 p <- p + geom_point()
 p <- p + scale_x_discrete(labels=labs) + xlab("")
 p <- p + ylab("Difference in % green") + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult/diff_perc_green_high_low_sd.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013/diff_perc_green_high_low_sd.png"
 png(file=pngname, units="in", res=300, width=2, height=2)
 print(p)
 dev.off()
