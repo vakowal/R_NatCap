@@ -89,8 +89,8 @@ pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRU
 studies <- c('Shem_et_al_1995')
 sim_l <- list()
 for(study in studies){
-  sim_dat <- read.csv(paste(data_dir, study, "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv", sep="/"), header=TRUE,
-                      stringsAsFactors=FALSE)
+  sim_dat <- read.csv(paste(data_dir, study, "summary_unsupplemented.csv",  sep="/"), header=TRUE,
+                      stringsAsFactors=FALSE)  # "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv",
   sim_l[[study]] <- sim_dat
 }
 df <- do.call(rbind, sim_l)
@@ -107,6 +107,9 @@ combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
 combined = merge(combined, pub_dat, by='grass_label')
 combined$sim_gain_per_intake <- combined$sim_daily_gain / combined$sim_intake_forage
 combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
+
+in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="pearson")
+gpi_test <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="pearson")
 
 in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
 in_test[['estimate']]

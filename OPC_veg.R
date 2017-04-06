@@ -225,7 +225,10 @@ ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
 ave_precip$site <- 'site_average'
 precip_df <- precip[, c('date', 'precip_cm', 'site')]
 precip_df <- rbind(precip_df, ave_precip)
-
+OPC_avg_2013_5 <- aggregate(precip_df[, 2:13], by=list(precip_df$Year), FUN=mean)
+colnames(OPC_avg_2013_5)[1] <- 'Year'
+write.csv(OPC_avg_2013_5, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2013_2014_2015_OPC_ave_precip.csv",
+          row.names=FALSE)
 p <- ggplot(precip_df, aes(x=date, y=precip_cm, group=site))
 p <- p + geom_line(aes(colour=site))
 print(p)
@@ -459,7 +462,7 @@ for(s in sites){
   fwf <- paste(indir, "/", s, ".wth", sep="")
   df <- read.fwf(fwf, widths=widths)
   prec_df <- df[which(df$V1 == 'prec  '), ]
-  prec_df <- prec_df[which(prec_df$V2 >= 2014), ]
+  prec_df <- prec_df[which(prec_df$V2 >= 2013), ]
   prec_df <- prec_df[, -1]
   prec_df$site <- s
   colnames(prec_df) <- c('Year', seq(1, 12), 'site')
