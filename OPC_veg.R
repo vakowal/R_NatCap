@@ -414,15 +414,20 @@ dev.off()
 
 # summarize match by back-calc management routine
 id_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/match_summary.csv")
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
 sum_df <- merge(sum_df, id_match, by='site')
-p <- ggplot(sum_df, aes(x=id, y=g_m2, group=sim_vs_emp))
-p <- p + geom_point(aes(shape=sim_vs_emp))
+sum_df$sim_vs_emp <- factor(sum_df$sim_vs_emp, levels=c("sim_default",
+                                                        "sim_calc",
+                                                        "emp"))
+
+p <- ggplot(sum_df, aes(x=order, y=g_m2, group=sim_vs_emp))
+p <- p + geom_point(aes(shape=sim_vs_emp), size=3) +
+  scale_shape_manual(values=c(17, 24, 16))
 p <- p + ylab('Biomass (grams per square m)') + xlab("Site")
 p <- p + scale_x_continuous(breaks=seq(1, 8))
 p <- p + print_theme
 p <- p + theme(legend.position="none")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/match_summary.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.png"
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
