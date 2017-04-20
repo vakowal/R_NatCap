@@ -208,6 +208,8 @@ bc_summary <- read.csv(save_as)
 bc_2015_con <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_con_schedule_summary.csv")
 intensity_df <- aggregate(total_rem~site, data=bc_2015_con, FUN=mean)
 colnames(intensity_df)[2] <- 'average_monthly_gm2_removed'
+save_as <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/intensity_summary_24mo_match_2015_constrained.csv'
+write.csv(intensity_df, save_as, row.names=FALSE)
 
 # compare grazing intensity in back-calc history and reported cattle density
 results_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/comparison_with_reported_density"
@@ -257,6 +259,42 @@ for(cattle_est in c("prop_density", "prop_non_density")){
 }
 save_as <- paste(results_dir, "correlation_summary_NOMAKURIAN.csv", sep="/")
 write.csv(cor_record, save_as)
+
+# compare stocking density estimated by back-calc management routine with reported cattle densities
+est_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
+FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
+est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
+est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
+est_df$prop_density <- est_df$property_cattle / est_df$LwfPropSizeHa
+est_df$prop_non_density <- est_df$property_non_property_cattle / est_df$LwfPropSizeHa
+est_df <- merge(est_df, FID_list, by.x="Property", by.y="NAME", all.x=TRUE)
+
+est_df <- est_df[, c('FID', "prop_density", "prop_non_density", "Property")]
+back_calc_sd <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/regional_density_est.csv")
+est_back_calc_df <- merge(est_df, back_calc_sd, by.x="FID", by.y="site")
+
+est_back_calc_df <- est_back_calc_df[which(est_back_calc_df$Property != "Makurian"), ]
+p <- ggplot(est_back_calc_df, aes(x=prop_non_density, y=avg_animals_per_ha))
+p <- p + geom_point()
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+print(p)
+
+est_df <- est_df[, c('LwfPropSizeHa', 'FID')]
+prod_uniform_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/gain_summary.csv")
+prod_uniform_dens <- prod_uniform_dens[, c('site', 'total_yearly_delta_weight_kg_per_ha')]
+colnames(prod_uniform_dens)[2] <- 'yearly_herd_gain_uniform_dens'
+
+prod_est_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
+prod_est_dens <- prod_est_dens[, c('site', 'total_yearly_delta_weight_kg_per_ha')]
+colnames(prod_est_dens)[2] <- 'yearly_herd_gain_est_dens'
+
+sim_prod <- merge(prod_uniform_dens, prod_est_dens, by='site')
+sim_prod <- merge(sim_prod, est_df, by.x='site', by.y='FID')
+sim_prod$prop_prod_uniform_dens <- sim_prod$LwfPropSizeHa * sim_prod$yearly_herd_gain_uniform_dens
+sim_prod$prop_prod_est_dens <- sim_prod$LwfPropSizeHa * sim_prod$yearly_herd_gain_est_dens
+sum_prod <- colSums(sim_prod[, c('prop_prod_uniform_dens', 'prop_prod_est_dens')])
+sum_prod
 
 # empirical biomass: regional properties
 # PDM by property
