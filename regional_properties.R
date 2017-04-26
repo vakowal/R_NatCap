@@ -12,28 +12,39 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # remaining biomass after cattle offtake
-rem_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/biomass_remaining_summary.csv")
+rem_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/biomass_remaining_summary.csv")
 rem_df$date <- as.Date(paste(rem_df$year, rem_df$month, '01', sep="-"),
                        format='%Y-%m-%d')
 rem_df$site <- factor(rem_df$site)
-rem_df <- rem_df[which(rem_df$cp_option == 'varying'), ]
-p <- ggplot(rem_df, aes(x=date, y=gazelle_equivalents, group=site))
-p <- p + geom_line(aes(colour=site))
-# p <- p + facet_wrap(~cp_option)
-p <- p + theme(legend.position="none")
-print(p)
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
-pngname <- paste(img_dir, "gazelle_equivalents_by_property_vary_cp_0.3_cattleperha.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-print(p)
-dev.off()
+var_rem <- rem_df[which(rem_df$cp_option == 'cp'), ]
+mean_gazelles_v <- aggregate(var_rem$gazelle_equivalents, by=list(var_rem$site),
+                             FUN=mean)
+colnames(mean_gazelles_v) <- c('site', 'mean_gazelle_equivalents')
+mean_gazelles_v$cp_opt <- 'varying'
 
-mean_gazelles <- aggregate(rem_df$gazelle_equivalents, by=list(rem_df$site),
-                           FUN=mean)
-colnames(mean_gazelles) <- c('site', 'mean_gazelle_equivalents')
-property_key <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
-mean_gazelles <- merge(mean_gazelles, property_key, by.x='site', by.y='FID')
-write.csv(mean_gazelles, file="C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/mean_gazelles_by_property.csv")
+const_rem <- rem_df[which(rem_df$cp_option == 'constant'), ]
+mean_gazelles_c <- aggregate(const_rem$gazelle_equivalents, by=list(const_rem$site),
+                             FUN=mean)
+colnames(mean_gazelles_c) <- c('site', 'mean_gazelle_equivalents')
+mean_gazelles_c$cp_opt <- 'constant'
+
+gaz_df <- rbind(mean_gazelles_c, mean_gazelles_v)
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
+m_df <- merge(gaz_df, precip_df, by.x="site", by.y="FID")
+
+p <- ggplot(m_df, aes(x=avg_annual_rainfall, y=mean_gazelle_equivalents))
+p <- p + geom_point() + ylab("Mean gazelle equivalents")
+p <- p + xlab("Average annual rainfall (cm)")
+p <- p + facet_wrap(~cp_opt) + print_theme
+print(p)
+p2 <- p
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+pngname = paste(imgdir, "gazelle_equiv_constant_vs_varying_cp_GL_0.3.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p2)
+dev.off()
 
 # correlation between mean gazelles by property, and precip, and biomass
 precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
@@ -544,7 +555,7 @@ plot_df$cp_treatment <- factor(plot_df$cp_treatment, levels=c('constant', 'varyi
 
 p <- ggplot(plot_df, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
 p <- p + geom_point()
-p <- p + xlab("Average annual rainfall (cm)") + ylab("Average annual liveweight gain (kg)")
+p <- p + xlab("Average annual rainfall (cm)") + ylab("Average annual liveweight gain (kg/ha)")
 p <- p + print_theme
 p <- p + facet_wrap(~cp_treatment)
 print(p)
