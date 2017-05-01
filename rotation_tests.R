@@ -11,6 +11,76 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# Ortega-S et al 2013
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs"
+cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous/summary_results.csv")
+rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/rotation/pasture_summary.csv")
+rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/rotation/animal_summary.csv")
+
+cont_df$date <- cont_df$year + (1/12) * cont_df$month
+rot_p_df$date <- rot_p_df$year + (1/12) * rot_p_df$month
+rot_a_df$date <- rot_a_df$year + (1/12) * rot_a_df$month
+
+anim_c <- cont_df[, c('cattle_gain_kg', 'date', 'year', 'month')]
+anim_r <- rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
+colnames(anim_r)[1] <- 'cattle_gain_kg'
+anim_c$treatment <- 'continuous'
+anim_r$treatment <- 'rotation'
+
+colnames(anim_c)[1] <- 'gain_cont'
+colnames(anim_r)[1] <- 'gain_rot'
+diff_df <- merge(anim_c, anim_r, by=c('date', 'month', 'year'), all=TRUE)
+diff_df$rot_minus_cont <- diff_df$gain_rot - diff_df$gain_cont
+
+diff_df$month <- factor(diff_df$month)
+p <- ggplot(diff_df, aes(x=month, y=rot_minus_cont))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'cattle_gain_rot_vs_cont.png', sep="/")
+png(file=pngname, units="in", res=300, width=6, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(cont_df, aes(x=date, y=total_grass_kgha))
+p <- p + geom_line()
+print(p)
+
+rot_p_df$pasture_index <- factor(rot_p_df$pasture_index)
+p <- ggplot(rot_p_df, aes(x=date, y=grass_total_kgha, group=pasture_index))
+p <- p + geom_line(aes(color=pasture_index))
+print(p)
+
+mean_cont <- mean(cont_df$total_grass_kgha)
+mean_rot <- mean(rot_p_df[which(rot_p_df$date <= 2012), 'grass_total_kgha'])
+
+# was biomass in selected pasture always highest among pastures?
+selected_df <- data.frame('date'=numeric(NROW(rot_a_df)),
+                          'grass_total_kgha'=numeric(NROW(rot_a_df)),
+                          stringsAsFactors=FALSE)
+for(r in 1:NROW(rot_a_df)){
+  pindx <- rot_a_df[r, 'pasture_index']
+  t <- rot_a_df[r, 'step']
+  selected_df[r, 'grass_total_kgha'] <- rot_p_df[which(rot_p_df$step == (t-1) &
+                                                         rot_p_df$pasture_index == pindx),
+                                                 'grass_total_kgha']
+  selected_df[r, 'date'] <- rot_p_df[which(rot_p_df$step == (t-1) &
+                                             rot_p_df$pasture_index == pindx),
+                                     'date']
+}
+
+subs_df <- rot_p_df[which(rot_p_df$date > 2002 & rot_p_df$date < 2004), ]
+subs_sel <- selected_df[which(selected_df$date > 2002 & selected_df$date < 2004), ]
+p <- ggplot(subs_df, aes(x=date, y=grass_total_kgha))
+p <- p + geom_line(aes(color=pasture_index))
+p <- p + geom_point(data=subs_sel, aes(x=date, y=grass_total_kgha))
+print(p)
+pngname <- paste(img_dir, 'pasture_biomass.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+
+### CGIAR Peru
 sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/Forage_model_results/test_rotation/comparison_8.9.16.csv"
 sum_df <- read.csv(sum_csv)
 
