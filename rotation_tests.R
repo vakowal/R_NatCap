@@ -14,67 +14,126 @@ print_theme <- theme(strip.text.y=element_text(size=10),
 # Ortega-S et al 2013
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs"
 cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous/summary_results.csv")
-rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/rotation/pasture_summary.csv")
-rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/rotation/animal_summary.csv")
+sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_3mo/pasture_summary.csv")
+sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_3mo/animal_summary.csv")
+bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_3mo/pasture_summary.csv")
+bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_3mo/animal_summary.csv")
 
 cont_df$date <- cont_df$year + (1/12) * cont_df$month
-rot_p_df$date <- rot_p_df$year + (1/12) * rot_p_df$month
-rot_a_df$date <- rot_a_df$year + (1/12) * rot_a_df$month
+sm_rot_p_df$date <- sm_rot_p_df$year + (1/12) * sm_rot_p_df$month
+sm_rot_a_df$date <- sm_rot_a_df$year + (1/12) * sm_rot_a_df$month
+bl_rot_p_df$date <- bl_rot_p_df$year + (1/12) * bl_rot_p_df$month
+bl_rot_a_df$date <- bl_rot_a_df$year + (1/12) * bl_rot_a_df$month
 
+# what is difference in cattle weight gain?
 anim_c <- cont_df[, c('cattle_gain_kg', 'date', 'year', 'month')]
-anim_r <- rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
-colnames(anim_r)[1] <- 'cattle_gain_kg'
-anim_c$treatment <- 'continuous'
-anim_r$treatment <- 'rotation'
-
+anim_blr <- bl_rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
+anim_smr <- sm_rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
 colnames(anim_c)[1] <- 'gain_cont'
-colnames(anim_r)[1] <- 'gain_rot'
-diff_df <- merge(anim_c, anim_r, by=c('date', 'month', 'year'), all=TRUE)
-diff_df$rot_minus_cont <- diff_df$gain_rot - diff_df$gain_cont
+colnames(anim_blr)[1] <- 'gain_bl_rot'
+colnames(anim_smr)[1] <- 'gain_sm_rot'
+diff_df <- merge(anim_c, anim_blr, by=c('date', 'month', 'year'), all=TRUE)
+diff_df <- merge(diff_df, anim_smr, by=c('date', 'month', 'year'), all=TRUE)
+diff_df$blrot_minus_cont <- diff_df$gain_bl_rot - diff_df$gain_cont
+diff_df$smrot_minus_cont <- diff_df$gain_sm_rot - diff_df$gain_cont
+diff_df$smrot_minus_blrot <- diff_df$gain_sm_rot - diff_df$gain_bl_rot
+
+summary(diff_df$blrot_minus_cont)
+summary(diff_df$smrot_minus_cont)
+summary(diff_df$smrot_minus_blrot)
+hist(diff_df$blrot_minus_cont, breaks=50)
+hist(diff_df$smrot_minus_cont, breaks=50)
+hist(diff_df$smrot_minus_blrot, breaks=50)
 
 diff_df$month <- factor(diff_df$month)
-p <- ggplot(diff_df, aes(x=month, y=rot_minus_cont))
+p <- ggplot(diff_df, aes(x=month, y=smrot_minus_blrot))
 p <- p + geom_boxplot()
 print(p)
-pngname <- paste(img_dir, 'cattle_gain_rot_vs_cont.png', sep="/")
-png(file=pngname, units="in", res=300, width=6, height=4)
+pngname <- paste(img_dir, 'smrot_minus_blrot_1mo.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
 
-p <- ggplot(cont_df, aes(x=date, y=total_grass_kgha))
+p <- ggplot(diff_df, aes(x=month, y=blrot_minus_cont))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'blrot_minus_cont_1mo.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(diff_df, aes(x=month, y=smrot_minus_cont))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'smrot_minus_cont_1mo.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+# what is difference in pasture biomass?
+mean_cont <- mean(cont_df$total_grass_kgha)
+mean_blrot <- mean(bl_rot_p_df[which(bl_rot_p_df$date <= 2012), 'grass_total_kgha'])
+mean_smrot <- mean(sm_rot_p_df[which(sm_rot_p_df$date <= 2012), 'grass_total_kgha'])
+
+# biomass over time in continuous grazed
+subs_c <- cont_df[which(cont_df$date > 2000 & cont_df$date < 2005), ]
+p <- ggplot(subs_c, aes(x=date, y=total_grass_kgha))
 p <- p + geom_line()
 print(p)
-
-rot_p_df$pasture_index <- factor(rot_p_df$pasture_index)
-p <- ggplot(rot_p_df, aes(x=date, y=grass_total_kgha, group=pasture_index))
-p <- p + geom_line(aes(color=pasture_index))
+pngname <- paste(img_dir, 'pasture_biomass_cont.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
+dev.off()
 
-mean_cont <- mean(cont_df$total_grass_kgha)
-mean_rot <- mean(rot_p_df[which(rot_p_df$date <= 2012), 'grass_total_kgha'])
-
-# was biomass in selected pasture always highest among pastures?
-selected_df <- data.frame('date'=numeric(NROW(rot_a_df)),
-                          'grass_total_kgha'=numeric(NROW(rot_a_df)),
+# biomass in selected pasture
+bl_rot_p_df$pasture_index <- factor(bl_rot_p_df$pasture_index)
+selected_df <- data.frame('date'=numeric(NROW(bl_rot_a_df)),
+                          'grass_total_kgha'=numeric(NROW(bl_rot_a_df)),
                           stringsAsFactors=FALSE)
-for(r in 1:NROW(rot_a_df)){
-  pindx <- rot_a_df[r, 'pasture_index']
-  t <- rot_a_df[r, 'step']
-  selected_df[r, 'grass_total_kgha'] <- rot_p_df[which(rot_p_df$step == (t-1) &
-                                                         rot_p_df$pasture_index == pindx),
+for(r in 1:NROW(bl_rot_a_df)){
+  pindx <- bl_rot_a_df[r, 'pasture_index']
+  t <- bl_rot_a_df[r, 'step']
+  selected_df[r, 'grass_total_kgha'] <- bl_rot_p_df[which(bl_rot_p_df$step == (t-1) &
+                                                            bl_rot_p_df$pasture_index == pindx),
                                                  'grass_total_kgha']
-  selected_df[r, 'date'] <- rot_p_df[which(rot_p_df$step == (t-1) &
-                                             rot_p_df$pasture_index == pindx),
+  selected_df[r, 'date'] <- bl_rot_p_df[which(bl_rot_p_df$step == (t-1) &
+                                                bl_rot_p_df$pasture_index == pindx),
                                      'date']
 }
 
-subs_df <- rot_p_df[which(rot_p_df$date > 2002 & rot_p_df$date < 2004), ]
-subs_sel <- selected_df[which(selected_df$date > 2002 & selected_df$date < 2004), ]
+subs_df <- bl_rot_p_df[which(bl_rot_p_df$date > 2000 & bl_rot_p_df$date < 2005), ]
+subs_sel <- selected_df[which(selected_df$date > 2000 & selected_df$date < 2005), ]
 p <- ggplot(subs_df, aes(x=date, y=grass_total_kgha))
 p <- p + geom_line(aes(color=pasture_index))
 p <- p + geom_point(data=subs_sel, aes(x=date, y=grass_total_kgha))
 print(p)
-pngname <- paste(img_dir, 'pasture_biomass.png', sep="/")
+pngname <- paste(img_dir, 'pasture_biomass_blind_rotation_1_mo.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+## smart rotation ; over time, between pastures, and in selected pasture
+sm_rot_p_df$pasture_index <- factor(sm_rot_p_df$pasture_index)
+selected_df <- data.frame('date'=numeric(NROW(sm_rot_a_df)),
+                          'grass_total_kgha'=numeric(NROW(sm_rot_a_df)),
+                          stringsAsFactors=FALSE)
+for(r in 1:NROW(sm_rot_a_df)){
+  pindx <- sm_rot_a_df[r, 'pasture_index']
+  t <- sm_rot_a_df[r, 'step']
+  selected_df[r, 'grass_total_kgha'] <- sm_rot_p_df[which(sm_rot_p_df$step == (t-1) &
+                                                            sm_rot_p_df$pasture_index == pindx),
+                                                    'grass_total_kgha']
+  selected_df[r, 'date'] <- sm_rot_p_df[which(sm_rot_p_df$step == (t-1) &
+                                                sm_rot_p_df$pasture_index == pindx),
+                                        'date']
+}
+subs_df <- sm_rot_p_df[which(sm_rot_p_df$date > 2000 & sm_rot_p_df$date < 2005), ]
+subs_sel <- selected_df[which(selected_df$date > 2000 & selected_df$date < 2005), ]
+p <- ggplot(subs_df, aes(x=date, y=grass_total_kgha))
+p <- p + geom_line(aes(color=pasture_index))
+p <- p + geom_point(data=subs_sel, aes(x=date, y=grass_total_kgha))
+print(p)
+pngname <- paste(img_dir, 'pasture_biomass_smart_rotation_3_mo.png', sep="/")
 png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
