@@ -18,6 +18,7 @@ summary_plots <- function(model_results_folder, imgpath){
   
   summary_file <- read.csv(paste(model_results_folder,
                                  "summary_results.csv", sep = "/"), header = TRUE)
+  summary_file$date <- summary_file$year + (1/12) * summary_file$month
   grass_type_cols <- grep("kgha", colnames(summary_file), value=TRUE)
   grass_types <- gsub("_kgha", "", grass_type_cols)
   summary_file$total_grass <- rowSums(summary_file[, grass_type_cols])
@@ -54,9 +55,10 @@ summary_plots <- function(model_results_folder, imgpath){
       summary_list[[animal]] <- one_df  
   }
   summary_df <- do.call(rbind, summary_list)
+  summary_df$date <- summary_df$year + (1/12) * summary_df$month
   
   biomass_subset <- summary_df[(summary_df$label %in% c('total_grass', animal_types)), ]
-  p <- ggplot(biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
+  p <- ggplot(biomass_subset, aes(x=date, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Total biomass")
   pngname <- paste(imgpath, "Biomass_summary.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
@@ -64,7 +66,7 @@ summary_plots <- function(model_results_folder, imgpath){
   dev.off()
   
   grass_biomass_subset <- summary_df[(summary_df$label %in% c('total_grass', grass_types)), ]
-  p <- ggplot(grass_biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
+  p <- ggplot(grass_biomass_subset, aes(x=date, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Grass biomass")
   pngname <- paste(imgpath, "Grass_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
@@ -72,7 +74,7 @@ summary_plots <- function(model_results_folder, imgpath){
   dev.off()
   
   animal_biomass_subset <- summary_df[(summary_df$label %in% animal_types), ]
-  p <- ggplot(animal_biomass_subset, aes(x=month, y=biomass, group=label, linetype=label))
+  p <- ggplot(animal_biomass_subset, aes(x=date, y=biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Herbivore biomass")
   p <- p + scale_linetype_manual(values = lines, name = "")
   pngname <- paste(imgpath, "Herbivore_biomass.png", sep="/")
@@ -80,7 +82,7 @@ summary_plots <- function(model_results_folder, imgpath){
   print(p)
   dev.off()
   
-  p <- ggplot(animal_biomass_subset, aes(x=month, y=offtake, group=label, linetype=label))
+  p <- ggplot(animal_biomass_subset, aes(x=date, y=offtake, group=label, linetype=label))
   p <- p + geom_line() + ylab("offtake (kg)") + ggtitle("Herbivore offtake")
   p <- p + scale_linetype_manual(values = lines, name = "")
   pngname <- paste(imgpath, "Herbivore_offtake.png", sep="/")
@@ -96,13 +98,14 @@ summary_plots <- function(model_results_folder, imgpath){
     prop_df <- data.frame('step'=summary_file$step,
                           'year'=summary_file$year,
                           'month'=summary_file$month,
+                          'date'=summary_file$date,
                           'label'=rep(label, length(summary_file$step)),
                           'proportion_biomass'=prop)
     prop_list[[label]] <- prop_df
   }
   prop_df <- do.call(rbind, prop_list)
   
-  p <- ggplot(prop_df, aes(x=month, y=proportion_biomass, group=label, linetype=label))
+  p <- ggplot(prop_df, aes(x=date, y=proportion_biomass, group=label, linetype=label))
   p <- p + geom_line() + ylab("percentage of total biomass") + 
     ggtitle("Proportion of total biomass by grass type")
   p <- p + scale_linetype_manual(values = lines, name = "")
@@ -111,6 +114,10 @@ summary_plots <- function(model_results_folder, imgpath){
   print(p)
   dev.off()
 }
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous"
+imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous_figs"
+summary_plots(model_results_folder, imgpath)
 
 model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/model_runs/cattle_zebra"
 imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/facilitation_exploration/figs/cattle_zebra"
@@ -308,7 +315,7 @@ p <- p + print_theme + scale_x_discrete(labels=labs)
 p <- p + xlab("Month") + ylab("")
 p <- p + theme(legend.key=element_blank(), legend.title=element_blank())
 p <- p + theme(legend.key.width=unit(3.7, "line"))
-p <- p + theme(legend.margin=unit(-0.7,"cm")) 
+# p <- p + theme(legend.margin=unit(-0.1,"cm")) 
 p <- p + theme(legend.position="bottom")
 imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013"
 pngname <- paste(imgpath, "New_growth_live_biomass~stocking_density_restart_monthly.png", sep="/")
@@ -341,9 +348,10 @@ p <- ggplot(comb, aes(x=year_month, y=diff))
 p <- p + geom_point()
 p <- p + scale_x_discrete(labels=labs) + xlab("")
 p <- p + ylab("Difference in % green") + print_theme
+p <- p + geom_abline(intercept=0, slope=0, linetype=2)
 print(p)
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013/diff_perc_green_high_low_sd.png"
-png(file=pngname, units="in", res=300, width=2, height=2)
+png(file=pngname, units="in", res=300, width=2.1, height=1.725)
 print(p)
 dev.off()
 
