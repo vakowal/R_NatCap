@@ -12,41 +12,156 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # Ortega-S et al 2013
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs"
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs/1mo_rotation"
 cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous/summary_results.csv")
-sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_3mo/pasture_summary.csv")
-sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_3mo/animal_summary.csv")
-bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_3mo/pasture_summary.csv")
-bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_3mo/animal_summary.csv")
+sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/pasture_summary.csv")
+sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/animal_summary.csv")
+bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_1mo/pasture_summary.csv")
+bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_1mo/animal_summary.csv")
+zero_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/zero_density/summary_results.csv")
 
 cont_df$date <- cont_df$year + (1/12) * cont_df$month
+zero_df$date <- zero_df$year + (1/12) * zero_df$month
 sm_rot_p_df$date <- sm_rot_p_df$year + (1/12) * sm_rot_p_df$month
 sm_rot_a_df$date <- sm_rot_a_df$year + (1/12) * sm_rot_a_df$month
 bl_rot_p_df$date <- bl_rot_p_df$year + (1/12) * bl_rot_p_df$month
 bl_rot_a_df$date <- bl_rot_a_df$year + (1/12) * bl_rot_a_df$month
 
-# what is difference in cattle weight gain?
-anim_c <- cont_df[, c('cattle_gain_kg', 'date', 'year', 'month')]
-anim_blr <- bl_rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
-anim_smr <- sm_rot_a_df[ c('animal_gain', 'date', 'year', 'month')]
-colnames(anim_c)[1] <- 'gain_cont'
-colnames(anim_blr)[1] <- 'gain_bl_rot'
-colnames(anim_smr)[1] <- 'gain_sm_rot'
-diff_df <- merge(anim_c, anim_blr, by=c('date', 'month', 'year'), all=TRUE)
-diff_df <- merge(diff_df, anim_smr, by=c('date', 'month', 'year'), all=TRUE)
-diff_df$blrot_minus_cont <- diff_df$gain_bl_rot - diff_df$gain_cont
-diff_df$smrot_minus_cont <- diff_df$gain_sm_rot - diff_df$gain_cont
-diff_df$smrot_minus_blrot <- diff_df$gain_sm_rot - diff_df$gain_bl_rot
+# forage availability in absence of grazing
+lines <- c("solid", "longdash", "dotted")
+sub_z <- zero_df[which(zero_df$date > 2000 & zero_df$date < 2005), ]
+sub_zreshp <- read.csv("C:/Users/Ginger/Desktop/sub_z_resh.csv")
+p <- ggplot(sub_zreshp, aes(x=date, y=kg_ha, group=biomass_label))
+p <- p + geom_line(aes(linetype=biomass_label))
+p + scale_linetype_manual(values=lines)
+print(p)
+pngname <- paste(img_dir, 'forage_zero_sd.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
 
-summary(diff_df$blrot_minus_cont)
-summary(diff_df$smrot_minus_cont)
-summary(diff_df$smrot_minus_blrot)
-hist(diff_df$blrot_minus_cont, breaks=50)
-hist(diff_df$smrot_minus_cont, breaks=50)
-hist(diff_df$smrot_minus_blrot, breaks=50)
+# summarize mean pasture biomass between rotation and continuous
+sm_r_pmean <- aggregate(grass_total_kgha~date + year + month, data=sm_rot_p_df, FUN=mean)
+bl_r_pmean <- aggregate(grass_total_kgha~date + year + month, data=bl_rot_p_df, FUN=mean)
+cont_pmean <- aggregate(total_grass_kgha~date + year + month, data=cont_df, FUN=mean)
+colnames(cont_pmean)[4] <- "grass_total_kgha"
+
+# difference between treatments, by month
+colnames(sm_r_pmean)[4] <- 'sm_r_kgha'
+colnames(bl_r_pmean)[4] <- 'bl_r_kgha'
+colnames(cont_pmean)[4] <- 'cont_kgha'
+pdiff <- merge(sm_r_pmean, bl_r_pmean, by=c('date', 'month', 'year'))
+pdiff <- merge(pdiff, cont_pmean, by=c('date', 'month', 'year'))
+pdiff$kgha_blrot_minus_cont <- pdiff$bl_r_kgha - pdiff$cont_kgha
+pdiff$kgha_smrot_minus_cont <- pdiff$sm_r_kgha - pdiff$cont_kgha
+pdiff$kgha_smrot_minus_blrot <- pdiff$sm_r_kgha - pdiff$bl_r_kgha
+
+pdiff$month <- factor(pdiff$month)
+p <- ggplot(pdiff, aes(x=month, y=kgha_blrot_minus_cont))
+p <- p + geom_boxplot()
+p <- p + ylab("Biomass (blind rot.) - biomass (continuous)")
+print(p)
+pngname <- paste(img_dir, 'biomass_blrot_minus_continuous.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(pdiff, aes(x=month, y=kgha_smrot_minus_cont))
+p <- p + geom_boxplot()
+p <- p + ylab("Biomass (smart rot.) - biomass (continuous)")
+print(p)
+pngname <- paste(img_dir, 'biomass_smrot_minus_continuous.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(pdiff, aes(x=month, y=kgha_smrot_minus_blrot))
+p <- p + geom_boxplot()
+p <- p + ylab("Biomass (smart rot.) - biomass (blind rot.)")
+print(p)
+pngname <- paste(img_dir, 'biomass_smrot_minus_blrot.png', sep="/")
+png(file=pngname, units="in", res=300, width=10, height=5)
+print(p)
+dev.off()
+
+
+
+# summarize gain and offtake between rotation and continuous
+diff_resh <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs/diff_df_resh.csv")
+diff_resh$treatment <- factor(diff_resh$treatment)
+p <- ggplot(diff_resh, aes(x=treatment, y=offtake_per_anim))
+p <- p + geom_boxplot()
+print(p)
+
+p <- ggplot(diff_resh, aes(x=treatment, y=gain))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'gain_by_treatment_all_mos.png', sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+subs <- diff_resh[which(diff_resh$month < 12), ]
+p <- ggplot(subs, aes(x=treatment, y=gain))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'gain_by_treatment_mo_1-11.png', sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+subs <- diff_resh[which(diff_resh$month < 12 & diff_resh$month > 1), ]
+p <- ggplot(subs, aes(x=treatment, y=gain))
+p <- p + geom_boxplot()
+print(p)
+pngname <- paste(img_dir, 'gain_by_treatment_mo_2-11.png', sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+# what is difference in cattle weight gain and offtake?
+anim_c <- cont_df[, c('cattle_gain_kg', 'total_offtake', 'date', 'year', 'month')]
+anim_blr <- bl_rot_a_df[ c('animal_gain', 'total_offtake', 'date', 'year', 'month')]
+anim_smr <- sm_rot_a_df[ c('animal_gain', 'total_offtake', 'date', 'year', 'month')]
+colnames(anim_c)[1] <- 'gain_cont'
+colnames(anim_c)[2] <- 'offtake_cont'
+colnames(anim_blr)[1] <- 'gain_bl_rot'
+colnames(anim_blr)[2] <- 'offtake_bl_rot'
+colnames(anim_smr)[1] <- 'gain_sm_rot'
+colnames(anim_smr)[2] <- 'offtake_sm_rot'
+diff_df <- merge(anim_c, anim_blr, by=c('date', 'month', 'year'))
+diff_df <- merge(diff_df, anim_smr, by=c('date', 'month', 'year'))
+diff_df$gain_blrot_minus_cont <- diff_df$gain_bl_rot - diff_df$gain_cont
+diff_df$gain_smrot_minus_cont <- diff_df$gain_sm_rot - diff_df$gain_cont
+diff_df$gain_smrot_minus_blrot <- diff_df$gain_sm_rot - diff_df$gain_bl_rot
+diff_df$offtake_blrot_minus_cont <- diff_df$offtake_bl_rot - diff_df$offtake_cont
+diff_df$offtake_smrot_minus_cont <- diff_df$offtake_sm_rot - diff_df$offtake_cont
+diff_df$offtake_smrot_minus_blrot <- diff_df$offtake_sm_rot - diff_df$offtake_bl_rot
+diff_df$offtake_per_anim_cont <- diff_df$offtake_cont / 0.275
+diff_df$offtake_per_anim_blrot <- diff_df$offtake_bl_rot / 2.31
+diff_df$offtake_per_anim_smrot <- diff_df$offtake_sm_rot / 2.31
+diff_df$offtake_per_anim_blrot_minus_cont <- diff_df$offtake_per_anim_blrot - diff_df$offtake_per_anim_cont
+diff_df$offtake_per_anim_smrot_minus_cont <- diff_df$offtake_per_anim_smrot - diff_df$offtake_per_anim_cont
+
+# is difference in gain attributable to difference in offtake?
+p <- ggplot(diff_df, aes(x=offtake_per_anim_blrot_minus_cont, y=gain_blrot_minus_cont))
+p <- p + geom_point(aes(color=month))
+print(p)
+
+p <- ggplot(diff_df, aes(x=offtake_per_anim_smrot_minus_cont, y=gain_smrot_minus_cont))
+p <- p + geom_point(aes(color=month))
+print(p)
+
+summary(diff_df$gain_blrot_minus_cont)
+summary(diff_df$gain_smrot_minus_cont)
+summary(diff_df$gain_smrot_minus_blrot)
+hist(diff_df$gain_blrot_minus_cont, breaks=50)
+hist(diff_df$gain_smrot_minus_cont, breaks=50)
+hist(diff_df$gain_smrot_minus_blrot, breaks=50)
 
 diff_df$month <- factor(diff_df$month)
-p <- ggplot(diff_df, aes(x=month, y=smrot_minus_blrot))
+p <- ggplot(diff_df, aes(x=month, y=gain_smrot_minus_blrot))
+p <- p + ylab('cattle gain (smart) - cattle gain (blind)')
 p <- p + geom_boxplot()
 print(p)
 pngname <- paste(img_dir, 'smrot_minus_blrot_1mo.png', sep="/")
@@ -54,16 +169,18 @@ png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
 
-p <- ggplot(diff_df, aes(x=month, y=blrot_minus_cont))
+p <- ggplot(diff_df, aes(x=month, y=gain_blrot_minus_cont))
 p <- p + geom_boxplot()
+p <- p + ylab('cattle gain (blind) - cattle gain (continuous)')
 print(p)
 pngname <- paste(img_dir, 'blrot_minus_cont_1mo.png', sep="/")
 png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
 
-p <- ggplot(diff_df, aes(x=month, y=smrot_minus_cont))
+p <- ggplot(diff_df, aes(x=month, y=gain_smrot_minus_cont))
 p <- p + geom_boxplot()
+p <- p + ylab('cattle gain (smart) - cattle gain (continuous)')
 print(p)
 pngname <- paste(img_dir, 'smrot_minus_cont_1mo.png', sep="/")
 png(file=pngname, units="in", res=300, width=10, height=5)
@@ -77,7 +194,7 @@ mean_smrot <- mean(sm_rot_p_df[which(sm_rot_p_df$date <= 2012), 'grass_total_kgh
 
 # biomass over time in continuous grazed
 subs_c <- cont_df[which(cont_df$date > 2000 & cont_df$date < 2005), ]
-p <- ggplot(subs_c, aes(x=date, y=total_grass_kgha))
+p <- ggplot(subs_c, aes(x=date, y=grass_green_kgha))
 p <- p + geom_line()
 print(p)
 pngname <- paste(img_dir, 'pasture_biomass_cont.png', sep="/")
