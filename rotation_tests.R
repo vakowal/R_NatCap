@@ -12,12 +12,55 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # Ortega-S et al 2013
+# stocking density test
+all_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_n_pasture_test_all_months/summary.csv")
+all_months$gain_diff <- all_months$gain_._diff * 100
+all_months$pasture_diff <- all_months$pasture_._diff * 100
+p <- ggplot(all_months, aes(x=num_pastures, y=pasture_diff))
+p <- p + geom_point()
+p <- p + facet_wrap(~num_animals)
+print(p)
+
+p <- ggplot(all_months, aes(x=num_pastures, y=gain_diff))
+p <- p + geom_point()
+p <- p + facet_wrap(~num_animals)
+print(p)
+
+restr_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_mo2-11/summary.csv")
+
+all_months$month_treatment <- 'Graze all months'
+restr_months$month_treatment <- 'Graze months 2-11'
+sum_df <- rbind(all_months, restr_months)
+sum_df$gain_diff <- sum_df$gain_._diff * 100
+sum_df$pasture_diff <- sum_df$pasture_._diff * 100
+
+p <- ggplot(sum_df, aes(x=num_animals, y=gain_diff))
+p <- p + geom_point() + ylab("Benefit of rotation: animal gain (%)")
+p <- p + xlab("Herd size")
+p <- p + facet_wrap(~month_treatment)
+print(p)
+pngname <- paste(img_dir, 'animal_gain_benefit_of_rotation.png', sep="/")
+png(file=pngname, units="in", res=300, width=5, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(sum_df, aes(x=num_animals, y=pasture_diff))
+p <- p + geom_point() + ylab("Benefit of rotation: pasture biomass (%)")
+p <- p + xlab("Herd size")
+p <- p + facet_wrap(~month_treatment)
+print(p)
+pngname <- paste(img_dir, 'pasture_biomass_benefit_of_rotation.png', sep="/")
+png(file=pngname, units="in", res=300, width=5, height=3)
+print(p)
+dev.off()
+
+# diff between rotated and continuous, plots etc
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs/1mo_rotation"
-cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous/summary_results.csv")
+cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/cont_35_animals/summary_results.csv")
 sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/pasture_summary.csv")
 sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/animal_summary.csv")
-bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_1mo/pasture_summary.csv")
-bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/blind_rotation_1mo/animal_summary.csv")
+bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/pasture_summary.csv")
+bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/animal_summary.csv")
 zero_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/zero_density/summary_results.csv")
 
 cont_df$date <- cont_df$year + (1/12) * cont_df$month
@@ -43,6 +86,7 @@ dev.off()
 # summarize mean pasture biomass between rotation and continuous
 sm_r_pmean <- aggregate(grass_total_kgha~date + year + month, data=sm_rot_p_df, FUN=mean)
 bl_r_pmean <- aggregate(grass_total_kgha~date + year + month, data=bl_rot_p_df, FUN=mean)
+cont_df$total_grass_kgha <- cont_df$grass_dead_kgha + cont_df$grass_green_kgha
 cont_pmean <- aggregate(total_grass_kgha~date + year + month, data=cont_df, FUN=mean)
 colnames(cont_pmean)[4] <- "grass_total_kgha"
 
@@ -147,6 +191,10 @@ diff_df$offtake_per_anim_smrot_minus_cont <- diff_df$offtake_per_anim_smrot - di
 p <- ggplot(diff_df, aes(x=offtake_per_anim_blrot_minus_cont, y=gain_blrot_minus_cont))
 p <- p + geom_point(aes(color=month))
 print(p)
+pngname <- paste(img_dir, 'offtake_v_gain_bl_minus_cont_35_animals.png', sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
 
 p <- ggplot(diff_df, aes(x=offtake_per_anim_smrot_minus_cont, y=gain_smrot_minus_cont))
 p <- p + geom_point(aes(color=month))
