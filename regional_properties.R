@@ -12,13 +12,21 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # remaining biomass after cattle offtake
+est_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_est_density_constant_cp.csv")
+cons_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_0.3_constant_cp.csv")
+colnames(est_dens_gaz)[2] <- 'mean_gaz_est_dens'
+colnames(cons_dens_gaz)[2] <- 'mean_gaz_const_dens'
+gaz_df <- merge(est_dens_gaz, cons_dens_gaz, by='site')
+gaz_df <- merge(gaz_df, precip_df, by.x='site', by.y='FID')
+write.csv(gaz_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/gazelles_summary.csv')
+
 rem_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/biomass_remaining_summary.csv")
 rem_df$date <- as.Date(paste(rem_df$year, rem_df$month, '01', sep="-"),
                        format='%Y-%m-%d')
 rem_df$site <- factor(rem_df$site)
 var_rem <- rem_df[which(rem_df$cp_option == 'cp'), ]
-mean_gazelles_v <- aggregate(var_rem$gazelle_equivalents, by=list(var_rem$site),
-                             FUN=mean)
+mean_gazelles_v <- aggregate(gazelle_equivalents~site, data=var_rem,
+                             FUN=mean, na.action=na.omit)
 colnames(mean_gazelles_v) <- c('site', 'mean_gazelle_equivalents')
 mean_gazelles_v$cp_opt <- 'varying'
 

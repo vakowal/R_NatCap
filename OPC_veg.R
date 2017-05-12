@@ -123,6 +123,7 @@ ave_precip$year_month <- format(ave_precip$date, '%Y_%m')
 ave_precip$month <- format(ave_precip$date, "%m")
 emp_months <- unique(dung_gr_br$year_month)
 precip_res <- ave_precip[which(ave_precip$year_month %in% emp_months), ]
+precip_res$month <- as.numeric(precip_res$month)
 labs = precip_res$month
 p <- ggplot(precip_res, aes(x=year_month, y=precip_cm))
 p <- p + geom_bar(stat='identity')
@@ -130,7 +131,7 @@ p <- p + scale_x_discrete(labels=labs)
 p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
 print(p)
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sampling_mos.png"
-png(file=pngname, units="in", res=300, width=3, height=2.5)
+png(file=pngname, units="in", res=300, width=2.04, height=1.725)
 print(p)
 dev.off()
 
@@ -145,7 +146,7 @@ p <- p + scale_x_discrete(labels=labs)
 p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
 print(p)
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sim_mos.png"
-png(file=pngname, units="in", res=300, width=2.87, height=2.37)
+png(file=pngname, units="in", res=300, width=2.79, height=2.09)
 print(p)
 dev.off()
 
@@ -175,12 +176,15 @@ for(gr in c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid')){
   }
 }
 
-write.csv(sum_df, file="C:/Users/Ginger/Desktop/sum_df.csv", row.names=FALSE)
+write.csv(sum_df, file="C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv", row.names=FALSE)
 
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv")
+sum_df$year_month <- as.character(sum_df$year_month)
 for (r in (1:NROW(sum_df))){
   month <- unlist(strsplit((sum_df[r, 'year_month']), split="_"))[2]
   sum_df[r, 'month'] <- month
 }
+sum_df$month <- as.numeric(sum_df$month)
 sum_df <- sum_df[order(sum_df$animal_group, sum_df$response,
                        sum_df$year_month), ]
 labs <- sum_df$month
@@ -198,6 +202,7 @@ sum_df <- sum_df[which(sum_df$animal_group %in% c('Bovid', 'Grazer (ex. bovid)')
 
 p <- ggplot(sum_df, aes(x=year_month, y=dung_estimate, group=sig))
 p <- p + geom_point(aes(shape=sig))
+p <- p + geom_abline(slope=0, intercept=0, linetype=2)
 p <- p + scale_shape_manual(values=c(1, 19))
 p <- p + facet_grid(response ~ animal_group, scales="free")
 p <- p + print_theme
@@ -206,7 +211,7 @@ p <- p + xlab("Month") + ylab("Dung: estimate")
 p <- p + theme(legend.position="none")
 print(p)
 
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/perc_green~dung_by_month_lm_estimate.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/perc_green~dung_by_month_lm_estimate_start_2013.png"
 png(file=pngname, units="in", res=300, width=4, height=2)
 print(p)
 dev.off()

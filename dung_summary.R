@@ -153,7 +153,7 @@ for(gr in unique(dung_join_df$group)){
   joined <- merge(sub_df, c_df, by="site")
   p <- ggplot(joined, aes(x=total_rem, y=mean_dung))
   p <- p + geom_point()
-  p <- p + xlab("Modeled grazing intensity") # + ylab(paste(gr, " dung per transect", sep=""))
+  p <- p + xlab("Modeled grazing intensity") + ylab(paste(gr, " dung per transect", sep=""))
   p <- p + ylab("Grazer (ex. bovid) dung per transect")
   p <- p + print_theme
   pngname <- paste(fig_dir, paste(gr, "ex_bovid_x_back_calc.png", sep=""), sep="/")
