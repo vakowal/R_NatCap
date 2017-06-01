@@ -10,7 +10,7 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # pin frame data
-pin_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_pinframe.csv")
+pin_df <- read.csv("C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
 pin_df <- pin_df[, (1:59)]
 
 pin_df$trans_pos <- paste(pin_df$Date, pin_df$Site, pin_df$Position_m, sep="_")
@@ -692,9 +692,46 @@ count <- function(values){
   return(length(values))
 }
 
+# make sure pinframe data matches with metadata
+pin_df <- read.csv("C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
+pin_df <- pin_df[, (1:59)]
+
+pin_df$trans_pos <- paste(pin_df$Date, pin_df$Site, pin_df$Position_m, sep="_")
+pin_pos_sum <- aggregate(pin_df[, 6:59], by=list(pin_df$trans_pos), FUN=sum)
+pin_pos_sum <- data.frame(pin_pos_sum,
+                          do.call(rbind, strsplit(as.character(pin_pos_sum$Group.1),'_')))
+pin_pos_sum$transect <- paste(pin_pos_sum$X1, pin_pos_sum$X2, sep="_")
+
+pin_mean <- aggregate(pin_pos_sum[, 2:55], by=list(pin_pos_sum$transect), FUN=mean)
+colnames(pin_mean)[1] <- 'transect'
+
+metadata_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
+meta_df <- read.csv(metadata_csv)
+veg_df <- pin_mean
+
+veg_ids <- veg_df$transect
+meta_ids <- unique(meta_df[ , c("Date", "Site")])
+meta_ids <- paste(meta_ids$Date, meta_ids$Site, sep="_")
+
+mismatch <- c()
+for (id in veg_ids){
+  if (!is.element(id, meta_ids)){
+    mismatch <- c(mismatch, id)
+  }
+}
+in_veg_not_meta <- mismatch
+
+mismatch <- c()
+for (id in meta_ids){
+  if (!is.element(id, veg_ids)){
+    mismatch <- c(mismatch, id)
+  }
+}
+in_meta_not_veg <- mismatch
+
 # analysis of veg data 9.30.16
-metadata_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_metadata.csv"
-PDM_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_data_9.30.16_PDM.csv"
+metadata_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
+PDM_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_PDM_dung.csv"
 
 meta_df <- read.csv(metadata_csv)
 veg_df <- read.csv(PDM_csv)
