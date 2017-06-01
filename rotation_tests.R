@@ -12,6 +12,59 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # Ortega-S et al 2013
+# regrowth at different defoliation levels
+regrow_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/defol_exp/regrowth_summary.csv")
+regrow_df$defoliation_step <- factor(regrow_df$defoliation_step)
+p <- ggplot(regrow_df, aes(x=defoliation_level, y=perc_regrowth_defol_step))
+p <- p + geom_point() + print_theme
+p <- p + facet_wrap(~defoliation_step, nrow=2)
+p <- p + ylab("Percent regrowth after defoliation")
+print(p)
+pngname <- paste(img_dir, 'percent_regrowth~defol_level.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(regrow_df, aes(x=defoliation_level, y=perc_regrowth_d.1))
+p <- p + geom_point()
+print(p)
+
+p <- ggplot(regrow_df, aes(x=defoliation_level, y=perc_regrowth_d.2))
+p <- p + geom_point()
+print(p)
+
+# strict growth: biomass produced in defoliation step
+grow_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/defol_exp/growth_summary.csv")
+grow_df$defoliation_step <- factor(grow_df$defoliation_step)
+p <- ggplot(grow_df, aes(x=defoliation_level, y=growth_defol_step))
+p <- p + geom_point() + print_theme
+p <- p + facet_wrap(~defoliation_step, nrow=2)
+p <- p + ylab("Growth after defoliation")
+print(p)
+pngname <- paste(img_dir, 'growth~defol_level.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+# recovery time at different defoliation levels
+recovery_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/defol_exp/recovery_summary.csv")
+recovery_df$defoliation_step <- factor(recovery_df$defoliation_step)
+recovery_df <- recovery_df[which(recovery_df$steps_to_recover < 999), ]
+p <- ggplot(recovery_df, aes(x=defoliation_level, y=steps_to_recover))
+p <- p + geom_point() + print_theme + ylab("Steps to recover to starting biomass")
+p <- p + facet_wrap(~defoliation_step, nrow=2)
+print(p)
+pngname <- paste(img_dir, 'steps_to_recover~defol_level.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(recovery_df, aes(x=stocking_density, y=steps_to_recover))
+p <- p + geom_point()
+p <- p + facet_grid(~defoliation_step, scales="free")
+print(p)
+
+
 # stocking density test
 all_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_n_pasture_test_all_months/summary.csv")
 all_months$gain_diff <- all_months$gain_._diff * 100
@@ -55,7 +108,7 @@ print(p)
 dev.off()
 
 # diff between rotated and continuous, plots etc
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs/1mo_rotation"
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs"
 cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/cont_35_animals/summary_results.csv")
 sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/pasture_summary.csv")
 sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/animal_summary.csv")
@@ -73,13 +126,13 @@ bl_rot_a_df$date <- bl_rot_a_df$year + (1/12) * bl_rot_a_df$month
 # forage availability in absence of grazing
 lines <- c("solid", "longdash", "dotted")
 sub_z <- zero_df[which(zero_df$date > 2000 & zero_df$date < 2005), ]
-sub_zreshp <- read.csv("C:/Users/Ginger/Desktop/sub_z_resh.csv")
-p <- ggplot(sub_zreshp, aes(x=date, y=kg_ha, group=biomass_label))
+sub_zreshp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/zero_density/sub_z_resh.csv")
+p <- ggplot(sub_zreshp, aes(x=step, y=kg_ha, group=biomass_label))
 p <- p + geom_line(aes(linetype=biomass_label))
 p + scale_linetype_manual(values=lines)
 print(p)
-pngname <- paste(img_dir, 'forage_zero_sd.png', sep="/")
-png(file=pngname, units="in", res=300, width=10, height=5)
+pngname <- paste(img_dir, 'forage_zero_sd_2001.png', sep="/")
+png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
