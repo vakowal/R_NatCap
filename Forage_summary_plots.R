@@ -115,6 +115,73 @@ summary_plots <- function(model_results_folder, imgpath){
   dev.off()
 }
 
+summary_plots_rot <- function(model_results_folder, imgpath){
+  dir.create(file.path(imgpath))
+  lines <- c("solid", "longdash", "dotted", "dotdash", "twodash")
+  summary_file <- read.csv(paste(model_results_folder,
+                                 "pasture_summary.csv", sep = "/"),
+                                 header = TRUE)
+  summary_file$date <- summary_file$year + (1/12) * summary_file$month
+  grass_type_cols_d <- grep("dead_kgha", colnames(summary_file), value=TRUE)
+  grass_type_cols_g <- grep("green_kgha", colnames(summary_file), value=TRUE)
+  grass_type_cols <- c(grass_type_cols_g, grass_type_cols_d)
+  grass_types <- gsub("_kgha", "", c(grass_type_cols_d, grass_type_cols_g))
+  
+  # average grass biomass across pastures
+  pasture_ave <- aggregate(summary_file[, grass_type_cols],
+                           by=list(summary_file$date), FUN=mean)
+  colnames(pasture_ave)[1] <- 'date'
+  pasture_ave$total_grass <- rowSums(pasture_ave[, grass_type_cols])
+  
+  summary_list <- list()
+  for(grass in grass_types){
+    one_df <- data.frame('date'=pasture_ave$date,
+                         'biomass'=pasture_ave[, paste(grass, '_kgha', sep="")],
+                         'label'=rep(grass, length(pasture_ave$date)),
+                         'type'=rep('grass', length(pasture_ave$date)))
+    summary_list[[grass]] <- one_df
+  }
+  grass_biomass_df <- do.call(rbind, summary_list)
+  p <- ggplot(grass_biomass_df, aes(x=date, y=biomass, group=label, linetype=label))
+  p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Grass biomass")
+  p <- p + scale_linetype_manual(values=lines, name=grass_biomass_df$label)
+  pngname <- paste(imgpath, "Grass_biomass.png", sep="/")
+  png(file=pngname, units="in", res=300, width=7.5, height=5)
+  print(p)
+  dev.off()
+  
+  # proportions of each grass type
+  prop_list <- list()
+  grass_labels <- gsub("_green", "", grep("_green", grass_types, value=TRUE))
+  for(label in grass_labels){
+    prop <- (pasture_ave[, paste(label, '_green_kgha', sep="")] + 
+               pasture_ave[, paste(label, '_dead_kgha', sep="")]) / pasture_ave$total_grass
+    prop_df <- data.frame('date'=pasture_ave$date,
+                          'label'=rep(label, length(pasture_ave$date)),
+                          'proportion_biomass'=prop)
+    prop_list[[label]] <- prop_df
+  }
+  prop_df <- do.call(rbind, prop_list)
+  
+  p <- ggplot(prop_df, aes(x=date, y=proportion_biomass, group=label,
+              linetype=label))
+  p <- p + geom_line() + ylab("percentage of total biomass") + 
+    ggtitle("Proportion of total biomass by grass type")
+  p <- p + scale_linetype_manual(values=lines, name="")
+  pngname <- paste(imgpath, "Grass_proportion.png", sep="/")
+  png(file=pngname, units="in", res=300, width=7.5, height=5)
+  print(p)
+  dev.off()
+}
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/control_0.206_v_0.103_cp_0.2_v_0.8_perc"
+imgpath <- paste(model_results_folder, 'figs', sep='/')
+summary_plots(model_results_folder, imgpath)
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/rot_0.206_v_0.103_cp_0.2_v_0.8_perc"
+imgpath <- paste(model_results_folder, 'figs', sep='/')
+summary_plots_rot(model_results_folder, imgpath)
+
 model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous"
 imgpath <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/continuous_figs"
 summary_plots(model_results_folder, imgpath)
