@@ -11,6 +11,24 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# Ucross: composition
+# first get grass production approximately right: zero sd
+summary_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/zero_sd_KNZ_cool_PRDX=1.2/summary_results.csv")
+live_grass_cols <- grep("green_kgha", colnames(summary_df), value=TRUE)
+summary_df$total_green_kgha <- rowSums(summary_df[, live_grass_cols])
+live_by_month <- as.data.frame(aggregate(total_green_kgha~month,
+                               data=summary_df, FUN=mean))
+live_by_month$lb_per_acre <- live_by_month$total_green_kgha * 0.892
+p <- ggplot(live_by_month, aes(x=month, y=lb_per_acre))
+p <- p + geom_point()
+p <- p + scale_x_continuous(breaks=seq(1, 12, by=1))
+p <- p + ylab("Average live biomass (lb/acre)")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ucross/zero_sd_figs/zero_sd_live_biomass.png"
+png(file=pngname, units="in", res=300, width=5, height=3)
+print(p)
+dev.off()
+
 # Ortega-S et al 2013
 # regrowth at different defoliation levels
 regrow_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/defol_exp/regrowth_summary.csv")
