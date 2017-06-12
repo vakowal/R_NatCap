@@ -229,11 +229,11 @@ transect_dists_inv[is.infinite(transect_dists_inv)] <- 25000 # max(transect_dist
 Moran.I(comb_df$bovid, transect_dists_inv)
 Moran.I(comb_df$Cow, transect_dists_inv)
 
-# Moran's I with adespatial
-library(adespatial)
-dists <- dist(cbind(comb_df$Long, comb_df$Lat))
-data(oribatid)
-
+# Moran's I with spdep
+library(spdep)
+dists_listw <- mat2listw(transect_dists_inv)
+moran.mc(comb_df$bovid, dists_listw, nsim=9999)
+moran.mc(comb_df$Cow, dists_listw, nsim=9999)
 
 # semivariogram
 library(geoR)
