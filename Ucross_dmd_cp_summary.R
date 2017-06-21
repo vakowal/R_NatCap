@@ -1,6 +1,6 @@
 library(ggplot2)
 
-kam_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Western_US/Ucross/kamstra_1973_CP_DMD.csv")
+kam_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Western_US/Ucross/grass_cp_dmd/kamstra_1973_CP_DMD.csv")
 
 # values in kamstra 1973 already sampled same date
 
@@ -14,15 +14,17 @@ summary(mod)
 
 mean_by_grass <- aggregate(protein_.~grass, data=kam_df, FUN=mean)
 
-cp_summary <- read.csv("C:/Users/Ginger/Desktop/cp_summary.csv")
+cp_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/Data/Ucross/grass_cp_dmd/protein_summary.csv")
 mean_by_grass <- aggregate(protein~grass, data=cp_summary, FUN=mean)
 cp_summary$grass <- factor(cp_summary$grass,
-                           levels=c("Blue grama", "Western wheatgrass",
-                                    "Idaho fescue", "Green needlegrass"))
+                           levels=c("Idaho fescue", "Blue grama", 
+                                    "Green needlegrass", "Western wheatgrass"))
 
 p <- ggplot(cp_summary, aes(x=grass, y=protein))
 p <- p + geom_boxplot()
 p <- p + geom_point()
+p <- p + geom_point(data=mean_by_grass, aes(x=grass, y=protein),
+                    shape=3, size=5)
 p <- p + xlab("") + ylab("crude protein (%)")
 print(p)
 
@@ -31,7 +33,7 @@ png(file=pngname, units="in", res=300, width=5, height=4)
 print(p)
 dev.off()
 
-bedell_dat <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Western_US/Ucross/Bedell_1980_Idaho_fescue_CP_DMD.csv")
+bedell_dat <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Western_US/Ucross/grass_cp_dmd/Bedell_1980_Idaho_fescue_CP_DMD.csv")
 bed_cp <- bedell_dat[which(bedell_dat$label == "crude protein"), ]
 bed_dmd <- bedell_dat[which(bedell_dat$label == 'digestibility'), ]
 month_out <- seq(min(bed_cp$month), max(bed_dmd$month), length.out=20)
