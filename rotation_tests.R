@@ -12,8 +12,55 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # Ucross: composition
+# composition calculated in python script
+comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/proportion_summary_36_mo.csv")
+comp_df <- comp_df[which(comp_df$cp_ratio == 1.1 &
+                           comp_df$n_pastures == 2), ]
+comp_resh <- reshape(comp_df, varying=c('continuous', 'rotation'),
+                     v.names='perc_diff', timevar='treatment', times=c('continuous', 'rotation'),
+                     direction='long')
+comp_resh$date <- comp_resh$year + (1/12) * comp_resh$month
+p <- ggplot(comp_resh, aes(x=date, y=perc_diff, group=treatment))
+p <- p + geom_line(aes(linetype=treatment))
+p <- p + facet_wrap(~high_quality_perc)
+p <- p + ylab("Proportion nutritious grass")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/prop_high_cp_2_pastures.png"
+png(file=pngname, units="in", res=300, width=8, height=4)
+print(p)
+dev.off()
+
+# what's happening to pasture with 2 pastures ?
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/rot_3_pastures_0.2_v_0.8_perc/pasture_summary.csv")
+sum_df <- sum_df[, -c(1, 2, 4, 5)]
+sum_resh <- reshape(sum_df, varying=c('high_quality_total_kgha', 'low_quality_total_kgha'),
+                    v.names='biomass', timevar='forage',
+                    times=c('high_quality', 'low_quality'),
+                    direction='long')
+p <- ggplot(sum_resh, aes(x=step, y=biomass, group=forage))
+p <- p + geom_line(aes(linetype=forage))
+p <- p + facet_wrap(~pasture_index)
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/biomass_rot_3_pastures_0.2_v_0.8_perc.png"
+png(file=pngname, units="in", res=300, width=7, height=2)
+print(p)
+dev.off()
+
+# cow weight gain from Jennie Muir-Gordon's data
+weight_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/data/Merlin_ranch/Jennie_Muir-Gordon/2016 cattle weights and grazing/2016 Preg check and weight.csv")
+weight_df$Age <- factor(weight_df$Age)
+p <- ggplot(weight_df, aes(x=Age, y=WEIGHTPREG))
+p <- p + geom_boxplot()
+print(p)
+
+# average weight gain from 2 year old to 3 year old
+mean(weight_df[which(weight_df$Age == '3 years'), 'WEIGHTPREG'],
+     na.rm=TRUE) - 
+  mean(weight_df[which(weight_df$Age == '2 years'), 'WEIGHTPREG'],
+       na.rm=TRUE)
+
 # first get grass production approximately right: zero sd
-summary_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/zero_sd_KNZ_cool_PRDX=1.2/summary_results.csv")
+summary_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/zero_sd_KNZ_2/summary_results.csv")
 live_grass_cols <- grep("green_kgha", colnames(summary_df), value=TRUE)
 summary_df$total_green_kgha <- rowSums(summary_df[, live_grass_cols])
 live_by_month <- as.data.frame(aggregate(total_green_kgha~month,
@@ -28,6 +75,16 @@ pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/mode
 png(file=pngname, units="in", res=300, width=5, height=3)
 print(p)
 dev.off()
+
+all_grass_cols <- grep("kgha", colnames(summary_df), value=TRUE)
+all_grass_cols <- all_grass_cols[all_grass_cols != 'total_green_kgha']
+summary_df$total_grass <- rowSums(summary_df[, all_grass_cols])
+total_by_month <- as.data.frame(aggregate(total_grass~month,
+                                          data=summary_df, FUN=mean))
+p <- ggplot(total_by_month, aes(x=month, y=total_grass))
+p <- p + geom_point()
+p <- p + scale_x_continuous(breaks=seq(1, 12, by=1))
+print(p)
 
 # Ortega-S et al 2013
 # regrowth at different defoliation levels
@@ -84,7 +141,7 @@ print(p)
 
 
 # stocking density test
-all_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_n_pasture_test_all_months/summary.csv")
+all_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_n_pasture_test_all_months/summary.csv")
 all_months$gain_diff <- all_months$gain_._diff * 100
 all_months$pasture_diff <- all_months$pasture_._diff * 100
 p <- ggplot(all_months, aes(x=num_pastures, y=pasture_diff))
@@ -97,7 +154,7 @@ p <- p + geom_point()
 p <- p + facet_wrap(~num_animals)
 print(p)
 
-restr_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_mo2-11/summary.csv")
+restr_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_test_mo2-11/summary.csv")
 
 all_months$month_treatment <- 'Graze all months'
 restr_months$month_treatment <- 'Graze months 2-11'
@@ -126,13 +183,13 @@ print(p)
 dev.off()
 
 # diff between rotated and continuous, plots etc
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/summary_figs"
-cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/cont_35_animals/summary_results.csv")
-sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/pasture_summary.csv")
-sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/smart_rotation_1mo/animal_summary.csv")
-bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/pasture_summary.csv")
-bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/animal_summary.csv")
-zero_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/WitW/Ortega-S_et_al/zero_density/summary_results.csv")
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/summary_figs"
+cont_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_test_all_months/cont_35_animals/summary_results.csv")
+sm_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/smart_rotation_1mo/pasture_summary.csv")
+sm_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/smart_rotation_1mo/animal_summary.csv")
+bl_rot_p_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/pasture_summary.csv")
+bl_rot_a_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_test_all_months/blind_rot_35_animals/animal_summary.csv")
+zero_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/zero_density/summary_results.csv")
 
 cont_df$date <- cont_df$year + (1/12) * cont_df$month
 zero_df$date <- zero_df$year + (1/12) * zero_df$month
@@ -199,6 +256,19 @@ png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
 dev.off()
 
+# biomass: continuous vs blind rotation
+cont_df$grass_total_kgha <- cont_df$grass_dead_kgha + cont_df$grass_green_kgha
+cont_df$pasture_index <- 'cont'
+p <- ggplot(bl_rot_p_df, aes(x=date, y=grass_total_kgha, group=pasture_index))
+p <- p + geom_line(colour="#56B4E9")
+p <- p + geom_line(data=cont_df, aes(x=date, y=grass_total_kgha),
+                   size=1)
+p <- p + ylab("Pasture biomass (kg/ha)")
+print(p)
+pngname <- paste(img_dir, 'bl_rot_cont_biomass_summary.png', sep='/')
+png(file=pngname, units="in", res=300, width=8, height=5)
+print(p)
+dev.off()
 
 
 # summarize gain and offtake between rotation and continuous
