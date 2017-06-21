@@ -3,7 +3,7 @@
 
 library(RODBC)
 
-db <- "C:/Users/Ginger/Documents/NatCap/GIS_local/Mongolia/From_Boogie/cashmere_Rangeland_monitoring.accdb"
+db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
 con2 <- odbcConnectAccess2007(db)
 
 table_names <- sqlTables(con2, tableType="TABLE")$TABLE_NAME
@@ -24,7 +24,7 @@ for(table_n in table_names){
   table_list[[table_n]] <- sqlFetch(con2, table_n)
 }
 
-biomass_df <- sqlFetch(con2, 'Biomass')
+biomass_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/SCP_biomass50sites.csv")
 soil_df <- sqlFetch(con2, 'site_soil_chemicals')
 spp_df <- sqlFetch(con2, 'tblSpecies')
 
