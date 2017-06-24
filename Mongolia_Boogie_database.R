@@ -57,3 +57,15 @@ pft_df$CommunityName <- gsub("<div>", "", pft_df$CommunityName)
 pft_df$CommunityName <- gsub("</div>", "", pft_df$CommunityName)
 pft_df$CommunityName <- gsub('<font color="#333333">', "", pft_df$CommunityName)
 pft_df$CommunityName <- gsub('</font>', "", pft_df$CommunityName)
+# write soil table for input to model
+soil_df <- sqlFetch(con2, 'site_soil_chemicals')
+soil_df <- soil_df[which(soil_df$soil_layers %in% c(0, 1)), ]
+soil_0_20_cm <- aggregate(soil_df[, c(8, 22:24, 29)], by=list(soil_df$SiteID), FUN=mean,
+                          na.rm=TRUE)
+coords <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/monitoring_points_coordinates.csv")
+soil_table <- merge(soil_0_20_cm, coords, by.x='Group.1', by.y='site')
+colnames(soil_table) <- c('site', 'pH', 'sand_0_20_cm', 'silt_0_20_cm',
+                          'clay_0_20_cm', 'bulkd_0_20_cm', 'latitude',
+                          'longitude')
+write.csv(soil_table, 'C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/soil_0_20_cm.csv',
+          row.names=FALSE)
