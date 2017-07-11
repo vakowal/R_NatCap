@@ -135,6 +135,15 @@ png(file=pngname, units="in", res=300, width=8, height=4)
 print(p)
 dev.off()
 
+# grass and forb biomass
+grass_forb_biom <- biomass_df[which(biomass_df$GrowthHabitSub.or.Functional.groups != 'shrub'), ]
+grass_forb_total <- aggregate(oven.dry.biomass~SiteId, data=grass_forb_biom, FUN=sum)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/grass_forb_biomass_freq.png"
+png(file=pngname, units="in", res=300, width=6, height=4)
+hist(grass_forb_total$oven.dry.biomass, breaks=50, xlab="Grass and forb biomass g/m2")
+dev.off()
+hist(grass_forb_total$oven.dry.biomass, breaks=3)
+
 ## worldclim data for Boogie's points
 worldclim_precip <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/Mongolia/Worldclim/monitoring_points_precip.csv")
 avg_annual_precip <- mean(aggregate(prec~site, data=worldclim_precip, FUN=sum)[, 'prec'])
@@ -159,3 +168,58 @@ colnames(soil_table) <- c('site', 'pH', 'sand_0_20_cm', 'silt_0_20_cm',
                           'longitude')
 write.csv(soil_table, 'C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/soil_0_20_cm.csv',
           row.names=FALSE)
+
+# write site csv for back-calc management routine
+biomass_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/SCP_biomass50sites.csv")
+for(r in 1:NROW(biomass_df)){
+  biomass_df[r, 'site_no'] <- as.numeric(strsplit(as.character(biomass_df[r, 'SiteId']),
+                                       split="st")[[1]][2])
+}
+biomass_df$site <- paste('st', biomass_df$site_no, sep="")
+
+bio_type <- aggregate(biomass_df$oven.dry.biomass,
+                           by=list(biomass_df$site, biomass_df$DATE,
+                                   biomass_df$GrowthHabitSub.or.Functional.groups),
+                           FUN=sum, na.rm=TRUE)
+colnames(bio_type) <- c('site', 'date', 'type', 'biomass')
+# reshape clumsily ugggggg
+grass_biom <- bio_type[which(bio_type$type == 'grass'), ]
+colnames(grass_biom)[4] <- 'grass_gm2'
+shrub_biom <- bio_type[which(bio_type$type == 'shrub'), ]
+colnames(shrub_biom)[4] <- 'shrub_gm2'
+forb_biom <- bio_type[which(bio_type$type == 'forb'), ]
+colnames(forb_biom)[4] <- 'forb_gm2'
+bio_type_resh <- merge(grass_biom, shrub_biom, by=c('date', 'site'),
+                              all=TRUE)
+bio_type_resh <- merge(bio_type_resh, forb_biom, by=c('date', 'site'),
+                              all=TRUE)
+bio_type_resh <- bio_type_resh[, c(1:2, 4, 6, 8)]
+bio_type_resh[is.na(bio_type_resh)] <- 0
+bio_type_resh$total_biomass_gm2 <- rowSums(bio_type_resh[, c(3:5)])
+coords <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/monitoring_points_coordinates.csv")
+site_csv <- merge(bio_type_resh, coords, by='site',
+                  all=TRUE)
+site_csv <- site_csv[, c(1:6, 8)]
+write.csv(site_csv, "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_inputs/sites.csv",
+          row.names=FALSE)
+
+## compare simulated biomass with Boogie's data
+library(ggplot2)
+cmp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/zero_sd/biomass_summary.csv")
+cmp_sub <- cmp_df[, c(1:3, 6, 8)]
+cmp_s_r <- reshape(cmp_sub, varying=c('grass_gm2', 'total_biomass_gm2', 'sim_gm2'),
+                   v.names='biomass_gm2', timevar='type', times=c('grass', 'total_emp', 'sim'),
+                   idvar='site', direction='long')
+p <- ggplot(cmp_s_r, aes(x=site, y=biomass_gm2, group=type))
+p <- p + geom_point(aes(colour=type))
+print(p)
+
+cmp_df$grass_plus_forb <- cmp_df$grass_gm2 + cmp_df$forb_gm2
+cmp_sub <- cmp_df[, c(1:2, 8:9)]
+cmp_sub <- cmp_sub[order(cmp_sub$grass_plus_forb, decreasing=TRUE), ]
+cmp_g_f_resh <- reshape(cmp_sub, varying=c('sim_gm2', 'grass_plus_forb'),
+                        v.names='biomass_gm2', timevar='type', times=c('sim', 'grass+forb'),
+                        idvar='site', direction='long')
+p <- ggplot(cmp_g_f_resh, aes(x=site, y=biomass_gm2, group=type))
+p <- p + geom_point(aes(colour=type))
+print(p)
