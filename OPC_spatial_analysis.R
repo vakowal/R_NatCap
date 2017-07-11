@@ -141,14 +141,16 @@ gr_key_df <- read.csv(group_key)
 means_t <- as.data.frame(t(dung_sum[, c(2:25)]))
 colnames(means_t) <- dung_sum$transect
 means_t$Abbrev <- rownames(means_t)
-gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group5', 'Group6')]
+gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group5', 'Group6', 'Group7')]
 comb <- merge(means_t, gr_subs, by='Abbrev')
 gr1_means <- aggregate(comb[, 2:287], by=list(comb$Group1), FUN=sum)
 gr5_means <- aggregate(comb[, 2:287], by=list(comb$Group5), FUN=sum)
 gr6_means <- aggregate(comb[, 2:287], by=list(comb$Group6), FUN=sum)
+gr7_means <- aggregate(comb[, 2:287], by=list(comb$Group7), FUN=sum)
 colnames(gr1_means)[1] <- "group"
 colnames(gr5_means)[1] <- "group"
 colnames(gr6_means)[1] <- "group"
+colnames(gr7_means)[1] <- "group"
 gr1_res <- as.data.frame(t(gr1_means))
 colnames(gr1_res) <- gr1_means$group
 gr1_res$transect <- rownames(gr1_res)
@@ -161,9 +163,15 @@ gr6_res <- as.data.frame(t(gr6_means))
 colnames(gr6_res) <- gr6_means$group
 gr6_res$transect <- rownames(gr6_res)
 gr6_res <- gr6_res[-1, ]
+gr7_res <- as.data.frame(t(gr7_means))
+colnames(gr7_res) <- gr7_means$group
+gr7_res$transect <- rownames(gr7_res)
+gr7_res <- gr7_res[-1, ]
 grouped_dung <- merge(gr1_res, gr6_res, all=TRUE)
 gr5_res <- gr5_res[, c('transect', setdiff(colnames(gr5_res), colnames(gr1_res)))]
 grouped_dung <- merge(grouped_dung, gr5_res, all=TRUE)
+gr7_res <- gr7_res[, c('transect', setdiff(colnames(gr7_res), colnames(grouped_dung)))]
+grouped_dung <- merge(grouped_dung, gr7_res, all=TRUE)
 
 # PDM data: average within transect
 PDM_mean <- aggregate(PDM~transect, data=dung_df, FUN=mean)
@@ -201,38 +209,25 @@ ecol_df$sampling_period <- as.factor(ecol_df$sampling_period)
 sample_size <- table(ecol_df[, c('sampling_period', 'mgmt_zone')])
 
 # average all values across transects by sampling period
-for(col in 25:36){
+for(col in 25:60){
   ecol_df[[col]] <- as.numeric(ecol_df[[col]])
 }
-ecol_by_samp <- aggregate(ecol_df[, 25:36], by=list(ecol_df$zone_period),
+ecol_by_samp <- aggregate(ecol_df[, 25:60], by=list(ecol_df$zone_period),
                           FUN=mean, na.rm=TRUE)
 colnames(ecol_by_samp)[1] <- 'zone_period'
 ecol_by_samp <- merge(ecol_by_samp,
                       ecol_df[!duplicated(ecol_df$zone_period), c('zone_period', 'sampling_period', 'mgmt_zone')],
                       by='zone_period', all.x=TRUE)
-library(ggplot2)
-imgdir <- "C:/Users/Ginger/Desktop/figs_xxx"
-for(col in c(56:59, 61:63)){
-  y_str <- colnames(ecol_by_samp)[col]
-  p <- ggplot(ecol_by_samp, aes_string(x='sampling_period', y=y_str))
-  p <- p + geom_point()
-  p <- p + facet_wrap(~mgmt_zone)
-  p <- p + ggtitle(y_str)
-  pngname <- paste(imgdir, paste(y_str, '.png', sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=7)
-  print(p)
-  dev.off()
-}
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/ecol_by_samp.csv"
+write.csv(ecol_by_samp, save_as, row.names=FALSE)
 
 # various groups vs cow dung at various lag times
-dung_df <- ecol_by_samp[, c("browser", "carnivore", 
-                            "mixed", "all_dung", "bovid", "grazer_ex_bovid",
-                            "sampling_period", "mgmt_zone")]
-bovid_subs <- ecol_by_samp[, c('bovid', "sampling_period", "mgmt_zone")]
+dung_df <- ecol_by_samp[, c("mgmt_zone", "sampling_period", colnames(ecol_by_samp)[5:36])]
+cattle_subs <- ecol_by_samp[, c('Cattle', "sampling_period", "mgmt_zone")]
 # make df of bovid dung density by different lag times
 bind_list <- list()
 for(lag in 0:7){
-  sub_df <- bovid_subs
+  sub_df <- cattle_subs
   sub_df$sampling_period <- as.numeric(sub_df$sampling_period)
   sub_df$samp_per_of_response <- sub_df$sampling_period + lag  # sampling period of the response
   sub_df$lag <- lag
@@ -240,15 +235,23 @@ for(lag in 0:7){
 }
 lag_df <- do.call(rbind, bind_list)
 lag_df <- lag_df[lag_df$samp_per_of_response < 9, ]
-lag_df <- lag_df[, c('bovid', 'mgmt_zone', 'samp_per_of_response', 'lag')]
-colnames(lag_df) <- c('bovid', 'mgmt_zone', 'sampling_period', 'lag')
+lag_df <- lag_df[, c('Cattle', 'mgmt_zone', 'samp_per_of_response', 'lag')]
+colnames(lag_df) <- c('Cattle', 'mgmt_zone', 'sampling_period', 'lag')
 # join lag df to response df
 dung_lag_df <- merge(dung_df, lag_df, by=c('sampling_period', 'mgmt_zone'), all=TRUE)
-colnames(dung_lag_df)[7] <- 'bovid_response'
-colnames(dung_lag_df)[9] <- 'lagged_bovid_dung'
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/dung_by_bovid_lag"
-for(col in colnames(dung_lag_df)[3:8]){
-  p <- ggplot(dung_lag_df, aes_string(x='lagged_bovid_dung', y=col))
+colnames(dung_lag_df)[13] <- 'cattle_response'
+colnames(dung_lag_df)[35] <- 'lagged_cattle_dung'
+
+# make plots
+mean_dung <- as.data.frame(colMeans(dung_lag_df[, c(3:6, 8:13, 15:34)], na.rm=TRUE))
+colnames(mean_dung)[1] <- 'mean_dung'
+mean_dung$type <- row.names(mean_dung)
+abundant_groups <- mean_dung[mean_dung$mean_dung > 4.031, 'type']
+
+library(ggplot2)
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/dung_by_cattle_lag"
+for(col in abundant_groups){
+  p <- ggplot(dung_lag_df, aes_string(x='lagged_cattle_dung', y=col))
   p <- p + geom_point()
   p <- p + facet_wrap(~lag) + ggtitle(col)
   pngname <- paste(imgdir, paste(col, '.png', sep=""), sep="/")
@@ -256,16 +259,55 @@ for(col in colnames(dung_lag_df)[3:8]){
   print(p)
   dev.off()
 }
+  
+# calculate correlation for each animal type, for each lag distance
+r <- 1
+cor_df <- data.frame('dung_type'=c(), 'sampling_period_lag'=c(),
+                     'pearson_r'=c(), 'pearson_p'=c(), 'sample_size'=c())
+for(col in abundant_groups){
+  for(lag in unique(dung_lag_df$lag)){
+    subs <- dung_lag_df[dung_lag_df$lag == lag, ]
+    t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
+    sample_size <- length(subs[!is.na(subs[[col]]), col])
+    cor_df[r, 'dung_type'] <- col
+    cor_df[r, 'sampling_period_lag'] <- lag
+    cor_df[r, 'pearson_p'] <- t1[[3]]
+    cor_df[r, 'pearson_r'] <- t1[[4]]
+    cor_df[r, 'sample_size'] <- sample_size
+    r <- r + 1
+  }
+}
+write.csv(cor_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/dung_lag_cor_table.csv',
+          row.names=FALSE)
 
 # calc veg metrics, join lag_df to veg metrics to make similar plot
 veg_df <- ecol_by_samp[, c('green_sum', 'brown_sum', 'perc_green',
                            'biomass_kgha', 'sampling_period',
                            'mgmt_zone')]
 veg_lag_df <- merge(veg_df, lag_df, by=c('sampling_period', 'mgmt_zone'), all=TRUE)
-colnames(veg_lag_df)[7] <- 'lagged_bovid_dung'
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/veg_by_bovid_lag"
+colnames(veg_lag_df)[7] <- 'lagged_cattle_dung'
+r <- 1
+cor_df <- data.frame('veg_metric'=c(), 'sampling_period_lag'=c(),
+                     'pearson_r'=c(), 'pearson_p'=c(), 'sample_size'=c())
 for(col in colnames(veg_lag_df)[3:6]){
-  p <- ggplot(veg_lag_df, aes_string(x='lagged_bovid_dung', y=col))
+  for(lag in unique(veg_lag_df$lag)){
+    subs <- veg_lag_df[veg_lag_df$lag == lag, ]
+    t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
+    sample_size <- length(subs[!is.na(subs[[col]]), col])
+    cor_df[r, 'dung_type'] <- col
+    cor_df[r, 'sampling_period_lag'] <- lag
+    cor_df[r, 'pearson_p'] <- t1[[3]]
+    cor_df[r, 'pearson_r'] <- t1[[4]]
+    cor_df[r, 'sample_size'] <- sample_size
+    r <- r + 1
+  }
+}
+write.csv(cor_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/veg_lag_cor_table.csv',
+          row.names=FALSE)
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/veg_by_cattle_lag"
+for(col in colnames(veg_lag_df)[3:6]){
+  p <- ggplot(veg_lag_df, aes_string(x='lagged_cattle_dung', y=col))
   p <- p + geom_point()
   p <- p + facet_wrap(~lag) + ggtitle(col)
   pngname <- paste(imgdir, paste(col, '.png', sep=""), sep="/")
