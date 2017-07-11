@@ -213,78 +213,6 @@ comb_df <- merge(comb_df, date_only, by='transect')
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
 write.csv(comb_df, file=save_as, row.names=TRUE)
 
-comb_df <- read.csv(save_as)
-
-# Moran's I: spatial autocorrelation in dung density
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/semivariograms"
-library(ape)
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
-comb_df <- read.csv(save_as)
-
-# create distance matrix
-transect_dists <- as.matrix(dist(cbind(comb_df$Long, comb_df$Lat)))
-transect_dists_inv <- 1/transect_dists
-diag(transect_dists_inv) <- 0
-transect_dists_inv[is.infinite(transect_dists_inv)] <- 25000 # max(transect_dists_inv) = 23570.23
-Moran.I(comb_df$bovid, transect_dists_inv)
-Moran.I(comb_df$Cow, transect_dists_inv)
-
-# Moran's I with spdep
-library(spdep)
-dists_listw <- mat2listw(transect_dists_inv)
-moran.mc(comb_df$bovid, dists_listw, nsim=9999)
-moran.mc(comb_df$Cow, dists_listw, nsim=9999)
-
-# semivariogram
-library(geoR)
-dists <- dist(cbind(comb_df$Long, comb_df$Lat))
-shortd <- dists[which(dists < max(dists)/2)]
-hist(shortd)  # look for lag distances with >= 30 points in each bin
-hist(shortd, breaks=50)
-breaks <- seq(0, max(dists)/2, length.out=15)
-cow_geodat <- jitterDupCoords(as.geodata(comb_df, coords.col=5:6, data.col=3),
-                              max=0.0001)
-variogram <- variog(cow_geodat, breaks=breaks, option="cloud")
-plot(variogram, main='Cow dung')
-pngname <- paste(imgdir, "cow_dung_semivariogram_cloud.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, main='Cow dung')
-dev.off()
-variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-pngname <- paste(imgdir, "cow_dung_semivariogram_bin.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, type="b", main='Cow dung')
-dev.off()
-breaks <- seq(0, max(dists), length.out=30)
-variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-pngname <- paste(imgdir, "cow_dung_semivariogram_bin_maxdist.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, type="b", main='Cow dung')
-dev.off()
-
-# semivariogram by month
-
-for(ym in unique(comb_df$year_month)){
-  subdf <- comb_df[which(comb_df$year_month == ym), ]
-  dists <- dist(cbind(subdf$Long, subdf$Lat))
-  shortd <- dists[which(dists < max(dists)/2)]
-  pngname <- paste(imgdir, paste("cow_dung_hist_maxdist_",
-                                 ym, ".png", sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=5)
-  hist(shortd, main=ym, breaks=10) 
-  dev.off()
-  breaks <- seq(0, max(dists), length.out=10)
-  cow_geodat <- jitterDupCoords(as.geodata(subdf, coords.col=4:5, data.col=3),
-                                max=0.0001)
-  variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-  pngname <- paste(imgdir, paste("cow_dung_semivariogram_bin_maxdist_",
-                                 ym, ".png", sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=5)
-  plot(variogram, type="b", main=paste('Cow dung ', ym, sep=""))
-  dev.off()
-}
-
-
 # cattle density calculated from GPS
 density_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/correlation_with_GPS_records"
 
@@ -574,33 +502,4 @@ p <- p + xlab("ratio of bovid to non-bovid dung") + ylab("property + non-propert
 print(p)
 
 
-## throwaway
-for (r in (1:NROW(meta_df))){
-  date <- as.Date(meta_df[r, "Date"], format="%d-%b-%y")
-  meta_df[r, 'year_month'] <- format(date, "%Y_%m")
-}
-# cattle density inside classes of movement density
-throwaway_df <- merge(comb_df, meta_df)
-# across months
-throwaway_df$Movement_d <- factor(throwaway_df$Movement_d,
-                                  levels=c("None", "Low", "Low medium",
-                                           "Medium", "Medium high",
-                                           "High"))
-p <- ggplot(throwaway_df, aes(x=Movement_d, y=bovid))
-p <- p + geom_boxplot() + ggtitle("all transects")
-print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/bovid_dung_by_movement_d.png"
-png(file=pngname, units="in", res=300, width=7, height=5)
-print(p)
-dev.off()
 
-# by month
-for(m in unique(throwaway_df$year_month)){
-  sub_df <- throwaway_df[which(throwaway_df$year_month == m), ]
-  sub_df$Movement_d <- factor(sub_df$Movement_d, levels=c("None", "Low", "Low medium",
-                                                          "Medium", "Medium high",
-                                                          "High"))
-  p <- ggplot(sub_df, aes(x=Movement_d, y=bovid))
-  p <- p + geom_boxplot() + ggtitle(m)
-  print(p)
-}
