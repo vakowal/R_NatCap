@@ -189,7 +189,7 @@ samp_per$year_month <- format(samp_per$Date, "%Y-%m")
 samp_per <- samp_per[!duplicated(samp_per$transect), ]
 year_mo_per <- as.data.frame(unique(samp_per$year_month))
 colnames(year_mo_per)[1] <- 'year_month'
-year_mo_per$sampling_period <- c(1, 2, 3, 3, 4, 5, 6, 7, 8)
+year_mo_per$sampling_period <- c(1, 2, 3, 3, 4, 5, 7, 8, 9) # skip a month to align with ticks sampling months
 samp_per <- merge(samp_per, year_mo_per, by='year_month')
 samp_per <- samp_per[, c('transect', 'sampling_period')]
 
