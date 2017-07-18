@@ -126,6 +126,8 @@ colnames(green_brown_summary) <- 'transect'
 green_brown_summary$green_sum <- rowSums(pin_mean[, (green_col_idx)])
 green_brown_summary$brown_sum <- rowSums(brown_cols[, -1])
 green_brown_summary$perc_green <- green_brown_summary$green_sum / (green_brown_summary$green_sum + green_brown_summary$brown_sum)
+from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/pinframe_summary.csv")
+green_brown_summary <- rbind(green_brown_summary, from_rs)
 
 # dung data: Sum within transect
 PDM_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_PDM_dung.csv"
@@ -172,24 +174,55 @@ gr5_res <- gr5_res[, c('transect', setdiff(colnames(gr5_res), colnames(gr1_res))
 grouped_dung <- merge(grouped_dung, gr5_res, all=TRUE)
 gr7_res <- gr7_res[, c('transect', setdiff(colnames(gr7_res), colnames(grouped_dung)))]
 grouped_dung <- merge(grouped_dung, gr7_res, all=TRUE)
+from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/grouped_dung.csv")
+colnames(from_rs)[6] <- 'Other'
+colnames(from_rs)[13] <- 'Dik-dik'
+for(col in colnames(grouped_dung)){
+  if(col %in% colnames(from_rs)){
+    next
+  }
+  else {
+    from_rs[, col] <- 0
+  }
+}
+for(col in colnames(from_rs)){
+  if(col %in% colnames(grouped_dung)){
+    next
+  }
+  else {
+    grouped_dung[, col] <- 0
+  }
+}
+grouped_dung <- rbind(grouped_dung, from_rs)
 
 # PDM data: average within transect
 PDM_mean <- aggregate(PDM~transect, data=dung_df, FUN=mean)
 PDM_mean$biomass_kgha <- PDM_mean$PDM * 332.35 + 15.857
 PDM_mean <- PDM_mean[, c('transect', 'biomass_kgha')]
+from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/pdm_biomass.csv")
+from_rs$transect <- paste(from_rs$Date, from_rs$Transect, sep="_")
+from_rs <- from_rs[, c('transect', 'biomass_kgha')]
+PDM_mean <- rbind(PDM_mean, from_rs)
 
 metadata_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
 meta_df <- read.csv(metadata_csv)
+meta_df <- meta_df[, c("transect", "mgmt_zone")]
+from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/metadata_mgmt_zone.csv")
+from_rs$transect <- paste(from_rs$Date_sampl, from_rs$Transect, sep="_")
+from_rs <- from_rs[, c("transect", "mgmt_zone")]
+meta_df <- rbind(meta_df, from_rs)
 
 # derive sampling periods (months, except March-April 2015 are combined)
-samp_per <- pin_df[, c("Date", "Site")]
-samp_per$transect <- paste(samp_per$Date, samp_per$Site, sep="_")
-samp_per$Date <- as.Date(samp_per$Date, format="%d-%b-%y")
+samp_per <- as.data.frame(green_brown_summary[, 'transect'])
+colnames(samp_per)[1] <- 'transect'
+samp_per <- data.frame(samp_per,
+                       do.call(rbind, strsplit(as.character(samp_per$transect),'_')))
+samp_per$Date <- as.Date(samp_per$X1, format="%d-%b-%y")
 samp_per$year_month <- format(samp_per$Date, "%Y-%m")
 samp_per <- samp_per[!duplicated(samp_per$transect), ]
 year_mo_per <- as.data.frame(unique(samp_per$year_month))
 colnames(year_mo_per)[1] <- 'year_month'
-year_mo_per$sampling_period <- c(1, 2, 3, 3, 4, 5, 7, 8, 9) # skip a month to align with ticks sampling months
+year_mo_per$sampling_period <- c(1, 2, 3, 3, 4, 5, 7, 8, 9, 10, 11) # TODO REPLACE THIS
 samp_per <- merge(samp_per, year_mo_per, by='year_month')
 samp_per <- samp_per[, c('transect', 'sampling_period')]
 
@@ -208,7 +241,11 @@ samp_per_key <- aggregate(year_month~sampling_period, data=year_mo_per, FUN='pas
 ecol_df$sampling_period <- as.factor(ecol_df$sampling_period)
 sample_size <- table(ecol_df[, c('sampling_period', 'mgmt_zone')])
 
+# tick pathogen data
+# TBD
+
 # average all values across transects by sampling period
+
 for(col in 25:60){
   ecol_df[[col]] <- as.numeric(ecol_df[[col]])
 }
@@ -315,3 +352,23 @@ for(col in colnames(veg_lag_df)[3:6]){
   print(p)
   dev.off()
 }
+
+# variation among transects within mgmt zone - sampling period bins
+library(ggplot2)
+abundant_groups <- c("grazer_inc_bovid", "mixed", "all_dung", "bovid", "grazer_ex_bovid",  
+                     "Buffalo", "Cattle", "Elephant", "Giraffe", "Grants_gazelle",
+                     "Impala", "Thompsons_gazelle", "Warthog", "Zebra")
+veg_cols <- c('green_sum', 'brown_sum', 'perc_green', 'biomass_kgha')
+imgdir <- "C:/Users/Ginger/Desktop/var_plots"
+for(col in c(abundant_groups, veg_cols)){
+  p <- ggplot(ecol_df, aes_string(x='sampling_period', y=col))
+  p <- p + geom_jitter(width=0.1, height=0)
+  p <- p + facet_wrap(~mgmt_zone)
+  pngname <- paste(imgdir, paste(col, '.png', sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=7, height=6)
+  print(p)
+  dev.off()
+}
+
+# throwaway
+
