@@ -22,7 +22,43 @@ for(gr_col in c('gr_1', 'gr_2', 'gr_3')){
     png(file=pngname, units="in", res=300, width=7, height=5)
     plot(variogram, type="b", main=paste("Bovid dung", gr_col, group, sep=" "))
     dev.off()
+get_sampling_periods <- function(df_inc_transects){
+  samp_per <- as.data.frame(df_inc_transects[, 'transect'])
+  colnames(samp_per)[1] <- 'transect'
+  samp_per <- data.frame(samp_per,
+                         do.call(rbind, strsplit(as.character(samp_per$transect),'_')))
+  samp_per$Date <- as.Date(samp_per$X1, format="%d-%b-%y")
+  samp_per$year_month <- format(samp_per$Date, "%Y-%m")
+  samp_per$year <- format(samp_per$Date, "%Y")
+  samp_per$month <- format(samp_per$Date, "%m")
+  year_mo_per <- as.data.frame(unique(samp_per$year_month),
+                               stringsAsFactors=FALSE)
+  colnames(year_mo_per)[1] <- 'year_month'
+  year_mo_per$sampled <- 1
+  r <- NROW(year_mo_per) + 1
+  for(y in min(samp_per$year):max(samp_per$year)){
+    for(m in 1:12){
+      value <- paste(sprintf("%04s", y), sprintf("%02d", m), sep="-")
+      if(value %in% year_mo_per$year_month){
+        next
+      }
+      else{
+        year_mo_per[r, 'year_month'] <- value
+        year_mo_per[r, 'sampled'] <- 0
+        r <- r + 1
+      }
+    }
   }
+  year_mo_per <- year_mo_per[order(year_mo_per$year_month), ]
+  year_mo_per <- year_mo_per[year_mo_per$year_month >= min(samp_per$year_month), ]
+  year_mo_per$sampling_period <- 1:NROW(year_mo_per)
+  year_mo_per <- year_mo_per[year_mo_per$sampled == 1,
+                             c("year_month", "sampling_period")]
+  # merge with original dataset to get transects
+  samp_per <- samp_per[!duplicated(samp_per$transect), c('year_month', 'transect')]
+  year_mo_per <- merge(year_mo_per, samp_per, by="year_month", all=TRUE)
+  year_mo_per <- year_mo_per[, c('sampling_period', 'transect')]
+  return(year_mo_per)
 }
 
 # Moran's I: spatial autocorrelation in dung density
@@ -208,19 +244,8 @@ from_rs$transect <- paste(from_rs$Date_sampl, from_rs$Transect, sep="_")
 from_rs <- from_rs[, c("transect", "mgmt_zone")]
 meta_df <- rbind(meta_df, from_rs)
 
-# derive sampling periods (months, except March-April 2015 are combined)
-samp_per <- as.data.frame(green_brown_summary[, 'transect'])
-colnames(samp_per)[1] <- 'transect'
-samp_per <- data.frame(samp_per,
-                       do.call(rbind, strsplit(as.character(samp_per$transect),'_')))
-samp_per$Date <- as.Date(samp_per$X1, format="%d-%b-%y")
-samp_per$year_month <- format(samp_per$Date, "%Y-%m")
-samp_per <- samp_per[!duplicated(samp_per$transect), ]
-year_mo_per <- as.data.frame(unique(samp_per$year_month))
-colnames(year_mo_per)[1] <- 'year_month'
-year_mo_per$sampling_period <- c(1, 2, 3, 3, 4, 5, 7, 8, 9, 10, 11) # TODO REPLACE THIS
-samp_per <- merge(samp_per, year_mo_per, by='year_month')
-samp_per <- samp_per[, c('transect', 'sampling_period')]
+# derive sampling periods
+sampling_periods <- get_sampling_periods(green_brown_summary)
 
 ecol_df <- merge(meta_df, green_brown_summary, by='transect')
 ecol_df <- merge(ecol_df, grouped_dung, by='transect')
