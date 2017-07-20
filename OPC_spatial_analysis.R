@@ -1,27 +1,6 @@
 # OPC spatial analysis
 
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
-comb_df <- read.csv(save_as)
-
-# semivariogram for smaller time periods
-# try 3-month periods, staggered (produced by hand) 
-month_gr <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/months_grouping.csv")
-comb_gr <- merge(comb_df, month_gr, by='year_month', all.x=TRUE)
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/semivariograms/3_month_groups"
-library(geoR)
-for(gr_col in c('gr_1', 'gr_2', 'gr_3')){
-  for(group in unique(comb_gr[, gr_col])){
-    subdf <- comb_gr[comb_gr[, gr_col] == group, ]
-    dists <- dist(cbind(subdf$Long, subdf$Lat))
-    breaks <- seq(0, max(dists), length.out=10)
-    cow_geodat <- jitterDupCoords(as.geodata(subdf, coords.col=7:8, data.col=6),
-                                  max=0.0001)
-    variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-    pngname <- paste(imgdir, paste("bovid_dung_semivariogram_bin_maxdist_",
-                                   gr_col, "_", group, ".png", sep=""), sep="/")
-    png(file=pngname, units="in", res=300, width=7, height=5)
-    plot(variogram, type="b", main=paste("Bovid dung", gr_col, group, sep=" "))
-    dev.off()
+# ecological data on OPC by management unit
 get_sampling_periods <- function(df_inc_transects){
   samp_per <- as.data.frame(df_inc_transects[, 'transect'])
   colnames(samp_per)[1] <- 'transect'
@@ -61,75 +40,6 @@ get_sampling_periods <- function(df_inc_transects){
   return(year_mo_per)
 }
 
-# Moran's I: spatial autocorrelation in dung density
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/semivariograms"
-library(ape)
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
-comb_df <- read.csv(save_as)
-
-# create distance matrix
-transect_dists <- as.matrix(dist(cbind(comb_df$Long, comb_df$Lat)))
-transect_dists_inv <- 1/transect_dists
-diag(transect_dists_inv) <- 0
-transect_dists_inv[is.infinite(transect_dists_inv)] <- 25000 # max(transect_dists_inv) = 23570.23
-Moran.I(comb_df$bovid, transect_dists_inv)
-Moran.I(comb_df$Cow, transect_dists_inv)
-
-# Moran's I with spdep
-library(spdep)
-dists_listw <- mat2listw(transect_dists_inv)
-moran.mc(comb_df$bovid, dists_listw, nsim=9999)
-moran.mc(comb_df$Cow, dists_listw, nsim=9999)
-
-# semivariogram
-library(geoR)
-dists <- dist(cbind(comb_df$Long, comb_df$Lat))
-shortd <- dists[which(dists < max(dists)/2)]
-hist(shortd)  # look for lag distances with >= 30 points in each bin
-hist(shortd, breaks=50)
-breaks <- seq(0, max(dists)/2, length.out=15)
-cow_geodat <- jitterDupCoords(as.geodata(comb_df, coords.col=5:6, data.col=3),
-                              max=0.0001)
-variogram <- variog(cow_geodat, breaks=breaks, option="cloud")
-plot(variogram, main='Cow dung')
-pngname <- paste(imgdir, "cow_dung_semivariogram_cloud.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, main='Cow dung')
-dev.off()
-variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-pngname <- paste(imgdir, "cow_dung_semivariogram_bin.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, type="b", main='Cow dung')
-dev.off()
-breaks <- seq(0, max(dists), length.out=30)
-variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-pngname <- paste(imgdir, "cow_dung_semivariogram_bin_maxdist.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5)
-plot(variogram, type="b", main='Cow dung')
-dev.off()
-
-# semivariogram by month
-for(ym in unique(comb_df$year_month)){
-  subdf <- comb_df[which(comb_df$year_month == ym), ]
-  dists <- dist(cbind(subdf$Long, subdf$Lat))
-  shortd <- dists[which(dists < max(dists)/2)]
-  pngname <- paste(imgdir, paste("cow_dung_hist_maxdist_",
-                                 ym, ".png", sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=5)
-  hist(shortd, main=ym, breaks=10) 
-  dev.off()
-  breaks <- seq(0, max(dists), length.out=10)
-  cow_geodat <- jitterDupCoords(as.geodata(subdf, coords.col=4:5, data.col=3),
-                                max=0.0001)
-  variogram <- variog(cow_geodat, breaks=breaks, option="bin")
-  pngname <- paste(imgdir, paste("cow_dung_semivariogram_bin_maxdist_",
-                                 ym, ".png", sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=5)
-  plot(variogram, type="b", main=paste('Cow dung ', ym, sep=""))
-  dev.off()
-}
-
-# ecological data on OPC by management unit
 # pinframe data: sum within position, then average within transect
 pin_df <- read.csv("C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
 pin_df <- pin_df[, (1:59)]
@@ -206,9 +116,12 @@ gr5_res <- gr5_res[, c('transect', setdiff(colnames(gr5_res), colnames(gr1_res))
 grouped_dung <- merge(grouped_dung, gr5_res, all=TRUE)
 gr7_res <- gr7_res[, c('transect', setdiff(colnames(gr7_res), colnames(grouped_dung)))]
 grouped_dung <- merge(grouped_dung, gr7_res, all=TRUE)
-from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/grouped_dung.csv")
+from_rs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/downloaded_from_box_7.18.17/summarized/grouped_dung.csv",
+                    stringsAsFactors=FALSE)
 colnames(from_rs)[6] <- 'Other'
 colnames(from_rs)[13] <- 'Dik-dik'
+from_rs[, 'other-unk'] <- from_rs$Other + from_rs$Unknown
+from_rs <- from_rs[ , !names(from_rs) %in% c("Unknown")]
 for(col in colnames(grouped_dung)){
   if(col %in% colnames(from_rs)){
     next
@@ -248,17 +161,17 @@ meta_df <- rbind(meta_df, from_rs)
 sampling_periods <- get_sampling_periods(green_brown_summary)
 
 ecol_df <- merge(meta_df, green_brown_summary, by='transect')
-ecol_df <- merge(ecol_df, grouped_dung, by='transect')
+ecol_df <- merge(ecol_df, grouped_dung, by='transect', all.x=TRUE)
 ecol_df <- merge(ecol_df, PDM_mean, by='transect')
-ecol_df <- merge(ecol_df, samp_per, by='transect')
+ecol_df <- merge(ecol_df, sampling_periods, by='transect')
 ecol_df$zone_period <- paste(ecol_df$mgmt_zone, as.character(ecol_df$sampling_period),
                              sep="-")
 
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/ecol_df.csv"
 write.csv(ecol_df, save_as, row.names=FALSE)
+ecol_df <- read.csv(save_as)
 
 # sample size by sampling period
-samp_per_key <- aggregate(year_month~sampling_period, data=year_mo_per, FUN='paste')
 ecol_df$sampling_period <- as.factor(ecol_df$sampling_period)
 sample_size <- table(ecol_df[, c('sampling_period', 'mgmt_zone')])
 
@@ -266,25 +179,24 @@ sample_size <- table(ecol_df[, c('sampling_period', 'mgmt_zone')])
 # TBD
 
 # average all values across transects by sampling period
-
-for(col in 25:60){
-  ecol_df[[col]] <- as.numeric(ecol_df[[col]])
-}
-ecol_by_samp <- aggregate(ecol_df[, 25:60], by=list(ecol_df$zone_period),
+ecol_by_samp <- aggregate(ecol_df[, 3:44], by=list(ecol_df$zone_period),
                           FUN=mean, na.rm=TRUE)
 colnames(ecol_by_samp)[1] <- 'zone_period'
 ecol_by_samp <- merge(ecol_by_samp,
-                      ecol_df[!duplicated(ecol_df$zone_period), c('zone_period', 'sampling_period', 'mgmt_zone')],
+                      ecol_df[!duplicated(ecol_df$zone_period),
+                              c('transect', 'zone_period', 'sampling_period', 'mgmt_zone')],
                       by='zone_period', all.x=TRUE)
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/ecol_by_samp.csv"
 write.csv(ecol_by_samp, save_as, row.names=FALSE)
+ecol_by_samp <- read.csv(save_as)
 
 # various groups vs cow dung at various lag times
-dung_df <- ecol_by_samp[, c("mgmt_zone", "sampling_period", colnames(ecol_by_samp)[5:36])]
+dung_df <- ecol_by_samp[, c("mgmt_zone", "sampling_period", colnames(ecol_by_samp)[5:42])]
 cattle_subs <- ecol_by_samp[, c('Cattle', "sampling_period", "mgmt_zone")]
+cattle_subs <- cattle_subs[!is.na(cattle_subs$Cattle), ]
 # make df of bovid dung density by different lag times
 bind_list <- list()
-for(lag in 0:7){
+for(lag in 0:16){
   sub_df <- cattle_subs
   sub_df$sampling_period <- as.numeric(sub_df$sampling_period)
   sub_df$samp_per_of_response <- sub_df$sampling_period + lag  # sampling period of the response
@@ -292,28 +204,34 @@ for(lag in 0:7){
   bind_list[[lag + 1]] <- sub_df
 }
 lag_df <- do.call(rbind, bind_list)
-lag_df <- lag_df[lag_df$samp_per_of_response < 9, ]
+lag_df <- lag_df[lag_df$samp_per_of_response < 18, ]
+lag_df <- lag_df[lag_df$lag <= 6, ]
 lag_df <- lag_df[, c('Cattle', 'mgmt_zone', 'samp_per_of_response', 'lag')]
 colnames(lag_df) <- c('Cattle', 'mgmt_zone', 'sampling_period', 'lag')
 # join lag df to response df
+dung_df$sampling_period <- as.numeric(dung_df$sampling_period)
+lag_df$sampling_period <- as.numeric(lag_df$sampling_period)
+
 dung_lag_df <- merge(dung_df, lag_df, by=c('sampling_period', 'mgmt_zone'), all=TRUE)
 colnames(dung_lag_df)[13] <- 'cattle_response'
-colnames(dung_lag_df)[35] <- 'lagged_cattle_dung'
+colnames(dung_lag_df)[41] <- 'lagged_cattle_dung'
 
 # make plots
-mean_dung <- as.data.frame(colMeans(dung_lag_df[, c(3:6, 8:13, 15:34)], na.rm=TRUE))
+mean_dung <- as.data.frame(colMeans(dung_lag_df[, c(3:40)], na.rm=TRUE))
 colnames(mean_dung)[1] <- 'mean_dung'
 mean_dung$type <- row.names(mean_dung)
-abundant_groups <- mean_dung[mean_dung$mean_dung > 4.031, 'type']
+abundant_groups <- mean_dung[mean_dung$mean_dung >= 0.065, 'type'] # top 50%
+abundant_groups <- abundant_groups[!abundant_groups %in%
+                                   c("other-unk", "Other", "Unknown")]
 
 library(ggplot2)
 imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/dung_by_cattle_lag"
 for(col in abundant_groups){
   p <- ggplot(dung_lag_df, aes_string(x='lagged_cattle_dung', y=col))
   p <- p + geom_point()
-  p <- p + facet_wrap(~lag) + ggtitle(col)
+  p <- p + facet_wrap(~lag, nrow=2) + ggtitle(col)
   pngname <- paste(imgdir, paste(col, '.png', sep=""), sep="/")
-  png(file=pngname, units="in", res=300, width=7, height=7)
+  png(file=pngname, units="in", res=300, width=7, height=5)
   print(p)
   dev.off()
 }
@@ -325,14 +243,16 @@ cor_df <- data.frame('dung_type'=c(), 'sampling_period_lag'=c(),
 for(col in abundant_groups){
   for(lag in unique(dung_lag_df$lag)){
     subs <- dung_lag_df[dung_lag_df$lag == lag, ]
-    t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
     sample_size <- length(subs[!is.na(subs[[col]]), col])
-    cor_df[r, 'dung_type'] <- col
-    cor_df[r, 'sampling_period_lag'] <- lag
-    cor_df[r, 'pearson_p'] <- t1[[3]]
-    cor_df[r, 'pearson_r'] <- t1[[4]]
-    cor_df[r, 'sample_size'] <- sample_size
-    r <- r + 1
+    if(sample_size > 3){
+      t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
+      cor_df[r, 'dung_type'] <- col
+      cor_df[r, 'sampling_period_lag'] <- lag
+      cor_df[r, 'pearson_p'] <- t1[[3]]
+      cor_df[r, 'pearson_r'] <- t1[[4]]
+      cor_df[r, 'sample_size'] <- sample_size
+      r <- r + 1
+    }
   }
 }
 write.csv(cor_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/dung_lag_cor_table.csv',
@@ -342,6 +262,7 @@ write.csv(cor_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_mod
 veg_df <- ecol_by_samp[, c('green_sum', 'brown_sum', 'perc_green',
                            'biomass_kgha', 'sampling_period',
                            'mgmt_zone')]
+veg_df$sampling_period <- as.numeric(veg_df$sampling_period)
 veg_lag_df <- merge(veg_df, lag_df, by=c('sampling_period', 'mgmt_zone'), all=TRUE)
 colnames(veg_lag_df)[7] <- 'lagged_cattle_dung'
 r <- 1
@@ -350,14 +271,16 @@ cor_df <- data.frame('veg_metric'=c(), 'sampling_period_lag'=c(),
 for(col in colnames(veg_lag_df)[3:6]){
   for(lag in unique(veg_lag_df$lag)){
     subs <- veg_lag_df[veg_lag_df$lag == lag, ]
-    t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
     sample_size <- length(subs[!is.na(subs[[col]]), col])
-    cor_df[r, 'dung_type'] <- col
-    cor_df[r, 'sampling_period_lag'] <- lag
-    cor_df[r, 'pearson_p'] <- t1[[3]]
-    cor_df[r, 'pearson_r'] <- t1[[4]]
-    cor_df[r, 'sample_size'] <- sample_size
-    r <- r + 1
+    if(sample_size > 3){
+      t1 <- cor.test(subs[[col]], subs$lagged_cattle_dung, method="pearson")
+      cor_df[r, 'dung_type'] <- col
+      cor_df[r, 'sampling_period_lag'] <- lag
+      cor_df[r, 'pearson_p'] <- t1[[3]]
+      cor_df[r, 'pearson_r'] <- t1[[4]]
+      cor_df[r, 'sample_size'] <- sample_size
+      r <- r + 1
+    }
   }
 }
 write.csv(cor_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/veg_lag_cor_table.csv',
@@ -376,11 +299,10 @@ for(col in colnames(veg_lag_df)[3:6]){
 
 # variation among transects within mgmt zone - sampling period bins
 library(ggplot2)
-abundant_groups <- c("grazer_inc_bovid", "mixed", "all_dung", "bovid", "grazer_ex_bovid",  
-                     "Buffalo", "Cattle", "Elephant", "Giraffe", "Grants_gazelle",
-                     "Impala", "Thompsons_gazelle", "Warthog", "Zebra")
 veg_cols <- c('green_sum', 'brown_sum', 'perc_green', 'biomass_kgha')
-imgdir <- "C:/Users/Ginger/Desktop/var_plots"
+abundant_groups <- abundant_groups[! abundant_groups == "cattle_response"]
+abundant_groups <- c(abundant_groups, "Cattle")
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/variation_by_mgmt_zone_samp_period"
 for(col in c(abundant_groups, veg_cols)){
   p <- ggplot(ecol_df, aes_string(x='sampling_period', y=col))
   p <- p + geom_jitter(width=0.1, height=0)
@@ -390,6 +312,102 @@ for(col in c(abundant_groups, veg_cols)){
   print(p)
   dev.off()
 }
+
+# semivariograms, Moran's I, etc
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
+comb_df <- read.csv(save_as)
+
+# semivariogram for smaller time periods
+# try 3-month periods, staggered (produced by hand) 
+month_gr <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/months_grouping.csv")
+comb_gr <- merge(comb_df, month_gr, by='year_month', all.x=TRUE)
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/semivariograms/3_month_groups"
+library(geoR)
+for(gr_col in c('gr_1', 'gr_2', 'gr_3')){
+  for(group in unique(comb_gr[, gr_col])){
+    subdf <- comb_gr[comb_gr[, gr_col] == group, ]
+    dists <- dist(cbind(subdf$Long, subdf$Lat))
+    breaks <- seq(0, max(dists), length.out=10)
+    cow_geodat <- jitterDupCoords(as.geodata(subdf, coords.col=7:8, data.col=6),
+                                  max=0.0001)
+    variogram <- variog(cow_geodat, breaks=breaks, option="bin")
+    pngname <- paste(imgdir, paste("bovid_dung_semivariogram_bin_maxdist_",
+                                   gr_col, "_", group, ".png", sep=""), sep="/")
+    png(file=pngname, units="in", res=300, width=7, height=5)
+    plot(variogram, type="b", main=paste("Bovid dung", gr_col, group, sep=" "))
+    dev.off()
+  }
+}
+
+# Moran's I: spatial autocorrelation in dung density
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_spatial_analysis/semivariograms"
+library(ape)
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_bovid_dung_sum.csv"
+comb_df <- read.csv(save_as)
+
+# create distance matrix
+transect_dists <- as.matrix(dist(cbind(comb_df$Long, comb_df$Lat)))
+transect_dists_inv <- 1/transect_dists
+diag(transect_dists_inv) <- 0
+transect_dists_inv[is.infinite(transect_dists_inv)] <- 25000 # max(transect_dists_inv) = 23570.23
+Moran.I(comb_df$bovid, transect_dists_inv)
+Moran.I(comb_df$Cow, transect_dists_inv)
+
+# Moran's I with spdep
+library(spdep)
+dists_listw <- mat2listw(transect_dists_inv)
+moran.mc(comb_df$bovid, dists_listw, nsim=9999)
+moran.mc(comb_df$Cow, dists_listw, nsim=9999)
+
+# semivariogram
+library(geoR)
+dists <- dist(cbind(comb_df$Long, comb_df$Lat))
+shortd <- dists[which(dists < max(dists)/2)]
+hist(shortd)  # look for lag distances with >= 30 points in each bin
+hist(shortd, breaks=50)
+breaks <- seq(0, max(dists)/2, length.out=15)
+cow_geodat <- jitterDupCoords(as.geodata(comb_df, coords.col=5:6, data.col=3),
+                              max=0.0001)
+variogram <- variog(cow_geodat, breaks=breaks, option="cloud")
+plot(variogram, main='Cow dung')
+pngname <- paste(imgdir, "cow_dung_semivariogram_cloud.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+plot(variogram, main='Cow dung')
+dev.off()
+variogram <- variog(cow_geodat, breaks=breaks, option="bin")
+pngname <- paste(imgdir, "cow_dung_semivariogram_bin.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+plot(variogram, type="b", main='Cow dung')
+dev.off()
+breaks <- seq(0, max(dists), length.out=30)
+variogram <- variog(cow_geodat, breaks=breaks, option="bin")
+pngname <- paste(imgdir, "cow_dung_semivariogram_bin_maxdist.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+plot(variogram, type="b", main='Cow dung')
+dev.off()
+
+# semivariogram by month
+for(ym in unique(comb_df$year_month)){
+  subdf <- comb_df[which(comb_df$year_month == ym), ]
+  dists <- dist(cbind(subdf$Long, subdf$Lat))
+  shortd <- dists[which(dists < max(dists)/2)]
+  pngname <- paste(imgdir, paste("cow_dung_hist_maxdist_",
+                                 ym, ".png", sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=7, height=5)
+  hist(shortd, main=ym, breaks=10) 
+  dev.off()
+  breaks <- seq(0, max(dists), length.out=10)
+  cow_geodat <- jitterDupCoords(as.geodata(subdf, coords.col=4:5, data.col=3),
+                                max=0.0001)
+  variogram <- variog(cow_geodat, breaks=breaks, option="bin")
+  pngname <- paste(imgdir, paste("cow_dung_semivariogram_bin_maxdist_",
+                                 ym, ".png", sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=7, height=5)
+  plot(variogram, type="b", main=paste('Cow dung ', ym, sep=""))
+  dev.off()
+}
+
+
 
 # throwaway
 
