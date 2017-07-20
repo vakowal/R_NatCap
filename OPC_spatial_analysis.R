@@ -140,7 +140,7 @@ colnames(dung_sum)[1] <- 'transect'
 # sum by functional groups
 group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
 gr_key_df <- read.csv(group_key)
-means_t <- as.data.frame(t(dung_sum[, c(2:25)]))
+means_t <- as.data.frame(t(dung_sum[, c(2:25)]), stringsAsFactors=FALSE)
 colnames(means_t) <- dung_sum$transect
 means_t$Abbrev <- rownames(means_t)
 gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group5', 'Group6', 'Group7')]
@@ -153,22 +153,18 @@ colnames(gr1_means)[1] <- "group"
 colnames(gr5_means)[1] <- "group"
 colnames(gr6_means)[1] <- "group"
 colnames(gr7_means)[1] <- "group"
-gr1_res <- as.data.frame(t(gr1_means))
+gr1_res <- as.data.frame(t(gr1_means[, 2:287]))
 colnames(gr1_res) <- gr1_means$group
 gr1_res$transect <- rownames(gr1_res)
-gr1_res <- gr1_res[-1, ]
-gr5_res <- as.data.frame(t(gr5_means))
+gr5_res <- as.data.frame(t(gr5_means[, 2:287]))
 colnames(gr5_res) <- gr5_means$group
 gr5_res$transect <- rownames(gr5_res)
-gr5_res <- gr5_res[-1, ]
-gr6_res <- as.data.frame(t(gr6_means))
+gr6_res <- as.data.frame(t(gr6_means[, 2:287]))
 colnames(gr6_res) <- gr6_means$group
 gr6_res$transect <- rownames(gr6_res)
-gr6_res <- gr6_res[-1, ]
-gr7_res <- as.data.frame(t(gr7_means))
+gr7_res <- as.data.frame(t(gr7_means[, 2:287]))
 colnames(gr7_res) <- gr7_means$group
 gr7_res$transect <- rownames(gr7_res)
-gr7_res <- gr7_res[-1, ]
 grouped_dung <- merge(gr1_res, gr6_res, all=TRUE)
 gr5_res <- gr5_res[, c('transect', setdiff(colnames(gr5_res), colnames(gr1_res)))]
 grouped_dung <- merge(grouped_dung, gr5_res, all=TRUE)
