@@ -501,5 +501,196 @@ p <- p + geom_point()
 p <- p + xlab("ratio of bovid to non-bovid dung") + ylab("property + non-property cattle per ha")
 print(p)
 
+## derive conversion from dung to livestock numbers
+# reported cattle
+est_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv"
+est_df <- read.csv(est_csv)
+est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
+est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
+est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
+est_df$prop_density <- est_df$property_cattle / est_df$LwfPropSizeHa
+est_df$prop_non_density <- est_df$property_non_property_cattle / est_df$LwfPropSizeHa
+est_df[which(est_df$Confirmed == 'yes'), 'Confirmed'] <- 'Yes'
+est_df[which(est_df$Confirmed == 'no'), 'Confirmed'] <- 'No'
 
+# regression to predict number of animals from piles of dung
+dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv")
+bovid_sum <- dung_sum[, c("Property", 'bovid')]
+est_df <- est_df[, c("Property", "prop_density", "prop_non_density", "Confirmed")]
+cor_df <- merge(bovid_sum, est_df, by="Property")
+cor_df <- cor_df[cor_df$Property != "Makurian", ]
+cor_df <- cor_df[which(cor_df$Confirmed == "Yes"), ]
 
+lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df) 
+lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
+summary(lm1_0)
+summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
+
+# Felicia's classifications used in Science manuscript
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+
+# group dung into relevant classes (relevant for modeling, relevant to Felicia's analysis)
+dung_sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
+property_means <- read.csv(dung_sum_csv)
+group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+
+means_t <- as.data.frame(t(property_means[2:24]))
+colnames(means_t) <- property_means$Property
+means_t$Abbrev <- rownames(means_t)
+gr_subs <- gr_key_df[, c('Abbrev', 'Group5', 'Group8', 'Group9', 'Unit_weight_kg')]
+comb <- merge(means_t, gr_subs, by='Abbrev')
+gr5_means <- aggregate(comb[, 2:25], by=list(comb$Group5), FUN=sum)
+gr8_means <- aggregate(comb[, 2:25], by=list(comb$Group8), FUN=sum)
+gr9_means <- aggregate(comb[, 2:25], by=list(comb$Group9), FUN=sum)
+colnames(gr5_means)[1] <- "group"
+colnames(gr8_means)[1] <- "group"
+colnames(gr9_means)[1] <- "group"
+gr5_res <- as.data.frame(t(gr5_means[2:25]))
+colnames(gr5_res) <- gr5_means$group
+gr5_res$Property <- rownames(gr5_res)
+gr8_res <- as.data.frame(t(gr8_means[2:25]))
+colnames(gr8_res) <- gr8_means$group
+gr8_res$Property <- rownames(gr8_res)
+gr9_res <- as.data.frame(t(gr9_means[2:25]))
+colnames(gr9_res) <- gr9_means$group
+gr9_res$Property <- rownames(gr9_res)
+gr9_res <- gr9_res[, c('Property', 'bovid_shoat', 'grazer_ex_bovid_shoat')]
+grouped_dung <- merge(gr5_res, gr8_res, all=TRUE)
+grouped_dung <- merge(gr9_res, grouped_dung, all=TRUE)
+grouped_dung <- grouped_dung[, c('Property', 'bovid', 'grazer_ex_bovid',
+                                 'livestock', 'wildlife', 
+                                 'bovid_shoat', 'grazer_ex_bovid_shoat')]
+
+# join Felicia's classification with grouped dung
+test <- setdiff(grouped_dung$Property, science_df$Property)  # Il Ngwesi not used in science MS
+science_df <- science_df[science_df$included_science_ms == "Y", ]
+science_df <- science_df[, c('Property', 'EcolClass', 'EconClass')]
+dung_by_class <- merge(grouped_dung, science_df, by="Property")
+dung_by_class$EcolClass <- factor(dung_by_class$EcolClass,
+                                  levels=c("Livestock", "Integrated", "Wildlife"))
+
+# are ratios related to ticks when defined differently?
+grouped_dung$ln_livestock_wildlife <- log(grouped_dung$wildlife / grouped_dung$livestock)
+grouped_dung$ln_grazerincshoat_bovid <- log(grouped_dung$grazer_ex_bovid / grouped_dung$bovid)
+grouped_dung$ln_grazerexshoat_bovidshoat <- log(grouped_dung$grazer_ex_bovid_shoat / grouped_dung$bovid_shoat)
+grouped_dung$ln_grazerexshoat_bovid <- log(grouped_dung$grazer_ex_bovid_shoat / grouped_dung$bovid)
+
+# replace infinite values with max or min
+max_livestock_wildlife <- max(grouped_dung[is.finite(grouped_dung$ln_livestock_wildlife),
+                                            'ln_livestock_wildlife'])
+min_livestock_wildlife <- min(grouped_dung[is.finite(grouped_dung$ln_livestock_wildlife),
+                                           'ln_livestock_wildlife'])
+max_grazerincshoat_bovid <- max(grouped_dung[is.finite(grouped_dung$ln_grazerincshoat_bovid),
+                                           'ln_grazerincshoat_bovid'])
+min_grazerincshoat_bovid <- min(grouped_dung[is.finite(grouped_dung$ln_grazerincshoat_bovid),
+                                           'ln_grazerincshoat_bovid'])
+max_grazerexshoat_bovidshoat <- max(grouped_dung[is.finite(grouped_dung$ln_grazerexshoat_bovidshoat),
+                                           'ln_grazerexshoat_bovidshoat'])
+min_grazerexshoat_bovidshoat <- min(grouped_dung[is.finite(grouped_dung$ln_grazerexshoat_bovidshoat),
+                                           'ln_grazerexshoat_bovidshoat'])
+max_grazerexshoat_bovid <- max(grouped_dung[is.finite(grouped_dung$ln_grazerexshoat_bovid),
+                                                 'ln_grazerexshoat_bovid'])
+min_grazerexshoat_bovid <- min(grouped_dung[is.finite(grouped_dung$ln_grazerexshoat_bovid),
+                                                 'ln_grazerexshoat_bovid'])
+grouped_dung[(grouped_dung$ln_livestock_wildlife < min_livestock_wildlife),
+             'ln_livestock_wildlife'] <- min_livestock_wildlife
+grouped_dung[(grouped_dung$ln_grazerincshoat_bovid < min_grazerincshoat_bovid),
+             'ln_grazerincshoat_bovid'] <- min_grazerincshoat_bovid
+grouped_dung[(grouped_dung$ln_grazerexshoat_bovidshoat < min_grazerexshoat_bovidshoat),
+             'ln_grazerexshoat_bovidshoat'] <- min_grazerexshoat_bovidshoat
+grouped_dung[(grouped_dung$ln_grazerexshoat_bovid < min_grazerexshoat_bovid),
+             'ln_grazerexshoat_bovid'] <- min_grazerexshoat_bovid
+grouped_dung[(grouped_dung$ln_livestock_wildlife > max_livestock_wildlife),
+             'ln_livestock_wildlife'] <- max_livestock_wildlife
+grouped_dung[(grouped_dung$ln_grazerincshoat_bovid > max_grazerincshoat_bovid),
+             'ln_grazerincshoat_bovid'] <- max_grazerincshoat_bovid
+grouped_dung[(grouped_dung$ln_grazerexshoat_bovidshoat > max_grazerexshoat_bovidshoat),
+             'ln_grazerexshoat_bovidshoat'] <- max_grazerexshoat_bovidshoat
+grouped_dung[(grouped_dung$ln_grazerexshoat_bovid > max_grazerexshoat_bovid),
+             'ln_grazerexshoat_bovid'] <- max_grazerexshoat_bovid
+  
+# relationship of different definitions of wildlife and livestock to ticks
+science_df <- science_df[science_df$included_science_ms == "Y", ]
+science_df$total_ticks <- (science_df$X2014LarvaeM2 + science_df$X2014NymphsM2 + science_df$X2014AdultsM2
+                           + science_df$X2015LarvaeM2 + science_df$X2015NymphsM2 + science_df$X2015AdultsM2) / 2
+science_df$ln_ticks <- log(science_df$total_ticks)
+max_ticks <- max(science_df[is.finite(science_df$ln_ticks), 'ln_ticks'])
+min_ticks <- min(science_df[is.finite(science_df$ln_ticks) & !is.na(science_df$ln_ticks), 'ln_ticks'])
+science_df[(science_df$ln_ticks > max_ticks) & !is.na(science_df$ln_ticks), 'ln_ticks'] <- max_ticks
+science_df[(science_df$ln_ticks < min_ticks) & !is.na(science_df$ln_ticks), 'ln_ticks'] <- min_ticks
+
+science_df <- science_df[, c('Property', 'ln_ticks')]
+dung_and_ticks <- merge(grouped_dung, science_df, by="Property")
+
+f_lm <- lm(dung_and_ticks$ln_ticks ~ dung_and_ticks$ln_livestock_wildlife)
+g_lm1 <- lm(dung_and_ticks$ln_ticks ~ dung_and_ticks$ln_grazerexshoat_bovidshoat)
+g_lm2 <- lm(dung_and_ticks$ln_ticks ~ dung_and_ticks$ln_grazerincshoat_bovid)
+g_lm3 <- lm(dung_and_ticks$ln_ticks ~ dung_and_ticks$ln_grazerexshoat_bovid)
+
+# new grouping relevant to scenarios
+# group dung into relevant classes (relevant for modeling, relevant to Felicia's analysis)
+dung_sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
+property_means <- read.csv(dung_sum_csv)
+group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+
+means_t <- as.data.frame(t(property_means[2:24]))
+colnames(means_t) <- property_means$Property
+means_t$Abbrev <- rownames(means_t)
+gr_subs <- gr_key_df[, c('Abbrev', 'Group10', 'Group8', 'Group9', 'Unit_weight_kg')]
+comb <- merge(means_t, gr_subs, by='Abbrev')
+gr10_means <- aggregate(comb[, 2:25], by=list(comb$Group10), FUN=sum)
+colnames(gr10_means)[1] <- "group"
+gr10_res <- as.data.frame(t(gr10_means[2:25]))
+colnames(gr10_res) <- gr10_means$group
+gr10_res$Property <- rownames(gr10_res)
+grouped_dung <- gr10_res
+
+# join Felicia's classification with grouped dung
+test <- setdiff(grouped_dung$Property, science_df$Property)  # Il Ngwesi not used in science MS
+science_df <- science_df[science_df$included_science_ms == "Y", ]
+science_df <- science_df[, c('Property', 'EcolClass', 'EconClass')]
+dung_by_class <- merge(grouped_dung, science_df, by="Property")
+dung_by_class$EcolClass <- factor(dung_by_class$EcolClass,
+                                  levels=c("Livestock", "Integrated", "Wildlife"))
+
+# mean of each group in each class
+summary_by_class <- aggregate(dung_by_class[, 2:10],
+                              by=list(dung_by_class$EcolClass), FUN=mean)
+colnames(summary_by_class)[1] <- 'EcolClass'
+out_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_scenarios/empirical_summaries"
+write.csv(summary_by_class, paste(out_dir, "dung_summary_by_ecol_class.csv", sep='/'),
+          row.names=FALSE)
+
+# calculate average size of each size class for grazers, weighted by abundance across properties
+dung_sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
+property_means <- read.csv(dung_sum_csv)
+group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key, stringsAsFactors=FALSE)
+
+means_t <- as.data.frame(t(property_means[2:24]))
+colnames(means_t) <- property_means$Property
+means_t$mean_across_properties <- rowMeans(means_t[])
+means_t$Abbrev <- rownames(means_t)
+
+gr_subs <- gr_key_df[, c('Abbrev', 'Herbivory',
+                         'Group10', 'Unit_weight_kg')]
+comb <- merge(means_t, gr_subs, by='Abbrev')
+comb <- comb[comb$Herbivory == 'grazer',
+             c('mean_across_properties', 'Group10', 'Unit_weight_kg')]
+comb$Unit_weight_kg <- as.numeric(comb$Unit_weight_kg)
+w_mean_df <- data.frame('Group10_group'=character(length(unique(comb$Group10))),
+                        'weighted_mean_kg'=numeric(length(unique(comb$Group10))),
+                        stringsAsFactors=FALSE)
+i <- 1
+for(gr in unique(comb$Group10)){
+  subs <- comb[comb$Group10 == gr, ]
+  w_mean <- weighted.mean(subs$Unit_weight_kg, subs$mean_across_properties)
+  w_mean_df[i, 'Group10_group'] <- gr
+  w_mean_df[i, 'weighted_mean_kg'] <- w_mean
+  i <- i + 1
+}
+gr_key_df <- merge(gr_key_df, w_mean_df, by.x="Group10", by.y="Group10_group", all=TRUE)
+mean_group_across_properties <- aggregate(comb$mean_across_properties, by=list(comb$Group10),
+                                          FUN=sum)
