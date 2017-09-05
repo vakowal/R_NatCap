@@ -710,3 +710,35 @@ pngname <- paste(img_dir, "PM_proportion_by_property.png", sep="/")
 png(file=pngname, units="in", res=300, width=4, height=2)
 print(p)
 dev.off()
+
+# average biomass across properties in 2014, for regional scenarios
+emp_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", c("Property", "included_science_ms")]
+emp_summary <- merge(emp_summary, science_df, by="Property")
+emp_2014 <- emp_summary[emp_summary$Year == 2014, ]
+avg_biomass <- mean(emp_2014$mean_biomass_gm2)
+avg_date <- mean.Date(as.Date(emp_2014$average_date, format='%m/%d/%Y'))
+date_list <- seq(as.Date("2014/01/28"), as.Date("2015/12/28"), by="month")
+match_date <- closest_date(avg_date, date_list)
+
+emp_2015 <- emp_summary[emp_summary$Year == 2015, ]
+avg_biomass <- mean(emp_2015$mean_biomass_gm2)
+avg_date <- mean.Date(as.Date(emp_2015$average_date, format='%m/%d/%Y'))
+date_list <- seq(as.Date("2014/01/28"), as.Date("2015/12/28"), by="month")
+match_date <- closest_date(avg_date, date_list)
+
+#### throwaway
+library(ggplot2)
+plotdf <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary/mean_across_properties_vs_back_calc.csv")
+p <- ggplot(plotdf, aes(x=time, y=biomass, group=label))
+p <- p + geom_line(aes(linetype=label))
+p <- p + facet_wrap(~biomass_type)
+p <- p + xlab("biomass")
+print(p)
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
+pngname <- paste(img_dir, "biomass_back_calc_vs_mean_across_properties.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=3)
+print(p)
+dev.off()
+
