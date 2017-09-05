@@ -1,7 +1,6 @@
 # what is effect of rotation on the forage model?
 
 library(ggplot2)
-
 print_theme <- theme(strip.text.y=element_text(size=10), 
                      strip.text.x=element_text(size=9), 
                      axis.title.x=element_text(size=10), 
@@ -11,18 +10,89 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# effect of rest-rotation
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/rest_effect/summary_figs/rest_effect_summary.csv")
+sum_df$biomass_aglive_gm2 <- sum_df$aglivc * 2.5
+sum_df$biomass_ag_gm2 <- sum_df$aglivc * 2.5 + sum_df$stdedc * 2.5
+sum_df$perc_green_biomass <- sum_df$biomass_aglive_gm2 / sum_df$biomass_ag_gm2
+sum_df$biomass_bglive_gm2 <- sum_df$bglivc * 2.5
+sum_df$soilC_gm2 <- sum_df$somtc
+sum_df$year <- floor(sum_df$time)
+sum_df[is.na(sum_df$rest_period), 'rest_period'] <- 0
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/rest_effect/summary_figs"
+
+# look at aboveground and belowground biomass and soilC
+# at different levels of continuous grazing
+cont_df <- sum_df[sum_df$treatment == 'continuous' & sum_df$year < 2007,
+                  c('biomass_ag_gm2', 'biomass_bglive_gm2',
+                    'soilC_gm2', 'time', 'sd', 'year')]
+cont_res <- reshape(cont_df, varying=c('biomass_ag_gm2', 'biomass_bglive_gm2', 'soilC_gm2'),
+                    timevar='label', v.names='amount',
+                    times=c('biomass_ag_gm2', 'biomass_bglive_gm2', 'soilC_gm2'),
+                    direction='long')
+cont_res$sd <- as.factor(cont_res$sd)
+p <- ggplot(cont_res, aes(x=time, y=amount, group=sd))
+p <- p + geom_line(aes(colour=sd))
+p <- p + facet_wrap(~label, scales='free')
+print(p)
+
+annual_soilC <- aggregate(soilC_gm2~sd + year, data=cont_df, FUN=mean)
+annual_soilC$sd <- as.factor(annual_soilC$sd)
+p <- ggplot(annual_soilC, aes(x=year, y=soilC_gm2, group=sd))
+p <- p + geom_line(aes(colour=sd))
+p <- p + ylab("Avg annual soil C")
+print(p)
+pngname <- paste(imgdir, "SoilC_avg_annual_continuous.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=4)
+print(p)
+dev.off()
+
+pre_2007 <- sum_df[sum_df$year < 2007, c('biomass_ag_gm2', 'biomass_bglive_gm2',
+                                         'soilC_gm2', 'time', 'sd', 'year',
+                                        'rest_period', 'treatment')]
+pre_2007$rest_period <- as.factor(pre_2007$rest_period)
+mean_ag_biomass <- aggregate(biomass_ag_gm2~sd+rest_period+year+treatment,
+                             data=pre_2007, FUN=mean)
+mean_bg_biomass <- aggregate(biomass_bglive_gm2~sd+rest_period+year+treatment,
+                             data=pre_2007, FUN=mean)
+mean_soilC <- aggregate(soilC_gm2~sd+rest_period+year+treatment,
+                             data=pre_2007, FUN=mean)
+p <- ggplot(mean_ag_biomass, aes(x=year, y=biomass_ag_gm2, group=rest_period))
+p <- p + geom_line(aes(colour=rest_period))
+p <- p + facet_wrap(~sd)
+pngname <- paste(imgdir, "AbovegroundBiomass_avg_annual_rot.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(mean_bg_biomass, aes(x=year, y=biomass_bglive_gm2, group=rest_period))
+p <- p + geom_line(aes(colour=rest_period))
+p <- p + facet_wrap(~sd)
+pngname <- paste(imgdir, "BelowgroundLive_avg_annual_rot.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(mean_soilC, aes(x=year, y=soilC_gm2, group=rest_period))
+p <- p + geom_line(aes(colour=rest_period))
+p <- p + facet_wrap(~sd)
+pngname <- paste(imgdir, "SoilC_avg_annual_rot.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
+
 # Ucross: composition
 # composition calculated in python script
-comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/proportion_summary_36_mo.csv")
-comp_df <- comp_df[which(comp_df$cp_ratio == 1.1 &
-                           comp_df$n_pastures == 2), ]
+comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/proportion_summary_0_anim.csv")
+comp_df <- comp_df[which(comp_df$cp_ratio == 1.2), ]
 comp_resh <- reshape(comp_df, varying=c('continuous', 'rotation'),
                      v.names='perc_diff', timevar='treatment', times=c('continuous', 'rotation'),
                      direction='long')
 comp_resh$date <- comp_resh$year + (1/12) * comp_resh$month
 p <- ggplot(comp_resh, aes(x=date, y=perc_diff, group=treatment))
 p <- p + geom_line(aes(linetype=treatment))
-p <- p + facet_wrap(~high_quality_perc)
+# p <- p + facet_wrap(cp_ratio~high_quality_perc)
 p <- p + ylab("Proportion nutritious grass")
 print(p)
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/prop_high_cp_2_pastures.png"
@@ -181,6 +251,14 @@ pngname <- paste(img_dir, 'pasture_biomass_benefit_of_rotation.png', sep="/")
 png(file=pngname, units="in", res=300, width=5, height=3)
 print(p)
 dev.off()
+
+# increasing desirable spp?
+rot_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/rot_3_pastures_0.2_v_0.8_perc_1.2_PRDX_1.2_v_1.6/pasture_summary.csv")
+rot_df$total_grass <- rot_df$high_quality_total_kgha + rot_df$low_quality_total_kgha
+rot_df$prop_hq <- rot_df$high_quality_total_kgha / rot_df$total_grass
+p <- ggplot(rot_df, aes(x=step, y=prop_hq, group=pasture_index))
+p <- p + geom_line()
+print(p)
 
 # diff between rotated and continuous, plots etc
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/summary_figs"
