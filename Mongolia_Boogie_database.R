@@ -24,8 +24,9 @@ for(table_n in table_names){
   table_list[[table_n]] <- sqlFetch(con2, table_n)
 }
 
-biomass_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/SCP_biomass50sites.csv")
-spp_df <- sqlFetch(con2, 'tblSpecies')
+biomass_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/SCP_biomass50sites.csv",
+                       stringsAsFactors=FALSE)
+spp_df <- sqlFetch(con2, 'tblSpecies', stringsAsFactors=FALSE)
 
 # find dominant species
 spp_freq <- as.data.frame(table(biomass_df$plants))
@@ -55,7 +56,7 @@ confusing_tab <- palat_subs[which(palat_subs$Genus_spec %in% confusing_spp), ]
 # consumed but undesirable (U), not consumable (N), toxic (T).
 
 # plant functional types or communities
-pft_df <- sqlFetch(con2, 'PlantCommunity')
+pft_df <- sqlFetch(con2, 'PlantCommunity', stringsAsFactors=FALSE)
 pft_df$CommunityName <- gsub("<div>", "", pft_df$CommunityName)
 pft_df$CommunityName <- gsub("</div>", "", pft_df$CommunityName)
 pft_df$CommunityName <- gsub('<font color="#333333">', "", pft_df$CommunityName)
@@ -74,7 +75,8 @@ in_spp_not_biom <- setdiff(spp_df$Genus, biomass_subs$Genus)  # oops
 
 species_list <- merge(spp_df, biomass_subs, by='Genus', all.x=TRUE)
 species_list <- species_list[, colnames(species_list)[c(1:4, 11:12, 15:16)]]
-pft_df$growth_habit <- 'NA'
+pft_df$growth_habit <- 0
+pft_df$duration <- 0
 for(r in 1:NROW(pft_df)){
   pft_spp <- pft_df[r, c('COM1', 'COM2', 'COM3')]
   pft_spp <- pft_spp[!is.na(pft_spp)]
@@ -87,6 +89,15 @@ for(r in 1:NROW(pft_df)){
     }
   }
   pft_df[r, 'growth_habit'] <- pft_str
+  pft_duration <- species_list[which(species_list$SpeciesCode %in% pft_spp),
+                               'Duration']
+  pft_str <- pft_duration[1]
+  if(length(unique(pft_duration)) > 1){
+    for(l in 2:length(pft_duration)){
+      pft_str <- paste(pft_str, pft_duration[l], sep=', ')
+    }
+  }
+  pft_df[r, 'duration'] <- pft_str
 }
 
 # average total biomass per site
