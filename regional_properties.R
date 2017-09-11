@@ -728,17 +728,47 @@ avg_date <- mean.Date(as.Date(emp_2015$average_date, format='%m/%d/%Y'))
 date_list <- seq(as.Date("2014/01/28"), as.Date("2015/12/28"), by="month")
 match_date <- closest_date(avg_date, date_list)
 
-#### throwaway
+# compare biomass in back-calculated vs empirical animal numbers
 library(ggplot2)
 plotdf <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary/mean_across_properties_vs_back_calc.csv")
 p <- ggplot(plotdf, aes(x=time, y=biomass, group=label))
 p <- p + geom_line(aes(linetype=label))
 p <- p + facet_wrap(~biomass_type)
-p <- p + xlab("biomass")
+p <- p + xlab("date")
+p <- p + theme(legend.position="bottom")
 print(p)
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
 pngname <- paste(img_dir, "biomass_back_calc_vs_mean_across_properties.png", sep="/")
-png(file=pngname, units="in", res=300, width=8, height=3)
+png(file=pngname, units="in", res=300, width=8, height=4)
 print(p)
 dev.off()
 
+# compare simulated 2015 biomass in 3 ecol classes
+outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities"
+classes <- c('livestock', 'integrated', 'wildlife')
+df_list <- list()
+for(cl in classes){
+  sum_df <- read.csv(paste(outerdir, cl, 'summary_results.csv', sep='/'))
+  subs <- sum_df[sum_df$step == 11,
+                 c('step', 'prop_avg_dead_kgha', 'prop_avg_green_kgha')]
+  subs$ecol_class <- cl
+  df_list[[cl]] <- subs
+}
+sum_df <- do.call(rbind, df_list)
+sum_df$total_biomass <- sum_df$prop_avg_dead_kgha + sum_df$prop_avg_green_kgha
+sum_res <- reshape(sum_df, varying=c('prop_avg_dead_kgha', 'prop_avg_green_kgha', 'total_biomass'),
+                   v.names='biomass', timevar='label',
+                   times=c('dead', 'green_biomass', 'total_biomass'),
+                   direction='long')
+sum_res$ecol_class <- factor(sum_res$ecol_class, levels=c('livestock', 'integrated', 'wildlife'))
+sum_res <- sum_res[sum_res$label %in% c('green_biomass', 'total_biomass'), ]
+sum_res$label <- factor(sum_res$label, levels=c('total_biomass', 'green_biomass'))
+p <- ggplot(sum_res, aes(x=ecol_class, y=biomass))
+p <- p + geom_point()
+p <- p + facet_wrap(~label, nrow=1, scales="free")
+print(p)
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
+pngname <- paste(img_dir, "sim_biomass_ecol_classes.png", sep="/")
+png(file=pngname, units="in", res=300, width=8, height=3.5)
+print(p)
+dev.off()
