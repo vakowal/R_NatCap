@@ -149,6 +149,13 @@ dev.off()
 # grass and forb biomass
 grass_forb_biom <- biomass_df[which(biomass_df$GrowthHabitSub.or.Functional.groups != 'shrub'), ]
 grass_forb_total <- aggregate(oven.dry.biomass~SiteId, data=grass_forb_biom, FUN=sum)
+
+# sites in median 10% of grass+forb biomass
+percs <- quantile(grass_forb_total$oven.dry.biomass, c(0.45, 0.55))
+med_sites <- grass_forb_total[grass_forb_total$oven.dry.biomass >= percs[[1]] &
+                                grass_forb_total$oven.dry.biomass <= percs[[2]],
+                              c("SiteId", "oven.dry.biomass")]
+  
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/grass_forb_biomass_freq.png"
 png(file=pngname, units="in", res=300, width=6, height=4)
 hist(grass_forb_total$oven.dry.biomass, breaks=50, xlab="Grass and forb biomass g/m2")
