@@ -241,3 +241,12 @@ cmp_g_f_resh <- reshape(cmp_sub, varying=c('sim_gm2', 'grass_plus_forb'),
 p <- ggplot(cmp_g_f_resh, aes(x=site, y=biomass_gm2, group=type))
 p <- p + geom_point(aes(colour=type))
 print(p)
+
+
+#### throwaway
+coords <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/stations.csv")
+climdat <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/normals_monthly_data.csv")
+coords$STATION_ID <- gsub("GHCND:", "", coords$STATION_ID)
+datwcoords <- merge(coords, climdat, by.x='STATION_ID', by.y='STATION', all.y=TRUE)
+write.csv(datwcoords, "C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/normals_with_coords.csv",
+          row.names=FALSE)

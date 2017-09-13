@@ -119,7 +119,7 @@ precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Keny
 precip$date <- as.Date(paste(precip$Year, precip$month, '01', sep="-"),
                        format='%Y-%m-%d')
 ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
-ave_precip$year_month <- format(ave_precip$date, '%Y_%m')
+ave_precip$year_month <- format(ave_precip$date, '%Y-%m')
 ave_precip$month <- format(ave_precip$date, "%m")
 emp_months <- unique(dung_gr_br$year_month)
 precip_res <- ave_precip[which(ave_precip$year_month %in% emp_months), ]
@@ -134,6 +134,9 @@ pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climat
 png(file=pngname, units="in", res=300, width=2.04, height=1.725)
 print(p)
 dev.off()
+
+# average precip on OPC for months where veg sampling took place
+samp_precip
 
 # average precip on OPC for simulated months (Nov 2014 - Dec 2015)
 sim_months <- c("2014_11", "2014_12", "2015_01", "2015_02", "2015_03", "2015_04", "2015_05", "2015_06",

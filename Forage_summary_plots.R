@@ -67,7 +67,8 @@ summary_plots <- function(model_results_folder, imgpath){
   
   grass_biomass_subset <- summary_df[(summary_df$label %in% c('total_grass', grass_types)), ]
   p <- ggplot(grass_biomass_subset, aes(x=date, y=biomass, group=label, linetype=label))
-  p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Grass biomass")
+  p <- p + geom_line() + ylab("Biomass (kg/ha)") + ggtitle("Forage biomass")
+  p <- p + geom_point(aes(x=2016.708, y=916))
   pngname <- paste(imgpath, "Grass_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
   print(p)
@@ -75,7 +76,7 @@ summary_plots <- function(model_results_folder, imgpath){
   
   animal_biomass_subset <- summary_df[(summary_df$label %in% animal_types), ]
   p <- ggplot(animal_biomass_subset, aes(x=date, y=biomass, group=label, linetype=label))
-  p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Herbivore biomass")
+  p <- p + geom_line() + ylab("Liveweight (kg)") + ggtitle("Goat body weight")
   p <- p + scale_linetype_manual(values = lines, name = "")
   pngname <- paste(imgpath, "Herbivore_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
@@ -143,7 +144,7 @@ summary_plots_rot <- function(model_results_folder, imgpath){
   }
   grass_biomass_df <- do.call(rbind, summary_list)
   p <- ggplot(grass_biomass_df, aes(x=date, y=biomass, group=label, linetype=label))
-  p <- p + geom_line() + ylab("biomass (kg)") + ggtitle("Grass biomass")
+  p <- p + geom_line() + ylab("biomass (kg/ha)") + ggtitle("Grass biomass")
   p <- p + scale_linetype_manual(values=lines, name=grass_biomass_df$label)
   pngname <- paste(imgpath, "Grass_biomass.png", sep="/")
   png(file=pngname, units="in", res=300, width=7.5, height=5)
@@ -174,7 +175,15 @@ summary_plots_rot <- function(model_results_folder, imgpath){
   dev.off()
 }
 
-model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/control_0.206_v_0.103_cp_0.2_v_0.8_perc"
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/empirical_sd/st17"
+imgpath <- paste(model_results_folder, 'figs', sep='/')
+summary_plots(model_results_folder, imgpath)
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/sample_input_grass_parameters/rot_2_pastures_0.2_v_0.8_perc_knz_high_cp"
+imgpath <- paste(model_results_folder, 'figs', sep='/')
+summary_plots_rot(model_results_folder, imgpath)
+
+model_results_folder <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/sample_input_grass_parameters/control_0.2_v_0.8_perc_knz_high_cp"
 imgpath <- paste(model_results_folder, 'figs', sep='/')
 summary_plots(model_results_folder, imgpath)
 
