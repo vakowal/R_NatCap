@@ -1,21 +1,6 @@
 # summarize landcover for USFS project
 
 # overstory
-# reclassify according to my crosswalk
-mad_ov <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Madden_overstory_Palmer_creek_1km_buf.csv",
-                   stringsAsFactors=FALSE)
-crosswalk <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Overstory_classification.csv")
-hemlock_types <- unique(c(grep('T/', mad_ov$DOMINANTVE, value=TRUE),
-                          grep('-T', mad_ov$DOMINANTVE, value=TRUE),
-                          grep('T-', mad_ov$DOMINANTVE, value=TRUE)))
-mad_ov$Ecogroup.mod <- mad_ov$Ecogroup
-mad_ov[mad_ov$DOMINANTVE %in% hemlock_types, 'Ecogroup.mod'] <- "Hemlock dominated"
-mad_ov <- mad_ov[, c("FID", 'OBJECTID', 'Ecogroup.mod')]
-mad_ov <- merge(mad_ov, crosswalk, by.x="Ecogroup.mod", by.y="Ecogroup")
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/overstory_lucode.csv"
-write.csv(mad_ov, save_as, row.names=FALSE)
-
-# exploratory stats etc
 # is there a dominant spp for each ecogroup? calc on area
 mad_ov <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Madden_overstory_Palmer_creek_1km_buf.csv",
                    stringsAsFactors=FALSE)
@@ -58,6 +43,37 @@ agg_veg_df <- do.call(rbind, df_list)
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/dom_veg_by_ecogroup.csv"
 write.csv(agg_veg_df, save_as, row.names=FALSE)
 
+crosswalk <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Overstory_classification.csv")
+dom_cross <- merge(crosswalk, agg_veg_df, all=TRUE)
+write.csv(dom_cross, "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Overstory_classification.csv",
+          row.names=FALSE)
+
+# reclassify according to my crosswalk
+crosswalk <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Overstory_classification.csv")
+mad_ov <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Madden_overstory_Palmer_creek_1km_buf.csv",
+                   stringsAsFactors=FALSE)
+hemlock_types <- unique(c(grep('T/', mad_ov$DOMINANTVE, value=TRUE),
+                          grep('-T', mad_ov$DOMINANTVE, value=TRUE),
+                          grep('T-', mad_ov$DOMINANTVE, value=TRUE)))
+mad_ov$Ecogroup.mod <- mad_ov$Ecogroup
+mad_ov[mad_ov$DOMINANTVE %in% hemlock_types, 'Ecogroup.mod'] <- "Hemlock dominated"
+mad_ov <- mad_ov[, c("FID", 'OBJECTID', "area_ha", 'Ecogroup.mod')]
+mad_ov <- merge(mad_ov, crosswalk, by.x="Ecogroup.mod", by.y="Ecogroup")
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/overstory_lucode.csv"
+write.csv(mad_ov, save_as, row.names=FALSE)
+
+# summarize lucode by area
+lucode_area <- aggregate(area_ha~lucode, data=mad_ov, FUN=sum)
+lucode_area$perc_area_pre_decline <- 0
+for (i in 1:NROW(lucode_area)){
+  lucode_area[i, 'perc_area_pre_decline'] <- (lucode_area[i, 'area_ha'] / sum(lucode_area$area_ha)) * 100
+}
+lucode_area <- lucode_area[, c('lucode', 'perc_area_pre_decline')]
+ov_subs <- unique(mad_ov[, c('lu_class', 'lucode')])
+biophys_table <- merge(lucode_area, ov_subs)
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/biophys_pre_decline.csv"
+write.csv(biophys_table, save_as, row.names=FALSE)
+
 # other fields by area
 domve_by_area <- aggregate(area_ha~DOMINANTVE, data=mad_ov, FUN=sum)
 shortname_by_area <- aggregate(area_ha~Short_name, data=mad_ov, FUN=sum)
@@ -66,4 +82,15 @@ ecogr_by_area <- aggregate(area_ha~Ecogroup, data=mad_ov, FUN=sum)
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/ov_w_hemlock.csv"
 write.csv(mad_ov, save_as, row.names=FALSE)
 
+## understory
 mad_un <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Madden_understory_Palmer_creek_1km_buf.csv")
+
+# identify polygons where Rhododendron is present
+mad_un$rhodo <- 0
+for (desc in unique(mad_un$Descriptio)) {
+  if (length(grep('hododendron', desc, fixed=TRUE, value=TRUE)) > 0){
+    mad_un[mad_un$Descriptio == desc, 'rhodo'] <- 1
+  }
+}
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/understory_with_rhodo.csv"
+write.csv(mad_un, save_as, row.names=FALSE)
