@@ -526,6 +526,36 @@ lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
 summary(lm1_0)
 summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
 
+# adjust property size by removing woody area
+woody_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Africover/summary_GK/perc_non_woody.csv",
+                     stringsAsFactors=FALSE)
+woody_df[woody_df$Property == 'Mpala_Research', 'Property'] <- "Mpala"
+est_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv"
+est_df <- read.csv(est_csv)
+est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
+est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
+est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
+est_copy <- est_df
+adj_df <- merge(est_copy, woody_df)
+adj_df$area_ha_adj <- adj_df$LwfPropSizeHa * (adj_df$percent_non_woody / 100)
+adj_df$prop_density <- adj_df$property_cattle / adj_df$area_ha_adj
+adj_df$prop_non_density <- adj_df$property_non_property_cattle / adj_df$area_ha_adj
+adj_df[which(adj_df$Confirmed == 'yes'), 'Confirmed'] <- 'Yes'
+adj_df[which(adj_df$Confirmed == 'no'), 'Confirmed'] <- 'No'
+
+# regression to predict number of animals from piles of dung
+dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv")
+bovid_sum <- dung_sum[, c("Property", 'bovid')]
+adj_df <- adj_df[, c("Property", "prop_density", "prop_non_density", "Confirmed")]
+cor_df <- merge(bovid_sum, adj_df, by="Property")
+cor_df <- cor_df[cor_df$Property != "Makurian", ]
+cor_df <- cor_df[which(cor_df$Confirmed == "Yes"), ]
+
+lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df) 
+lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
+summary(lm1_0)
+summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
+
 # Felicia's classifications used in Science manuscript
 science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
 
@@ -643,9 +673,25 @@ comb <- merge(means_t, gr_subs, by='Abbrev')
 gr10_means <- aggregate(comb[, 2:25], by=list(comb$Group10), FUN=sum)
 colnames(gr10_means)[1] <- "group"
 gr10_res <- as.data.frame(t(gr10_means[2:25]))
-colnames(gr10_res) <- gr10_means$group
+colnames(gr10_res) <- gr10_means$group  # ---> to convert dung to animals/ha
 gr10_res$Property <- rownames(gr10_res)
 grouped_dung <- gr10_res
+
+# convert dung to animals/ha on each property
+animals_per_prop <- gr10_res * 0.016578  # regression estimated from reported property cattle
+anim_t <- animals_per_prop[, c('bovid', 'non-ruminant_large', 'non-ruminant_medium',
+                               'non-ruminant_small', 'ruminant_large', 'ruminant_medium',   
+                               'ruminant_small', 'shoat')]
+anim_t <- as.data.frame(t(anim_t))
+# write inputs to run forage model with empirical numbers for each property
+template <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/regional_scenarios/herbivores_regional_scenarios_empirical.csv")
+rownames(anim_t) == template$label
+outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/regional_scenarios/by_property"
+for(prop in rownames(gr10_res)){
+  template$stocking_density <- anim_t[, prop]
+  save_as <- paste(outdir, paste(prop, '.csv', sep=''), sep='/')
+  write.csv(template, save_as, row.names=FALSE)
+}
 
 # join Felicia's classification with grouped dung
 test <- setdiff(grouped_dung$Property, science_df$Property)  # Il Ngwesi not used in science MS
