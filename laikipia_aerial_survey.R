@@ -38,6 +38,77 @@ sum_df <- merge(sum_df, sum_herb)
 save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Laikipia_aerial_survey/summary_GK/habitat_summary.csv"
 write.csv(sum_df, save_as, row.names=FALSE)
 
+# % shrub, tree, herb on properties in different ecol classes
+sum_df <- read.csv(save_as)
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", c("Property", "EcolClass")]
+sum_class <- merge(sum_df, science_df)
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Laikipia_aerial_survey/summary_GK/boxplots_cover_by_ecolclass"
+p <- ggplot(sum_class, aes(x=EcolClass, y=tree_cover))
+p <- p + geom_boxplot()
+p <- p + ylab("Tree cover (%)")
+pngname <- paste(img_dir, "tree_cover_by_ecolclass.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3.5)
+print(p)
+dev.off()
+p <- ggplot(sum_class, aes(x=EcolClass, y=shrub_cover))
+p <- p + geom_boxplot()
+p <- p + ylab("Shrub cover (%)")
+pngname <- paste(img_dir, "shrub_cover_by_ecolclass.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3.5)
+print(p)
+dev.off()
+p <- ggplot(sum_class, aes(x=EcolClass, y=herb_cover))
+p <- p + geom_boxplot()
+p <- p + ylab("Herbaceous cover (%)")
+pngname <- paste(img_dir, "herb_cover_by_ecolclass.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3.5)
+print(p)
+dev.off()
+
+# landcover types from Africover
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Africover/summary_GK/landcover_by_property_intersect.csv",
+                   stringsAsFactors=FALSE)
+area_df <- aggregate(area_ha~Property+short_desc, data=sum_df, FUN=sum)
+area_df$perc_area <- 0
+for (p in unique(area_df$Property)){
+  subs <- area_df[area_df$Property == p, ]
+  total_area <- sum(subs$area_ha)
+  for (r in 1:NROW(subs)){
+    subs[r, 'perc_area'] <- (subs[r, 'area_ha'] / total_area) * 100
+  }
+  area_df[area_df$Property == p, ] <- subs
+}
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", c("Property", "EcolClass")]
+area_df <- merge(area_df, science_df)
+
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Africover/summary_GK"
+p <- ggplot(area_df, aes(x=EcolClass, y=perc_area))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~short_desc, scales="free")
+p <- p + ylab("Percent of property area")
+print(p)
+pngname <- paste(img_dir, "Africover_lulc_by_ecol_class.png", sep="/")
+png(file=pngname, units="in", res=300, width=11, height=9)
+print(p)
+dev.off()
+
+# get % of each property that can be defensibly modeled
+nonwoody_df <- area_df[(area_df$short_desc != 'closed_trees_shrubs' &
+                      area_df$short_desc != 'mixed_tree_shrub' &
+                       area_df$short_desc != 'other_lulc'), ]
+grass_perc1 <- aggregate(perc_area~Property, data=nonwoody_df, FUN=sum)
+colnames(grass_perc1)[2] <- 'percent_non_woody'
+
+grass_df <- area_df[(area_df$short_desc == 'herbaceous' |
+                       area_df$short_desc == 'herbaceous_sparse_trees_or_shrubs'), ]
+grass_perc2 <- aggregate(perc_area~Property, data=grass_df, FUN=sum)
+colnames(grass_perc2)[2] <- 'percent_grassy'
+herb_df <- merge(grass_perc1, grass_perc2)
+write.csv(grass_perc1, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Africover/summary_GK/perc_non_woody.csv",
+          row.names=FALSE)
+
 # relationship of habitat from aerial survey with wildlife density from dung
 sum_df <- read.csv(save_as)
 dung_sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
