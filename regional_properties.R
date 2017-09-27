@@ -772,3 +772,64 @@ pngname <- paste(img_dir, "sim_biomass_ecol_classes.png", sep="/")
 png(file=pngname, units="in", res=300, width=8, height=3.5)
 print(p)
 dev.off()
+
+# simulated biomass with empirical densities, by property
+comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/biomass_comparison.csv")
+comp_df$diff <- comp_df$biomass_emp_densities - comp_df$biomass_back_calc
+p <- ggplot(comp_df, aes(x=site, y=diff))
+p <- p + geom_point()
+p <- p + facet_wrap(~density_multiplier)
+print(p)
+
+ave_diff_by_multiplier = aggregate(diff~density_multiplier, data=comp_df, FUN=mean)
+ave_diff_by_multiplier
+
+# simulated biomass in 3 ecol classes, each property separately
+outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/1.00"
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", c("EcolClass", "Property")]
+FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+property_df <- merge(science_df, FID_list, by.x="Property", by.y='NAME')
+for(r in 1:NROW(property_df)){
+  fid <- property_df[r, 'FID']
+  sum_df <- read.csv(paste(outer_dir, fid, "summary_results.csv", sep="/"))
+  green_field <- paste('X', fid, '_green_kgha', sep="")
+  dead_field <- paste('X', fid, '_dead_kgha', sep="")
+  property_df[r, 'green_biomass'] <- sum_df[sum_df$step == max(sum_df$step), green_field]
+  property_df[r, 'dead_biomass'] <- sum_df[sum_df$step == max(sum_df$step), dead_field]
+  property_df[r, 'cattle_gain'] <- sum(sum_df[!is.na(sum_df$bovid_gain_kg), 'bovid_gain_kg'])
+  property_df[r, 'shoat_gain'] <- sum(sum_df[!is.na(sum_df$shoat_gain_kg), 'shoat_gain_kg'])
+}
+# biomass
+property_df$total_biomass <- property_df$green_biomass + property_df$dead_biomass
+sum_res <- reshape(property_df, varying=c('green_biomass', 'dead_biomass', 'total_biomass'),
+                   v.names='biomass', timevar='label',
+                   times=c('green_biomass', 'dead', 'total_biomass'),
+                   direction='long')
+sum_res$EcolClass <- factor(sum_res$EcolClass, levels=c('Livestock', 'Integrated', 'Wildlife'))
+sum_res <- sum_res[sum_res$label %in% c('green_biomass', 'total_biomass'), ]
+sum_res$label <- factor(sum_res$label, levels=c('total_biomass', 'green_biomass'))
+p <- ggplot(sum_res, aes(x=EcolClass, y=biomass))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~label, nrow=1, scales="free")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_biomass_summary.png"
+png(file=pngname, units="in", res=300, width=8, height=3.5)
+print(p)
+dev.off()
+
+# livestock weight gain
+sum_res <- reshape(property_df, varying=c('cattle_gain', 'shoat_gain'),
+                   v.names='gain', timevar='label',
+                   times=c('cattle', 'shoat'),
+                   direction='long')
+sum_res <- sum_res[sum_res$gain > 0, ]
+sum_res$EcolClass <- factor(sum_res$EcolClass, levels=c('Livestock', 'Integrated', 'Wildlife'))
+p <- ggplot(sum_res, aes(x=EcolClass, y=gain))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~label, nrow=1, scales="free")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_livestock_gain.png"
+png(file=pngname, units="in", res=300, width=8, height=3.5)
+print(p)
+dev.off()
