@@ -600,90 +600,126 @@ for(spp in spp_list){
 }
 
 # back-calculated management of Jenny's sites (33 sites, 9.14.16)
-summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary.csv"
+summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
 sum_df = read.csv(summary_csv)
 
 failed <- c('N4', 'M10', 'W06', 'GO', 'LO3', 'LO4')
+succeeded <- setdiff(unique(sum_df$site), failed)
 
 p <- ggplot(sum_df, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp)) + geom_line(aes(colour=sim_vs_emp))
 p <- p + facet_wrap(~site, ncol=10, scales='free')
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/summary.png"
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/summary_sim_ext.png"
 png(file=pngname, units="in", res=300, width=18, height=8)
 print(p)
 dev.off()
 
-# linear interpolation
+# linear interpolation: simulated values on empirical measurement dates
 df_list = list()
-diff_df_list = list()
 i <- 1
 for(site in unique(sum_df$site)){
   subs <- sum_df[which(sum_df$site == site), ]
   sim <- subs[which(subs$sim_vs_emp == 'simulated'), ]
   emp <- subs[which(subs$sim_vs_emp == 'empirical'), ]
-  empinterp <- approx(x=emp$date, y=emp$biomass,
-                      xout=seq(min(sim$date), max(sim$date), length.out=12))
   siminterp <- approx(x=sim$date, y=sim$biomass,
-                      xout=seq(min(sim$date), max(sim$date), length.out=12))
-  sumdiff <- sum(abs(siminterp$y - empinterp$y))
+                      xout=emp$date)
   interpdf <- rbind(data.frame('date'=siminterp$x, 'biomass'=siminterp$y,
-                               'sim_vs_emp'=rep('simulated', 12),
-                               'site'=rep(site, 12)),
-                    data.frame('date'=empinterp$x, 'biomass'=empinterp$y,
-                               'sim_vs_emp'=rep('empirical', 12),
-                               'site'=rep(site, 12)))
-  diff_df_list[[i]] <- data.frame('site'=site, 'sum_diff'=sumdiff)
+                               'sim_vs_emp'=rep('simulated', length(sim$biomass)),
+                               'site'=rep(site, length(sim$biomass))),
+                    data.frame('date'=emp$date, 'biomass'=emp$biomass,
+                               'sim_vs_emp'=rep('empirical', length(emp$biomass)),
+                               'site'=rep(site, length(emp$biomass))))
   df_list[[i]] <- interpdf
   i <- i + 1
 }
 interpdf <- do.call(rbind, df_list)
-diff_df <- do.call(rbind, diff_df_list)
 
 p <- ggplot(interpdf, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
-p <- p + facet_wrap(~site, ncol=10, scales='free_x')
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_all.png"
+p <- p + geom_line(aes(colour=sim_vs_emp))
+p <- p + facet_wrap(~site, ncol=10, scales='free')
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_emp_meas_date.png"
 png(file=pngname, units="in", res=300, width=18, height=8)
 print(p)
 dev.off()
 
-succeeded <- setdiff(interpdf$site, failed)
+# compare rate of change between simulated and empirical
+# first differences method (change between each measurement period)
+df_list = list()
+i <- 1
+for(site in unique(interpdf$site)){
+  subs <- interpdf[which(interpdf$site == site), ]
+  sim <- subs[which(subs$sim_vs_emp == 'simulated'), ]
+  emp <- subs[which(subs$sim_vs_emp == 'empirical'), ]
+  sim_diff <- diff(sim$biomass)
+  emp_diff <- diff(emp$biomass)
+  date_list <- sim$date[2:4]
+  year <- floor(sim$date[1])
+  diffdf <- data.frame('date'=date_list, "sim_delta"=sim_diff,
+                       "emp_delta"=emp_diff, "site"=rep(site, 3),
+                       "year"=rep(year, 3))
+  df_list[[i]] <- diffdf
+  i <- i + 1
+}
+diffdf <- do.call(rbind, df_list)
+
+# how well does simulated change in biomass explain
+# empirical change in biomass?
+cor0 <- cor.test(diffdf$emp_delta, diffdf$sim_delta)
+cor0
+
 succ_interp <- interpdf[which(interpdf$site %in% succeeded), ]
-p <- ggplot(succ_interp, aes(x=date, y=biomass, group=sim_vs_emp))
+# convert dates to Date to facilitate plotting
+for(r in 1:NROW(succ_interp)){
+  succ_interp[r, 'year'] <- floor(succ_interp[r, 'date'])
+}
+succ_interp$Date <- as.Date(1:NROW(succ_interp), origin=Sys.Date())
+succ_interp[succ_interp$date == 2014.08, "Date"] <- 
+  as.Date("01/18/2014", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2014.141 ,
+            "Date"] <- as.Date("02/08/2014", format="%m/%d/%Y")
+succ_interp[succ_interp$date == 2014.205, "Date"] <- 
+  as.Date("03/01/2014", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2014.266 & succ_interp$date < 2014.268,
+            "Date"] <- as.Date("03/22/2014", format="%m/%d/%Y")
+succ_interp[succ_interp$date == 2012.5, "Date"] <- 
+  as.Date("06/23/2012", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2012.561 & succ_interp$date < 2012.563,
+            "Date"] <- as.Date("07/14/2012", format="%m/%d/%Y")
+succ_interp[succ_interp$date == 2012.625, "Date"] <- 
+  as.Date("08/04/2012", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2012.687 & succ_interp$date < 2012.689,
+            "Date"] <- as.Date("08/24/2012", format="%m/%d/%Y")
+succ_interp[succ_interp$date == 2013.5, "Date"] <- 
+  as.Date("06/29/2013", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2013.561 & succ_interp$date < 2013.563,
+            "Date"] <- as.Date("07/20/2013", format="%m/%d/%Y")
+succ_interp[succ_interp$date == 2013.625, "Date"] <- 
+  as.Date("08/10/2013", format="%m/%d/%Y")
+succ_interp[succ_interp$date > 2013.687 & succ_interp$date < 2013.689,
+            "Date"] <- as.Date("08/31/2013", format="%m/%d/%Y")
+
+order_subs <- succ_interp[!duplicated(succ_interp$site), ]
+succ_interp$site <- factor(succ_interp$site,
+                           levels=order_subs[order(order_subs$date), 'site'])
+p <- ggplot(succ_interp, aes(x=Date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
 p <- p + geom_line(aes(colour=sim_vs_emp))
 p <- p + facet_wrap(~site, ncol=4, scales='free_x')
 p <- p + ylab("Biomass (g/m2)")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded.png"
+p <- p + labs(colour="")
+p <- p + scale_x_date(date_breaks = "1 month", date_labels = "%b '%y")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_fixed_y.png"
+png(file=pngname, units="in", res=300, width=9, height=12)
+print(p)
+dev.off()
+
+p <- p + facet_wrap(~site, ncol=4, scales='free')
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_free_y.png"
 png(file=pngname, units="in", res=300, width=10, height=12)
 print(p)
 dev.off()
 
-diff_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/sum_diff.csv"
-write.csv(diff_df, diff_csv)
-
-# joined sum_diff to site summary csv manually
-site_summary_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/jenny_site_summary_open.csv"
-site_summary_df = read.csv(site_summary_csv)
-
-p <- ggplot(site_summary_df, aes(x=weather_distance_m, y=sum_weekly_diff))
-p <- p + geom_point() + xlab("distance to nearest weather station (m)")
-p <- p + ylab("sum(abs(simulated - empirical))")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/distance_to_weather_vs_diff.png"
-png(file=pngname, units="in", res=300, width=7, height=5)
-print(p)
-dev.off()
-
-succeeded <- setdiff(site_summary_df$site, failed)
-succ_subs <- site_summary_df[which(site_summary_df$site %in% succeeded), ]
-p <- ggplot(succ_subs, aes(x=closest_weather, y=sum_weekly_diff))
-p <- p + geom_point()
-p <- p + xlab("Weather station")
-p <- p + ylab("sum(abs(simulated - empirical))")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/weather_stn_vs_diff.png"
-png(file=pngname, units="in", res=300, width=7, height=5)
-print(p)
-dev.off()
 
 ## OPC veg analysis
 coeff_var <- function(values){
