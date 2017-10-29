@@ -664,9 +664,12 @@ dung_sum_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/F
 property_means <- read.csv(dung_sum_csv)
 group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
 gr_key_df <- read.csv(group_key)
-
-means_t <- as.data.frame(t(property_means[2:24]))
-colnames(means_t) <- property_means$Property
+FID_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv"
+FID_list <- read.csv(FID_csv)
+property_means <- merge(property_means, FID_list, by.x="Property",
+                        by.y="NAME")[2:25]
+means_t <- as.data.frame(t(property_means[1:23]))
+colnames(means_t) <- property_means$FID
 means_t$Abbrev <- rownames(means_t)
 gr_subs <- gr_key_df[, c('Abbrev', 'Group10', 'Group8', 'Group9', 'Unit_weight_kg')]
 comb <- merge(means_t, gr_subs, by='Abbrev')
@@ -682,12 +685,16 @@ animals_per_prop <- gr10_res * 0.016578  # regression estimated from reported pr
 anim_t <- animals_per_prop[, c('bovid', 'non-ruminant_large', 'non-ruminant_medium',
                                'non-ruminant_small', 'ruminant_large', 'ruminant_medium',   
                                'ruminant_small', 'shoat')]
+anim_t_labeled <- anim_t
+anim_t_labeled$Property <- rownames(gr10_res)
+write.csv(anim_t_labeled, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv",
+          row.names=FALSE)
 anim_t <- as.data.frame(t(anim_t))
 # write inputs to run forage model with empirical numbers for each property
 template <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/regional_scenarios/herbivores_regional_scenarios_empirical.csv")
 rownames(anim_t) == template$label
 outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_inputs/regional_scenarios/by_property"
-for(prop in rownames(gr10_res)){
+for(prop in colnames(anim_t)){
   template$stocking_density <- anim_t[, prop]
   save_as <- paste(outdir, paste(prop, '.csv', sep=''), sep='/')
   write.csv(template, save_as, row.names=FALSE)
@@ -737,6 +744,7 @@ for(gr in unique(comb$Group10)){
   w_mean_df[i, 'weighted_mean_kg'] <- w_mean
   i <- i + 1
 }
+write.csv(w_mean_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/group10_avg_body_weights.csv")
 gr_key_df <- merge(gr_key_df, w_mean_df, by.x="Group10", by.y="Group10_group", all=TRUE)
 mean_group_across_properties <- aggregate(comb$mean_across_properties, by=list(comb$Group10),
                                           FUN=sum)

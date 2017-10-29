@@ -784,6 +784,69 @@ print(p)
 ave_diff_by_multiplier = aggregate(diff~density_multiplier, data=comp_df, FUN=mean)
 ave_diff_by_multiplier
 
+# merge with empirical biomass
+emp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
+emp_df <- emp_df[emp_df$Year == 2015, c("FID", "Property", "mean_biomass_gm2")]
+plot_df <- merge(emp_df, comp_df, by.x="FID", by.y="site")
+
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mult_7"
+p <- ggplot(plot_df, aes(x=mean_biomass_gm2, y=biomass_back_calc))
+p <- p + geom_point()
+print(p)
+pngname <- paste(img_dir, "empirical_vs_back-calc.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(plot_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities))
+p <- p + facet_wrap(~density_multiplier)
+p <- p + geom_point()
+print(p) # wow
+
+nrow <- length(unique(plot_df$density_multiplier))
+cor_df <- data.frame('density_mult'=numeric(nrow), "corr_coeff"=numeric(nrow),
+                     'corr_p'=numeric(nrow))
+i <- 1
+# plot_df <- plot_df[plot_df$mean_biomass_gm2 < 600, ]
+for(dens in unique(plot_df$density_multiplier)){
+  subs <- plot_df[plot_df$density_multiplier == dens, ]
+  cor1 <- cor.test(subs$mean_biomass_gm2, subs$biomass_emp_densities,
+                   method="pearson")
+  cor_df[i, 'density_mult'] <- dens
+  cor_df[i, 'corr_coeff'] <- cor1[[4]]
+  cor_df[i, 'corr_p'] <- cor1[[3]]
+  i <- i + 1
+}
+# table of empirical vs simulated values
+subs <- plot_df[, c('FID', 'Property', 'mean_biomass_gm2',
+                    'biomass_back_calc', 'biomass_emp_densities',
+                    'density_multiplier')]
+write.csv(subs, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
+          row.names=FALSE)
+subs$perc_diff <- (subs$biomass_emp_densities - subs$mean_biomass_gm2) / subs$mean_biomass_gm2
+  
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+comp_df <- merge(subs, science_df, by="Property", all=TRUE)
+comp_df$EcolClass <- as.factor(comp_df$EcolClass)
+comp_df <- comp_df[comp_df$density_multiplier == 1, ]
+lims <- c(min(min(comp_df$mean_biomass_gm2, na.rm=TRUE),
+              min(comp_df$biomass_emp_densities, na.rm=TRUE)) - 15,
+          max(max(comp_df$mean_biomass_gm2, na.rm=TRUE),
+              max(comp_df$biomass_emp_densities), na.rm=TRUE) + 15) 
+p <- ggplot(comp_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities,
+                         group=EcolClass))
+p <- p + geom_point(aes(shape=EcolClass))
+p <- p + xlim(lims) + ylim(lims)
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+print(p)
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary"
+pngname <- paste(img_dir, "empirical_vs_simulated_2015_biomass_mult=1.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5.5)
+print(p)
+dev.off()
+
+
+
 # simulated biomass in 3 ecol classes, each property separately
 outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/1.00"
 science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
@@ -831,5 +894,56 @@ p <- p + facet_wrap(~label, nrow=1, scales="free")
 print(p)
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_livestock_gain.png"
 png(file=pngname, units="in", res=300, width=8, height=3.5)
+print(p)
+dev.off()
+
+# relationship between ending bimoass and total # animals
+outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult"
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", c("EcolClass", "Property")]
+FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+property_df <- merge(science_df, FID_list, by.x="Property", by.y='NAME')
+df_list <- list()
+for(m in c('1.00', '1.20', '1.50', '2.00', '5.00', '7.00', '10.00')){
+  df_copy <- property_df
+  for(r in 1:NROW(property_df)){
+    fid <- property_df[r, 'FID']
+    sum_df <- read.csv(paste(outer_dir, m, fid, "summary_results.csv", sep="/"))
+    green_field <- paste('X', fid, '_green_kgha', sep="")
+    dead_field <- paste('X', fid, '_dead_kgha', sep="")
+    df_copy[r, 'green_biomass'] <- sum_df[sum_df$step == max(sum_df$step), green_field]
+    df_copy[r, 'dead_biomass'] <- sum_df[sum_df$step == max(sum_df$step), dead_field]
+    df_copy[r, 'cattle_gain'] <- sum(sum_df[!is.na(sum_df$bovid_gain_kg), 'bovid_gain_kg'])
+    df_copy[r, 'shoat_gain'] <- sum(sum_df[!is.na(sum_df$shoat_gain_kg), 'shoat_gain_kg'])
+  }
+  df_copy$total_biomass <- df_copy$green_biomass + df_copy$dead_biomass
+  df_copy$multiplier <- m
+  df_list[[m]] <- df_copy
+}
+m_df <- do.call(rbind, df_list)
+# now add animal densities per property
+dung_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
+# weight the density of each animal group by body size (calculated as average unit weight of animals in that group,
+# weighted by their average density across properties)
+body_weight_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/group10_avg_body_weights.csv",
+                           stringsAsFactors=FALSE)
+body_weight_df$Group10_group <- gsub("-", ".", body_weight_df$Group10_group)
+weighted_density_df <- dung_df
+for(r in 1:NROW(body_weight_df)){
+  gr <- body_weight_df[r, "Group10_group"]
+  weighted_density_df[, gr] <- dung_df[, gr] * body_weight_df[r, "weighted_mean_kg"]
+}
+weighted_density_df$animal_sum <- rowSums(weighted_density_df[, c(1:8)])
+weighted_density_df <- weighted_density_df[, c(9, 10)]
+merged_df <- merge(m_df, weighted_density_df, by.x='FID', by.y="Property", all.x=TRUE)
+merged_df$multiplier <- factor(merged_df$multiplier,
+                               levels=c('1.00', '1.20', '1.50', '2.00', '5.00', '7.00', '10.00'))
+p <- ggplot(merged_df, aes(x=animal_sum, y=total_biomass))
+p <- p + geom_point()
+p <- p + facet_wrap(~multiplier)
+p <- p + xlab("Animal sum weighted by body weight") + ylab("2015 biomass")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/animal_density_v_2015_biomass.png"
+png(file=pngname, units="in", res=300, width=7, height=6)
 print(p)
 dev.off()

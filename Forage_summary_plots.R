@@ -379,7 +379,7 @@ gr_df_sub <- subset(gr_df, gr_df$label %in% c("c", "Total biomass (g/m2)", "Perc
                                                "New growth (g/m2)",
                                                "Herd liveweight gain (kg/ha)",
                                                "Crude protein in live biomass (%)"))
-# gr_df_sub <- gr_df
+gr_df_sub <- gr_df
 gr_df_sub <- gr_df_sub[order(gr_df_sub$stocking_density, gr_df_sub$label,
                              gr_df_sub$year, gr_df_sub$month), ]
 labs <- gr_df_sub$month
@@ -398,6 +398,14 @@ pngname <- paste(imgpath, "New_growth_live_biomass~stocking_density_restart_mont
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
+
+# summarize individual livweight gain
+atest <- gr_df[gr_df$label == "Indiv. liveweight_gain (kg/ha)", ]
+atest_agg <- aggregate(biomass~stocking_density, data=atest, FUN=mean)
+write.csv(atest, "C:/Users/Ginger/Desktop/fuckit.csv", row.names=FALSE)  # reshape by hand in Excel
+t_res <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/stocking_density_new_growth/n_mult_start_2013/fuckit.csv")
+t_res$high_minus_low <- t_res$indiv_gain_0.8 - t_res$indiv_gain_0.1
+NROW(t_res[t_res$high_minus_low > 0 & !is.na(t_res$high_minus_low), ])  # majority of months
 
 # diff between high and low density treatments in % green
 emp_months <- c("2015_04", "2015_11", "2015_05", "2014_11", "2015_09", "2015_06", "2015_02", "2015_03", "2015_12")
