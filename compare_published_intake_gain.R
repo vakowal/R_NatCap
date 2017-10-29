@@ -88,11 +88,10 @@ pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRU
 # simulated values
 studies <- c('Shem_et_al_1995')
 sim_l <- list()
-for(study in studies){
-  sim_dat <- read.csv(paste(data_dir, study, "summary_unsupplemented.csv",  sep="/"), header=TRUE,
+sim_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12"
+sim_dat <- read.csv(paste(sim_dir, "summary.csv",  sep="/"), header=TRUE,
                       stringsAsFactors=FALSE)  # "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv",
-  sim_l[[study]] <- sim_dat
-}
+sim_l[[study]] <- sim_dat
 df <- do.call(rbind, sim_l)
 df$grass_label <- as.factor(df$grass_label)
 df$intake_forage <- as.numeric(df$intake_forage)
@@ -108,18 +107,18 @@ combined = merge(combined, pub_dat, by='grass_label')
 combined$sim_gain_per_intake <- combined$sim_daily_gain / combined$sim_intake_forage
 combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
 
-in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="pearson")
-gpi_test <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="pearson")
-
-in_test <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
-in_test[['estimate']]
-in_test[['p.value']]
-gain_test <- cor.test(combined$sim_daily_gain, combined$daily_gain, method="spearman")
-gain_test[['estimate']]
-gain_test[['p.value']]
-gpi_test <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="spearman")
-gpi_test[['estimate']]
-gpi_test[['p.value']]
+mean_dev_intake <- mean(combined$sim_intake_forage - combined$intake_forage)
+mean_dev_intake
+mean_dev_gpi <- mean(combined$sim_gain_per_intake - combined$gain_per_intake)
+mean_dev_gpi
+in_test_p <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="pearson")
+in_test_p[['estimate']]
+gpi_test_p <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="pearson")
+gpi_test_p[['estimate']]
+in_test_s <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
+in_test_s[['estimate']]
+gpi_test_s <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="spearman")
+gpi_test_s[['estimate']]
 
 figdir <- paste(data_dir, study, 'unsupplemented', sep='/')
 
@@ -132,18 +131,6 @@ p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 pngname <- paste(figdir, "intake_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
-print(p)
-dev.off()
-
-p <- ggplot(combined, aes(x=daily_gain, y=sim_daily_gain))
-p <- p + geom_point(aes(size=5)) + print_theme_l
-p <- p + xlab('Empirical daily gain (kg)') + ylab('Simulated daily gain (kg)')
-min_val <- min(c(combined$daily_gain, combined$sim_daily_gain))
-max_val <- max(c(combined$daily_gain, combined$sim_daily_gain))
-p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
-p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "gain_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce_large.png", sep="/")
-png(file=pngname, units="in", res=150, width=9, height=8)
 print(p)
 dev.off()
 
