@@ -629,7 +629,8 @@ dev.off()
 
 # range of stocking densities
 zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
 varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL/gain_summary.csv")
 constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL/gain_summary.csv")
 
@@ -638,14 +639,15 @@ constant_cp$cp_opt <- 'constant'
 produc_df <- rbind(varying_cp, constant_cp)
 produc_df <- merge(produc_df, precip_df, by.x='site', by.y='FID')
 produc_df$cp_opt <- factor(produc_df$cp_opt, levels=c('constant', 'varying'),
-                           labels=c('Fixed % crude protein', 'Varying % crude protein'))
+                           labels=c('Constant % crude protein', 'Varying % crude protein'))
 
 imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
 p <- ggplot(produc_df, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
 p <- p + geom_point()
 p <- p + facet_grid(density ~ cp_opt, scales="free")
-p <- p + xlab("Average annual rainfall (mm)")
+p <- p + xlab("Average annual rainfall (cm)")
 p <- p + ylab("Average yearly liveweight gain (kg)")
+p <- p + print_theme
 print(p)
 pngname <- paste(imgdir, "precip_vs_gain.png", sep="/")
 png(file=pngname, units="in", res=300, width=5, height=8)
@@ -844,6 +846,8 @@ subs <- plot_df[, c('FID', 'Property', 'mean_biomass_gm2',
                     'density_multiplier')]
 write.csv(subs, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
           row.names=FALSE)
+subs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
+                 stringsAsFactors=FALSE)
 subs$perc_diff <- (subs$biomass_emp_densities - subs$mean_biomass_gm2) / subs$mean_biomass_gm2
   
 science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
@@ -859,13 +863,52 @@ p <- ggplot(comp_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities,
 p <- p + geom_point(aes(shape=EcolClass))
 p <- p + xlim(lims) + ylim(lims)
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+p <- p + xlab("Empirical biomass (g/m2)") + ylab("Simulated biomass (g/m2)")
 print(p)
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary"
 pngname <- paste(img_dir, "empirical_vs_simulated_2015_biomass_mult=1.png", sep="/")
-png(file=pngname, units="in", res=300, width=7, height=5.5)
+png(file=pngname, units="in", res=300, width=4, height=3)
 print(p)
 dev.off()
 
+# mismatch vs .......
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mismatch_vs"
+comp_df <- comp_df[comp_df$included_science_ms == "Y", ]
+comp_df <- comp_df[comp_df$density_multiplier == 1, ]
+comp_df$mismatch <- comp_df$biomass_emp_densities - comp_df$mean_biomass_gm2
+comp_df$EcolClass <- factor(comp_df$EcolClass)
+p <- ggplot(comp_df, aes(x=EcolClass, y=mismatch))
+p <- p + geom_boxplot()
+pngname <- paste(imgdir, "mismatch_vs_EcolClass.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+dung_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
+comp_df <- merge(comp_df, dung_df, by.x="FID", by.y="Property")
+comp_df$livestock <- comp_df$bovid + comp_df$shoat
+comp_df$total_animals <- rowSums(comp_df[colnames(dung_df)[1:8]])
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
+comp_df <- merge(precip_df, comp_df, by="FID")
+soil_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Soil/Regional_average_soil.csv")
+comp_df <- merge(comp_df, soil_df, by="FID")
+zero_dens_biomass <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/mean_total_biomass_by_site.csv")
+zero_dens_biomass$biomass_without_grazing <- zero_dens_biomass$total_kgha
+comp_df <- merge(comp_df, zero_dens_biomass, by.x="FID", by.y="site")
+
+for(ycol in c('livestock', 'shoat', 'bovid', 'total_animals',
+              'avg_annual_rainfall', 'bulk.density', 'sand.ppt',
+              "EconClass", 'EcolClass', "Fenced", "OwnedBy", "WLRatio",
+              "LogWLRatio", "ManagedBy", 'biomass_without_grazing')){
+  p <- ggplot(comp_df, aes_string(x=ycol, y="mismatch"))
+  p <- p + geom_point()
+  p <- p + geom_abline(slope=0, intercept=0, linetype=1)
+  pngname <- paste(imgdir, paste("mismatch_vs_", ycol, ".png", sep=""), sep="/")
+  png(file=pngname, units="in", res=300, width=4, height=3)
+  print(p)
+  dev.off()
+}
 
 
 # simulated biomass in 3 ecol classes, each property separately
