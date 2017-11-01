@@ -11,6 +11,27 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# estimated stocking density (with back-calc mgmt) vs rainfall
+gain_back_calc_sd <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
+precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
+m_df <- merge(gain_back_calc_sd, precip_df, by.x="site", by.y="FID")
+m_df$cp_opt <- 'constant'
+summary(m_df$avg_yearly_gain)
+gain_varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL_est_densities/gain_summary.csv")
+v_df <- merge(gain_varying_cp, precip_df, by.x="site", by.y="FID")
+v_df$cp_opt <- 'varying'
+combdf <- rbind(m_df, v_df)
+
+p <- ggplot(combdf, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
+p <- p + geom_point() + ylab("Average annual liveweight gain (kg/ha)")
+p <- p + xlab("Average annual rainfall (cm)")
+p <- p + facet_wrap(~cp_opt) + print_theme
+pngname = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/gain_est_densities_v_rainfall.png"
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p)
+dev.off()
+
 # remaining biomass after cattle offtake
 est_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_est_density_constant_cp.csv")
 cons_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_0.3_constant_cp.csv")
