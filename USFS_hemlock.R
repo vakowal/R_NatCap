@@ -1,3 +1,20 @@
+# USFS hemlock decline
+
+# results: quickflow (fourth draft run)
+qf_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/model_runs/fourth_draft/summary_of_results/monthly_quickflow.csv")
+raw <- qf_df[qf_df$scenario != 'difference', ]
+p <- ggplot(raw, aes(x=month, y=sum_quickflow, group=scenario))
+p <- p + geom_point(aes(colour=scenario))
+p <- p + geom_line(aes(colour=scenario))
+print(p)
+
+diff_df <- qf_df[qf_df$scenario == 'difference', ]
+p <- ggplot(diff_df, aes(x=month, y=sum_quickflow))
+p <- p + geom_point()
+p <- p + geom_line()
+p <- p + ggtitle("Difference: post - pre quickflow")
+print(p)
+
 # summarize landcover for USFS project
 
 # overstory
