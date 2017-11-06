@@ -11,6 +11,70 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
+# regional scenarios: mean densities of each ecolclass within each property
+biom_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/biomass_summary.csv")
+num_r <- length(unique(biom_df$site)) * 6
+sum_df <- data.frame('site'=character(num_r), 'diff'=numeric(num_r),
+                     'class_comparison'=character(num_r),
+                     'biom_type'=character(num_r), stringsAsFactors=FALSE)
+i <- 1
+for(site in unique(biom_df$site)){
+  for(biom_type in c('total', 'green')){
+    for(class_c in c('livestock_minus_integrated', 'livestock_minus_wildlife',
+                     'integrated_minus_wildlife')){
+      class1 <- strsplit(class_c, '_')[[1]][1]
+      class2 <- strsplit(class_c, '_')[[1]][3]
+      sum_df[i, 'site'] <- site
+      sum_df[i, 'diff'] <- ((biom_df[biom_df$site == site &
+                                       biom_df$ecolclass == class1,
+                                     paste(biom_type, 'biomass', sep='_')]) -
+                              (biom_df[biom_df$site == site &
+                                         biom_df$ecolclass == class2,
+                                       paste(biom_type, 'biomass', sep='_')]))
+      sum_df[i, 'class_comparison'] <- class_c
+      sum_df[i, 'biom_type'] <- biom_type
+      i <- i + 1
+    }
+  }
+}  # oy
+
+sum_df$biom_type <- factor(sum_df$biom_type,
+                           levels=c('total', 'green'),
+                           labels=c('Total biomass', 'Green biomass'))
+sum_df$class_comparison <- factor(sum_df$class_comparison,
+                            levels=c('livestock_minus_integrated', 'livestock_minus_wildlife',
+                                     'integrated_minus_wildlife'),
+                            labels=c('lives. - integr.', 'lives. - wildl.',
+                                     'integr. - wildl.'))
+p <- ggplot(sum_df, aes(x=class_comparison, y=diff))
+p <- p + geom_point()
+p <- p + facet_wrap(~biom_type)
+p <- p + ylab("Difference (g/m2)") + xlab("")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/diff_plot.png"
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p)
+dev.off()
+
+# felicia's data, same display
+fel_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.csv")
+fel_df$class_comparison <- factor(fel_df$class_comparison,
+                                  levels=c('livestock_minus_integrated', 'livestock_minus_wildlife',
+                                           'integrated_minus_wildlife'),
+                                  labels=c('lives. - integr.', 'lives. - wildl.',
+                                           'integr. - wildl.'))
+fel_df$biom_type <- factor(fel_df$biom_type,
+                           levels=c('total', 'green'),
+                           labels=c('Total biomass', 'Green biomass'))
+p <- ggplot(fel_df, aes(x=class_comparison, y=diff))
+p <- p + geom_point()
+p <- p + facet_wrap(~biom_type)
+p <- p + ylab("Difference (g/m2)") + xlab("")
+pngname = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.png"
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p)
+dev.off()
+
 # estimated stocking density (with back-calc mgmt) vs rainfall
 gain_back_calc_sd <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
 precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
@@ -858,18 +922,29 @@ lims <- c(min(min(comp_df$mean_biomass_gm2, na.rm=TRUE),
               min(comp_df$biomass_emp_densities, na.rm=TRUE)) - 15,
           max(max(comp_df$mean_biomass_gm2, na.rm=TRUE),
               max(comp_df$biomass_emp_densities), na.rm=TRUE) + 15) 
+comp_df$OwnedBy <- factor(comp_df$OwnedBy)
+
 p <- ggplot(comp_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities,
-                         group=EcolClass))
-p <- p + geom_point(aes(shape=EcolClass))
+                         group=OwnedBy))
+p <- p + geom_point(aes(colour=OwnedBy, shape=EcolClass))
 p <- p + xlim(lims) + ylim(lims)
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 p <- p + xlab("Empirical biomass (g/m2)") + ylab("Simulated biomass (g/m2)")
 print(p)
 img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary"
 pngname <- paste(img_dir, "empirical_vs_simulated_2015_biomass_mult=1.png", sep="/")
-png(file=pngname, units="in", res=300, width=4, height=3)
+png(file=pngname, units="in", res=300, width=5.5, height=4)
 print(p)
 dev.off()
+
+comp_df$OwnedBy <- factor(comp_df$OwnedBy)
+p <- ggplot(comp_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities,
+                         group=OwnedBy))
+p <- p + geom_point(aes(colour=OwnedBy, shape=EcolClass))
+p <- p + xlim(lims) + ylim(lims)
+p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+p <- p + xlab("Empirical biomass (g/m2)") + ylab("Simulated biomass (g/m2)")
+print(p)
 
 # mismatch vs .......
 imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mismatch_vs"
