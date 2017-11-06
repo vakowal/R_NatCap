@@ -1,5 +1,135 @@
 # USFS hemlock decline
 
+# steve norman's analysis of ForWarn NDVI
+points <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/forwarn_points_intersect_lulc.csv")
+values <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/forwarn_values.csv")
+forwarn_dat <- merge(points, values, all.y=FALSE)
+
+# code yearly winter dates as chosen by Steve Norman
+period_df <- data.frame('period'=colnames(values)[2:length(colnames(values))],
+                        stringsAsFactors=FALSE)
+period_df$year <- gsub("A", "", period_df$period)
+out <- strsplit(period_df$year, "_")
+period_df <- data.frame(period_df, do.call(rbind, out))
+colnames(period_df) <- c('period', 'erase', 'year', 'window')
+period_df <- period_df[, c('period', 'year', 'window')]
+
+winter_cur <- 1:11
+winter_prev <- 44:46
+for(r in 1:NROW(period_df)){
+  if(as.numeric(as.character(period_df[r, 'window'])) %in% winter_cur){
+    period_df[r, 'winter_year'] <- as.numeric(as.character(period_df[r, 'year']))
+  }
+  if(as.numeric(as.character(period_df[r, 'window'])) %in% winter_prev){
+    period_df[r, 'winter_year'] <- as.numeric(as.character(period_df[r, 'year'])) + 1
+  }
+}
+
+# make time series and compare: (visualize mean within groups, and some measure
+# of variability within group around the mean)
+# whole watershed (all rows in forwarn dat)
+# hemlock decline
+# hemlock decline with rhodo, without rhodo
+
+# select only winter records, code as winter year
+row.names(values) <- values$id
+values <- values[, c(2:dim(values)[2])]
+values_t <- data.frame(t(values))
+values_t$period <- row.names(values_t)
+per_subs <- period_df[, c('period', 'winter_year')]
+values_t <- merge(values_t, per_subs)
+values_t <- values_t[, colnames(values_t)[2:length(colnames(values_t))]]
+winter_vals <- values_t[!is.na(values_t$winter_year) &
+                          values_t$winter_year >= 2001, ]  # select only winter values starting in 2001
+winter_max <- aggregate(winter_vals, by=list(winter_vals$winter_year),
+                        FUN=max)  # max NDVI within each winter for each pixel
+row.names(winter_max) <- winter_max$Group.1
+winter_max <- winter_max[, colnames(winter_max)[2:length(colnames(winter_max))]]
+winter_maxt <- data.frame(t(winter_max))
+winter_maxt <- winter_maxt[1:(dim(winter_maxt)[1]-1), ]  # get rid of winter year row
+winter_maxt$id <- row.names(winter_maxt)
+winter_maxt$id <- as.numeric(as.character(gsub("X", "", winter_maxt$id)))
+points <- points[, c("id", "lulc_inter")]
+winter_maxt <- merge(winter_maxt, points)
+
+# summarize
+# all points, data only
+year <- as.numeric(as.character(gsub("X", "", colnames(winter_maxt)[2:17])))
+all_points <- winter_maxt[, colnames(winter_maxt)[2:17]]  
+q25_watershed <- sapply(all_points, quantile, probs=c(0.25), 
+                        na.rm=TRUE, names=FALSE)
+q75_watershed <- sapply(all_points, quantile, probs=c(0.75), 
+                        na.rm=TRUE, names=FALSE)
+mean_watershed <- sapply(all_points, mean, 
+                         na.rm=TRUE, names=FALSE)
+watershed_df <- data.frame('year'=year, 'q25'=q25_watershed,
+                           'q75'=q75_watershed, 'NDVI'=mean_watershed,
+                          'lulc_group'='watershed')
+
+hemlock <- winter_maxt[winter_maxt$lulc_inter == 'decline_no_rhodo' &
+                         winter_maxt$lulc_inter == 'decline_with_rhodo',
+                       colnames(winter_maxt)[2:17]]  # hemlock decline
+q25_hemlock <- sapply(hemlock, quantile, probs=c(0.25), 
+                        na.rm=TRUE, names=FALSE)
+q75_hemlock <- sapply(hemlock, quantile, probs=c(0.75), 
+                        na.rm=TRUE, names=FALSE)
+mean_hemlock <- sapply(hemlock, mean, 
+                         na.rm=TRUE, names=FALSE)
+hemlock_df <- data.frame('year'=year, 'q25'=q25_hemlock,
+                           'q75'=q75_hemlock, 'NDVI'=mean_hemlock,
+                           'lulc_group'='hemlock_decline')
+# decline without rhodo
+decline_no_rhodo <- winter_maxt[winter_maxt$lulc_inter == 'decline_no_rhodo',
+                                colnames(winter_maxt)[2:17]]  
+q25_no_rh <- sapply(decline_no_rhodo, quantile, probs=c(0.25), 
+                      na.rm=TRUE, names=FALSE)
+q75_no_rh <- sapply(decline_no_rhodo, quantile, probs=c(0.75), 
+                      na.rm=TRUE, names=FALSE)
+mean_no_rh <- sapply(decline_no_rhodo, mean, 
+                       na.rm=TRUE, names=FALSE)
+decl_no_df <- data.frame('year'=year, 'q25'=q25_no_rh,
+                         'q75'=q75_no_rh, 'NDVI'=mean_no_rh,
+                         'lulc_group'='decline_no_rhodo')
+# decline with rhodo
+decline_with_rhodo <- winter_maxt[winter_maxt$lulc_inter == 'decline_with_rhodo',
+                                  colnames(winter_maxt)[2:17]]
+q25_w_rh <- sapply(decline_with_rhodo, quantile, probs=c(0.25), 
+                    na.rm=TRUE, names=FALSE)
+q75_w_rh <- sapply(decline_with_rhodo, quantile, probs=c(0.75), 
+                    na.rm=TRUE, names=FALSE)
+mean_w_rh <- sapply(decline_with_rhodo, mean, 
+                     na.rm=TRUE, names=FALSE)
+decl_rh_df <- data.frame('year'=year, 'q25'=q25_w_rh,
+                         'q75'=q75_w_rh, 'NDVI'=mean_w_rh,
+                         'lulc_group'='decline_with_rhodo')
+NDVI_df <- rbind(watershed_df, decl_no_df, decl_rh_df)
+
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/figs"
+p <- ggplot(NDVI_df, aes(x=year, y=NDVI))
+p <- p + geom_line(aes(colour=lulc_group))
+pngname <- paste(imgdir, "winter_NDVI_by_lulc.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(NDVI_df, aes(x=year, y=NDVI))
+p <- p + geom_line(aes(colour=lulc_group))
+p <- p + geom_ribbon(aes(ymin=q25, ymax=q75, fill=lulc_group), alpha=0.2)
+pngname <- paste(imgdir, "winter_NDVI_by_lulc_25-75_perc.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(NDVI_df, aes(x=year, y=NDVI))
+p <- p + geom_line()
+p <- p + geom_ribbon(aes(ymin=q25, ymax=q75), alpha=0.2)
+p <- p + facet_wrap(~lulc_group)
+pngname <- paste(imgdir, "winter_NDVI_by_lulc_facet.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+
 # results: quickflow (fourth draft run)
 qf_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/model_runs/fourth_draft/summary_of_results/monthly_quickflow.csv")
 raw <- qf_df[qf_df$scenario != 'difference', ]
