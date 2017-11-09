@@ -1,5 +1,13 @@
 # USFS hemlock decline
 
+# GSMNP veg monitoring database
+library(RODBC)
+db2 <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/NPS_veg_monitoring/GRSMLTVegMon_BE/GRSMLTVeg_20170120_BE.accdb"
+con2 <- odbcConnectAccess2007(db2)
+tables2 <- sqlTables(con2, tableType="TABLE")$TABLE_NAME
+atest <- sqlFetch(con2, "tbl_Locations")
+
+
 # steve norman's analysis of ForWarn NDVI
 points <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/forwarn_points_intersect_lulc.csv")
 values <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/forwarn_values.csv")
