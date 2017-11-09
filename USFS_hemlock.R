@@ -103,6 +103,9 @@ decl_rh_df <- data.frame('year'=year, 'q25'=q25_w_rh,
                          'q75'=q75_w_rh, 'NDVI'=mean_w_rh,
                          'lulc_group'='decline_with_rhodo')
 NDVI_df <- rbind(watershed_df, decl_no_df, decl_rh_df)
+NDVI_df$lulc_group <- factor(NDVI_df$lulc_group, levels=levels(NDVI_df$lulc_group),
+                             labels=c("Entire watershed", "Hemlock decline with rhododendron",
+                                      "Hemlock decline without rhododendron"))
 
 imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/materials_from_Steve_Norman/GK_reanalysis/figs"
 p <- ggplot(NDVI_df, aes(x=year, y=NDVI))
@@ -115,6 +118,8 @@ dev.off()
 p <- ggplot(NDVI_df, aes(x=year, y=NDVI))
 p <- p + geom_line(aes(colour=lulc_group))
 p <- p + geom_ribbon(aes(ymin=q25, ymax=q75, fill=lulc_group), alpha=0.2)
+p <- p + xlab("Year") + ylab("Winter NDVI")
+p <- p + theme(legend.title=element_blank(), legend.position="bottom")
 pngname <- paste(imgdir, "winter_NDVI_by_lulc_25-75_perc.png", sep="/")
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
@@ -131,12 +136,20 @@ dev.off()
 
 
 # results: quickflow (fourth draft run)
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/USFS/model_runs/fourth_draft/summary_of_results/figs"
 qf_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/model_runs/fourth_draft/summary_of_results/monthly_quickflow.csv")
 raw <- qf_df[qf_df$scenario != 'difference', ]
-p <- ggplot(raw, aes(x=month, y=sum_quickflow, group=scenario))
-p <- p + geom_point(aes(colour=scenario))
-p <- p + geom_line(aes(colour=scenario))
+raw$Scenario <- factor(raw$scenario, levels=c("pre-decline", "post-decline"),
+                       labels=c("Pre-decline", "Post-decline"))
+p <- ggplot(raw, aes(x=month, y=sum_quickflow, group=Scenario))
+p <- p + geom_point()
+p <- p + geom_line(aes(linetype=Scenario))
+p <- p + scale_x_continuous(breaks=seq(0, 12, by=2))
+p <- p + xlab("Month") + ylab("Quickflow (mm)") + print_theme
+pngname <- paste(imgdir, "monthly_quickflow_by_scenario.png", sep="/")
+png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
+dev.off()
 
 diff_df <- qf_df[qf_df$scenario == 'difference', ]
 p <- ggplot(diff_df, aes(x=month, y=sum_quickflow))
@@ -146,7 +159,6 @@ p <- p + ggtitle("Difference: post - pre quickflow")
 print(p)
 
 # summarize landcover for USFS project
-
 # overstory
 # is there a dominant spp for each ecogroup? calc on area
 mad_ov <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/USFS/input_data/Madden_landcover_summary/Madden_overstory_Palmer_creek_1km_buf.csv",
