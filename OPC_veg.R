@@ -703,11 +703,11 @@ order_subs <- succ_interp[!duplicated(succ_interp$site), ]
 succ_interp$site <- factor(succ_interp$site,
                            levels=order_subs[order(order_subs$date), 'site'])
 p <- ggplot(succ_interp, aes(x=Date, y=biomass, group=sim_vs_emp))
-p <- p + geom_point(aes(colour=sim_vs_emp))
-p <- p + geom_line(aes(colour=sim_vs_emp))
+p <- p + geom_point()
+p <- p + geom_line(aes(linetype=sim_vs_emp))
 p <- p + facet_wrap(~site, ncol=4, scales='free_x')
 p <- p + ylab("Biomass (g/m2)")
-p <- p + labs(colour="")
+p <- p + labs(linetype="") + print_theme
 p <- p + scale_x_date(date_breaks = "1 month", date_labels = "%b '%y")
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_fixed_y.png"
 png(file=pngname, units="in", res=300, width=9, height=12)

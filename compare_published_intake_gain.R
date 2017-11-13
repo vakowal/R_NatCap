@@ -85,10 +85,11 @@ summary_df <- do.call(rbind, summary_list)
 # published values
 pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRUE,
                     stringsAsFactors=FALSE)
+pub_dat <- pub_dat[pub_dat$Ref == "Shem_et_al", ]
 # simulated values
-studies <- c('Shem_et_al_1995')
+study <- 'Shem_et_al_1995'
 sim_l <- list()
-sim_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12"
+sim_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12/summary_unsupplemented"
 sim_dat <- read.csv(paste(sim_dir, "summary.csv",  sep="/"), header=TRUE,
                       stringsAsFactors=FALSE)  # "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv",
 sim_l[[study]] <- sim_dat
@@ -97,52 +98,110 @@ df$grass_label <- as.factor(df$grass_label)
 df$intake_forage <- as.numeric(df$intake_forage)
 df$daily_gain <- as.numeric(df$daily_gain)
 
-sim_mean_intake <- aggregate(df$intake_forage~df$grass_label, FUN=mean)
-colnames(sim_mean_intake) <- c('grass_label', 'sim_intake_forage')
-sim_mean_gain <- aggregate(df$daily_gain~df$grass_label, FUN=mean)
-colnames(sim_mean_gain) <- c('grass_label', 'sim_daily_gain')
+sim_mean_intake <- aggregate(df$intake_forage~df$grass_label + df$SRW, FUN=mean)
+colnames(sim_mean_intake) <- c('grass_label', 'SRW', 'sim_intake_forage')
+sim_mean_gain <- aggregate(df$daily_gain~df$grass_label + df$SRW, FUN=mean)
+colnames(sim_mean_gain) <- c('grass_label', 'SRW', 'sim_daily_gain')
 pub_dat$grass_label = factor(pub_dat$type)  #, levels=levels(sim_mean_gain$grass_label))
-combined = merge(sim_mean_intake, sim_mean_gain, by='grass_label')
-combined = merge(combined, pub_dat, by='grass_label')
+combined = merge(sim_mean_intake, sim_mean_gain)
+combined = merge(combined, pub_dat, by='grass_label', all=TRUE)
 combined$sim_gain_per_intake <- combined$sim_daily_gain / combined$sim_intake_forage
 combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
+combined$diff_intake <- combined$sim_intake_forage - combined$intake_forage
+combined$diff_gpi <- combined$sim_gain_per_intake - combined$gain_per_intake
 
-mean_dev_intake <- mean(combined$sim_intake_forage - combined$intake_forage)
-mean_dev_intake
-mean_dev_gpi <- mean(combined$sim_gain_per_intake - combined$gain_per_intake)
-mean_dev_gpi
-in_test_p <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="pearson")
-in_test_p[['estimate']]
-gpi_test_p <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="pearson")
-gpi_test_p[['estimate']]
-in_test_s <- cor.test(combined$sim_intake_forage, combined$intake_forage, method="spearman")
-in_test_s[['estimate']]
-gpi_test_s <- cor.test(combined$sim_gain_per_intake, combined$gain_per_intake, method="spearman")
-gpi_test_s[['estimate']]
+diff_intake_SRW <- aggregate(diff_intake~SRW, data=combined, FUN=mean)
+diff_gpi_SRW <- aggregate(diff_gpi~SRW, data=combined, FUN=mean)
+mean_intake_SRW <- aggregate(intake_forage~SRW, data=combined, FUN=mean)
+mean_gpi_SRW <- aggregate(gain_per_intake~SRW, data=combined, FUN=mean)
 
-figdir <- paste(data_dir, study, 'unsupplemented', sep='/')
+imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12/summary_unsupplemented"
 
-p <- ggplot(combined, aes(x=intake_forage, y=sim_intake_forage))
+numr <- length(unique(combined$SRW))
+cor_df <- data.frame("SRW"=numeric(numr),
+                     'pearson_cor_intake'=numeric(numr),
+                     'pearson_p_intake'=numeric(numr),
+                     'spearman_cor_intake'=numeric(numr),
+                     'spearman_p_intake'=numeric(numr),
+                     'pearson_cor_gpi'=numeric(numr),
+                     'pearson_p_gpi'= numeric(numr),
+                     'spearman_cor_gpi'=numeric(numr),
+                     'spearman_p_gpi'=numeric(numr))
+for(i in 1:length(unique(combined$SRW))){
+  SRW <- unique(combined$SRW)[i]
+  cor_df[i, 'SRW'] <- SRW
+  subs <- combined[combined$SRW == SRW, ]
+  in_test_p <- cor.test(subs$sim_intake_forage, subs$intake_forage, method="pearson")
+  cor_df[i, 'pearson_cor_intake'] <- in_test_p[['estimate']]
+  cor_df[i, 'pearson_p_intake'] <- in_test_p[['p.value']]
+  gpi_test_p <- cor.test(subs$sim_gain_per_intake, subs$gain_per_intake, method="pearson")
+  cor_df[i, 'pearson_cor_gpi'] <- gpi_test_p[['estimate']]
+  cor_df[i, 'pearson_p_gpi'] <- gpi_test_p[['p.value']]
+  in_test_s <- cor.test(subs$sim_intake_forage, subs$intake_forage, method="spearman")
+  cor_df[i, 'spearman_cor_intake'] <- in_test_s[['estimate']]
+  cor_df[i, 'spearman_p_intake'] <- in_test_s[['p.value']]
+  gpi_test_s <- cor.test(subs$sim_gain_per_intake, subs$gain_per_intake, method="spearman")
+  cor_df[i, 'spearman_cor_gpi'] <- gpi_test_s[['estimate']]
+  cor_df[i, 'spearman_p_gpi'] <- gpi_test_s[['p.value']]
+}
+write.csv(cor_df, paste(imgdir, "cor_summary.csv", sep="/"))
+
+for(SRW in unique(combined$SRW)){
+  subs <- combined[combined$SRW == SRW, ]
+  p <- ggplot(subs, aes(x=intake_forage, y=sim_intake_forage))
+  p <- p + geom_point()
+  min_val <- min(c(subs$intake_forage, subs$sim_intake_forage) - 0.1)
+  max_val <- max(c(subs$intake_forage, subs$sim_intake_forage) + 0.1)
+  p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+  p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+  p <- p + ggtitle(paste("Intake: SRW", SRW))
+  pngname <- paste(imgdir, paste("intake_SRW_", SRW, ".png", sep=""),
+                   sep="/")
+  png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+  print(p)
+  dev.off()
+}
+
+for(SRW in unique(combined$SRW)){
+  subs <- combined[combined$SRW == SRW, ]
+  p <- ggplot(subs, aes(x=gain_per_intake, y=sim_gain_per_intake))
+  p <- p + geom_point()
+  min_val <- min(c(subs$gain_per_intake, subs$sim_gain_per_intake) - 0.001)
+  max_val <- max(c(subs$gain_per_intake, subs$sim_gain_per_intake) + 0.001)
+  p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
+  p <- p + geom_abline(slope=1, intercept=0, linetype=2)
+  p <- p + ggtitle(paste("Gain per unit Intake: SRW", SRW))
+  pngname <- paste(imgdir, paste("gain_per_intake_SRW_", SRW, ".png", sep=""),
+                   sep="/")
+  png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+  print(p)
+  dev.off()
+}
+
+# plots for MS: best matched SRW
+subs <- combined[combined$SRW == 215, ]
+p <- ggplot(subs, aes(x=intake_forage, y=sim_intake_forage))
 p <- p + geom_point() + print_theme
 p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
-min_val <- min(c(combined$intake_forage, combined$sim_intake_forage))
-max_val <- max(c(combined$intake_forage, combined$sim_intake_forage))
+min_val <- min(c(subs$intake_forage, subs$sim_intake_forage) - 0.1)
+max_val <- max(c(subs$intake_forage, subs$sim_intake_forage) + 0.1)
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "intake_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
+pngname <- paste(imgdir, "intake_SRW215_MS.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
 dev.off()
 
-p <- ggplot(combined, aes(x=gain_per_intake, y=sim_gain_per_intake))
+subs <- combined[combined$SRW == 600, ]
+p <- ggplot(subs, aes(x=gain_per_intake, y=sim_gain_per_intake))
 p <- p + geom_point() + print_theme
-p <- p + xlab('Empirical daily gain per kg intake (kg/kg)') + ylab('Simulated daily gain per kg intake (kg/kg)')
-min_val <- min(c(combined$gain_per_intake, combined$sim_gain_per_intake))
-max_val <- max(c(combined$gain_per_intake, combined$sim_gain_per_intake))
+p <- p + xlab('Empirical daily gain per kg intake (kg)') + ylab('Simulated daily gain per kg intake (kg)')
+min_val <- min(c(subs$gain_per_intake, subs$sim_gain_per_intake))
+max_val <- max(c(subs$gain_per_intake, subs$sim_gain_per_intake))
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(figdir, "gain_per_kg_intake_CK13x2_CG2=1_CM2div10_CM12div10_no_reduce.png", sep="/")
-png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+pngname <- paste(imgdir, "gain_per_kg_intake_SRW600_MS.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.66, height=3.5)
 print(p)
 dev.off()
 
