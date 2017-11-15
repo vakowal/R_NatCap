@@ -3,9 +3,63 @@
 
 library(RODBC)
 
-db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
+db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_boogie_11.15.17.accdb"
+# db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
 con2 <- odbcConnectAccess2007(db)
 
+# make one table with all field measurements currently available
+biomass_SCP <- sqlFetch(con2, "Biomass")
+biomass_SCP$DATE <- as.Date(biomass_SCP$DATE, format="%d/%m/%Y")
+biomass_SCP$dry_calc <- biomass_SCP$dry
+biomass_SCP[is.na(biomass_SCP$dry), 'dry_calc'] <- biomass_SCP[is.na(biomass_SCP$dry), 'wet'] * 0.45561
+
+total_biomass_d <- aggregate(dry ~ `2017ID` + DATE, data=biomass_SCP,
+                            FUN=sum)  # this is total biomass for 2016 dates
+total_biomass_w <- aggregate(wet ~ `2017ID` + DATE, data=biomass_SCP,
+                             FUN=sum)
+sum_biomass <- merge(total_biomass_d, total_biomass_w)
+dry_from_wet <- lm(dry~wet + 0, data=sum_biomass)
+# Coefficients:
+#   Estimate Std. Error t value Pr(>|t|)    
+# wet  0.45561    0.01047   43.51   <2e-16 ***
+#   ---
+#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# Residual standard error: 25.05 on 49 degrees of freedom
+# Multiple R-squared:  0.9748,	Adjusted R-squared:  0.9742 
+# F-statistic:  1893 on 1 and 49 DF,  p-value: < 2.2e-16
+
+total_biomass_SCP <- aggregate(dry_calc ~ `2017ID` + DATE, data=biomass_SCP,
+                               FUN=sum) # dry biomass, all SCP samples
+CBM_sites_17 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/site_data.csv")
+CBM_sites_17$Date <- as.Date(CBM_sites_17$Date, format="%d/%m/%Y")
+## figure out how to get biomass for these sites
+## sum up biomass by sample date
+# for now ...
+CBM_sites_17$biomass <- 0
+CBM_sum_biomass <- aggregate(biomass~Plot_ID + Date, data=CBM_sites_17,
+                             FUN=sum) ## TODO use Plot_ID or another identifier?
+colnames(CBM_sum_biomass) <- c("site_id", "Date", "biomass_g_m2")
+colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
+biomass_combined <- rbind(CBM_sum_biomass, total_biomass_SCP)
+write.csv(biomass_combined,
+          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/biomass_SCP_CBM.csv",
+          row.names=FALSE)
+
+
+meta_df <- sqlFetch(con2, "Metadata")
+
+# check: is total dry biomass in 'dry2017BIOMASS' the sum of spp-level biomass in "Biomass"?
+biomass <- sqlFetch(con2, "Biomass")
+dry2016 <- biomass[!is.na(biomass$dry), ]
+dry2017 <- biomass[is.na(biomass$dry), ]
+
+sumdry2016 <- aggregate(dry2016$dry~dry2016$`2017ID`, FUN=sum)
+check <- sqlFetch(con2, "dry2017BIOMASS")
+checkm <- merge(sumdry2016, check, by.x="dry2016$`2017ID`",
+                by.y="2017SiteID", all=TRUE)
+# No, they are not the same: "dry2016$dry" is different from "dry2016"
+  
 table_names <- sqlTables(con2, tableType="TABLE")$TABLE_NAME
 meta_df <- sqlFetch(con2, "Metadata")
 str(meta_df)  # summarize structure of the table
