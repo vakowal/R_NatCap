@@ -502,30 +502,6 @@ p <- p + xlab("ratio of bovid to non-bovid dung") + ylab("property + non-propert
 print(p)
 
 ## derive conversion from dung to livestock numbers
-# reported cattle
-est_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv"
-est_df <- read.csv(est_csv)
-est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
-est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
-est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
-est_df$prop_density <- est_df$property_cattle / est_df$LwfPropSizeHa
-est_df$prop_non_density <- est_df$property_non_property_cattle / est_df$LwfPropSizeHa
-est_df[which(est_df$Confirmed == 'yes'), 'Confirmed'] <- 'Yes'
-est_df[which(est_df$Confirmed == 'no'), 'Confirmed'] <- 'No'
-
-# regression to predict number of animals from piles of dung
-dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv")
-bovid_sum <- dung_sum[, c("Property", 'bovid')]
-est_df <- est_df[, c("Property", "prop_density", "prop_non_density", "Confirmed")]
-cor_df <- merge(bovid_sum, est_df, by="Property")
-cor_df <- cor_df[cor_df$Property != "Makurian", ]
-cor_df <- cor_df[which(cor_df$Confirmed == "Yes"), ]
-
-lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df) 
-lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
-summary(lm1_0)
-summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
-
 # adjust property size by removing woody area
 woody_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Africover/summary_GK/perc_non_woody.csv",
                      stringsAsFactors=FALSE)
@@ -555,6 +531,46 @@ lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df)
 lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
 summary(lm1_0)
 summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
+
+# examine error in animals~dung by property type and ecological class
+science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- science_df[science_df$included_science_ms == "Y", ]
+science_df <- science_df[, c("Property", "EcolClass", "OwnedBy")]
+cor_df <- merge(bovid_sum, adj_df, by="Property")
+cor_df <- merge(cor_df, science_df)
+cor_df$predicted_cattle <- cor_df$bovid * 0.016578  # adjusted for woody area, lm1_0 above
+cor_df$residual <- cor_df$predicted_cattle - cor_df$prop_density
+
+p <- ggplot(cor_df, aes(x=bovid, y=residual))
+p <- p + geom_point(aes(colour=OwnedBy))
+p <- p + xlab("bovid dung") + ylab("residual (predicted - reported cattle density)")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/residual_cattle_numbers.png"
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
+
+# what about mismatch in simulated vs back-calculated grazing intensity?
+comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/biomass_comparison.csv")
+comp_df$diff <- comp_df$biomass_emp_densities - comp_df$biomass_back_calc
+comp_df <- comp_df[comp_df$density_multiplier == 1, ]
+FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+comp_df <- merge(comp_df, FID_list, by.x="site", by.y='FID')
+comp_df <- merge(comp_df, science_df, by.x='NAME', by.y='Property')
+p <- ggplot(comp_df, aes(x=OwnedBy, y=diff))
+p <- p + geom_boxplot()
+p <- p + ylab("biomass (empirical densities - back-calculated)")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_vs_back-calc_by_ownership.png"
+png(file=pngname, units="in", res=300, width=5.5, height=4)
+print(p)
+dev.off()
+p <- ggplot(comp_df, aes(x=EcolClass, y=diff))
+p <- p + geom_boxplot()
+p <- p + ylab("biomass (empirical densities - back-calculated)")
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_vs_back-calc_by_EcolClass.png"
+png(file=pngname, units="in", res=300, width=5.5, height=4)
+print(p)
+dev.off()
 
 # Felicia's classifications used in Science manuscript
 science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
