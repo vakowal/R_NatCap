@@ -29,37 +29,59 @@ dry_from_wet <- lm(dry~wet + 0, data=sum_biomass)
 # Multiple R-squared:  0.9748,	Adjusted R-squared:  0.9742 
 # F-statistic:  1893 on 1 and 49 DF,  p-value: < 2.2e-16
 
-total_biomass_SCP <- aggregate(dry_calc ~ `2017ID` + DATE, data=biomass_SCP,
+biomass_SCP$dry_calc_gm2 <- biomass_SCP$dry_calc / biomass_SCP$FREQUENCY
+total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
                                FUN=sum) # dry biomass, all SCP samples
-CBM_sites_17 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/site_data.csv")
-CBM_sites_17$Date <- as.Date(CBM_sites_17$Date, format="%d/%m/%Y")
-## figure out how to get biomass for these sites
-## sum up biomass by sample date
-# for now ...
-CBM_sites_17$biomass <- 0
-CBM_sum_biomass <- aggregate(biomass~Plot_ID + Date, data=CBM_sites_17,
-                             FUN=sum) ## TODO use Plot_ID or another identifier?
-colnames(CBM_sum_biomass) <- c("site_id", "Date", "biomass_g_m2")
 colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
-biomass_combined <- rbind(CBM_sum_biomass, total_biomass_SCP)
+total_biomass_SCP$source <- 'SCP'
+
+CBM_sites <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_site_coordinates_2016_17.csv")
+CBM_biomass_16 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_biomass_data_2016.csv")
+## TODO calc 2017 biomass from LPI data, using LPI and biomass data from 2016
+for(r in 1:NROW(CBM_sites)){
+  if(length(strsplit(as.character(CBM_sites[r, 'id_GK']),
+                     split="_")[[1]]) > 1){
+    CBM_sites[r, 'year_suf'] <- as.numeric(strsplit(as.character(CBM_sites[r, 'id_GK']),
+                                                    split="_")[[1]][2])
+  }
+  else{
+    CBM_sites[r, 'year_suf'] <- 0
+  }
+}
+CBM_sites <- CBM_sites[CBM_sites$year_suf != 17, ]
+CBM_sites <- CBM_sites[, c('Plot_ID', 'id_GK')]  # this is the dataframe
+  # that translates "Plot_ID" to "site_id" that I used for simulations, for 2016 sites
+CBM_biomass <- merge(CBM_sites, CBM_biomass_16, by='Plot_ID', all.y=TRUE)
+CBM_biomass <- aggregate(Average_biomass~id_GK + Date, data=CBM_biomass,
+                         FUN=sum)
+CBM_biomass$Date <- as.Date(CBM_biomass$Date, format="%m/%d/%Y")
+CBM_biomass <- CBM_biomass[, c('id_GK', 'Date', 'Average_biomass')]
+colnames(CBM_biomass) <- c('site_id', 'Date', 'biomass_g_m2')
+CBM_biomass$source <- 'CBM'
+
+biomass_combined <- rbind(CBM_biomass, total_biomass_SCP)
 write.csv(biomass_combined,
           "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/biomass_SCP_CBM.csv",
           row.names=FALSE)
-
+# check: compare biomass of SCP vs CBM sites in 2016
+wth_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_SCP_points_nearest_soum_ctr.csv")
+wth_match <- wth_match[, c('site_id', 'NEAR_DIST', 'name_en')]
+colnames(wth_match) <- c('site_id', 'distance_to_nearest_soum_center',
+                         'nearest_soum_center')
+check <- biomass_combined[biomass_combined$Date < "2017-01-01", ]
+plot <- merge(wth_match, check, by='site_id')
+p <- ggplot(plot, aes(x=source, y=biomass_g_m2))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~nearest_soum_center)
+p <- p + xlab("Biomass data source") + ylab("Biomass (g per square m)")
+print(p)
+pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/biomass_2016_SCP_CBM.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
 
 meta_df <- sqlFetch(con2, "Metadata")
 
-# check: is total dry biomass in 'dry2017BIOMASS' the sum of spp-level biomass in "Biomass"?
-biomass <- sqlFetch(con2, "Biomass")
-dry2016 <- biomass[!is.na(biomass$dry), ]
-dry2017 <- biomass[is.na(biomass$dry), ]
-
-sumdry2016 <- aggregate(dry2016$dry~dry2016$`2017ID`, FUN=sum)
-check <- sqlFetch(con2, "dry2017BIOMASS")
-checkm <- merge(sumdry2016, check, by.x="dry2016$`2017ID`",
-                by.y="2017SiteID", all=TRUE)
-# No, they are not the same: "dry2016$dry" is different from "dry2016"
-  
 table_names <- sqlTables(con2, tableType="TABLE")$TABLE_NAME
 meta_df <- sqlFetch(con2, "Metadata")
 str(meta_df)  # summarize structure of the table
@@ -78,8 +100,8 @@ for(table_n in table_names){
   table_list[[table_n]] <- sqlFetch(con2, table_n)
 }
 
-biomass_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/SCP_biomass50sites.csv",
-                       stringsAsFactors=FALSE)
+#### the following code refers to old data summaries, should rework
+biomass_df <- sqlFetch(con2, "Biomass")
 spp_df <- sqlFetch(con2, 'tblSpecies', stringsAsFactors=FALSE)
 
 # find dominant species
