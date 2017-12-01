@@ -28,6 +28,7 @@ print(p)
 dev.off()
 
 # make csv to join to soum centers, to make map
+match_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/climate/NAMEM/soum_ctr_match_table.csv")
 comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/soum_centers/biomass_summary_zero_sd_namem_chirps_GCD_G.csv")
 comp_subs <- comp_df[comp_df$month == 9, colnames(comp_df)[c(2:5, 7, 9)]]  # August only
 comp_nm <- comp_df[comp_df$month == 9 &
@@ -36,15 +37,28 @@ comp_nm <- comp_df[comp_df$month == 9 &
 comp_wide <- reshape(comp_nm, idvar='site_id',
                      timevar='year',
                      direction="wide")
+comp_wide <- merge(comp_wide, match_df, by='site_id')
+comp_wide$total_forage_kg_2016 <- comp_wide$total_biomass_gm2.2016 * 10 * comp_wide$soum_area_ha
+comp_wide$SFU_2016 <- comp_wide$total_forage_kg_2016 / 365
+comp_wide$total_forage_kg_2017 <- comp_wide$total_biomass_gm2.2017 * 10 * comp_wide$soum_area_ha
+comp_wide$SFU_2017 <- comp_wide$total_forage_kg_2017 / 365
+comp_wide <- comp_wide[colnames(comp_wide)[c(1:7, 18, 20)]]
 write.csv(comp_wide,
           "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/soum_centers/biomass_August_2016_2017_NAMEM.csv",
           row.names=FALSE)
+
 comp_ch <- comp_df[comp_df$month == 9 &
                      comp_df$climate_source == 'chirps_prec',
                    colnames(comp_df)[c(2:5, 9)]]
 comp_wide <- reshape(comp_ch, idvar='site_id',
                      timevar='year',
                      direction="wide")
+comp_wide <- merge(comp_wide, match_df, by='site_id')
+comp_wide$total_forage_kg_2016 <- comp_wide$total_biomass_gm2.2016 * 10 * comp_wide$soum_area_ha
+comp_wide$SFU_2016 <- comp_wide$total_forage_kg_2016 / 365
+comp_wide$total_forage_kg_2017 <- comp_wide$total_biomass_gm2.2017 * 10 * comp_wide$soum_area_ha
+comp_wide$SFU_2017 <- comp_wide$total_forage_kg_2017 / 365
+comp_wide <- comp_wide[colnames(comp_wide)[c(1:7, 18, 20)]]
 write.csv(comp_wide,
           "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/soum_centers/biomass_August_2016_2017_CHIRPS.csv",
           row.names=FALSE)
