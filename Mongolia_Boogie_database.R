@@ -7,6 +7,27 @@ db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_boogie_11.15.17.
 # db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
 con2 <- odbcConnectAccess2007(db)
 
+# non-woody biomass, Boogie's sites
+biomass_SCP <- sqlFetch(con2, "Biomass", stringsAsFactors=FALSE)
+spp <- sqlFetch(con2, "tblSpecies")
+growth <- sqlFetch(con2, "tblSpeciesGrowthHabit")
+spp <- merge(spp, growth, by.x='GrowthHabitCode', by.y="Code")
+spp <- spp[, c("GenSpec", "GrowthHabitSub")]
+biomass_SCP <- merge(biomass_SCP, spp, by="GenSpec")
+biomass_SCP$DATE <- as.Date(biomass_SCP$DATE, format="%d/%m/%Y")
+biomass_SCP$dry_calc <- biomass_SCP$dry
+biomass_SCP[is.na(biomass_SCP$dry), 'dry_calc'] <- biomass_SCP[is.na(biomass_SCP$dry), 'wet'] * 0.45561
+biomass_SCP[is.na(biomass_SCP$FREQUENCY), 'FREQUENCY'] <- 4
+biomass_SCP$dry_calc_gm2 <- biomass_SCP$dry_calc / biomass_SCP$FREQUENCY
+biomass_SCP <- biomass_SCP[biomass_SCP$GrowthHabitSub != 'shrub', ]
+total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
+                               FUN=sum) # dry biomass, all SCP samples
+colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
+total_biomass_SCP$source <- 'SCP'
+write.csv(total_biomass_SCP,
+          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv",
+          row.names=FALSE)
+
 # make one table with all field measurements currently available
 biomass_SCP <- sqlFetch(con2, "Biomass")
 biomass_SCP$DATE <- as.Date(biomass_SCP$DATE, format="%d/%m/%Y")
@@ -29,6 +50,7 @@ dry_from_wet <- lm(dry~wet + 0, data=sum_biomass)
 # Multiple R-squared:  0.9748,	Adjusted R-squared:  0.9742 
 # F-statistic:  1893 on 1 and 49 DF,  p-value: < 2.2e-16
 
+biomass_SCP[is.na(biomass_SCP$FREQUENCY), 'FREQUENCY'] <- 4
 biomass_SCP$dry_calc_gm2 <- biomass_SCP$dry_calc / biomass_SCP$FREQUENCY
 total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
                                FUN=sum) # dry biomass, all SCP samples
@@ -295,34 +317,4 @@ site_csv <- merge(bio_type_resh, coords, by='site',
                   all=TRUE)
 site_csv <- site_csv[, c(1:6, 8)]
 write.csv(site_csv, "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_inputs/sites.csv",
-          row.names=FALSE)
-
-## compare simulated biomass with Boogie's data
-library(ggplot2)
-cmp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/zero_sd/biomass_summary.csv")
-cmp_sub <- cmp_df[, c(1:3, 6, 8)]
-cmp_s_r <- reshape(cmp_sub, varying=c('grass_gm2', 'total_biomass_gm2', 'sim_gm2'),
-                   v.names='biomass_gm2', timevar='type', times=c('grass', 'total_emp', 'sim'),
-                   idvar='site', direction='long')
-p <- ggplot(cmp_s_r, aes(x=site, y=biomass_gm2, group=type))
-p <- p + geom_point(aes(colour=type))
-print(p)
-
-cmp_df$grass_plus_forb <- cmp_df$grass_gm2 + cmp_df$forb_gm2
-cmp_sub <- cmp_df[, c(1:2, 8:9)]
-cmp_sub <- cmp_sub[order(cmp_sub$grass_plus_forb, decreasing=TRUE), ]
-cmp_g_f_resh <- reshape(cmp_sub, varying=c('sim_gm2', 'grass_plus_forb'),
-                        v.names='biomass_gm2', timevar='type', times=c('sim', 'grass+forb'),
-                        idvar='site', direction='long')
-p <- ggplot(cmp_g_f_resh, aes(x=site, y=biomass_gm2, group=type))
-p <- p + geom_point(aes(colour=type))
-print(p)
-
-
-#### throwaway
-coords <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/stations.csv")
-climdat <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/normals_monthly_data.csv")
-coords$STATION_ID <- gsub("GHCND:", "", coords$STATION_ID)
-datwcoords <- merge(coords, climdat, by.x='STATION_ID', by.y='STATION', all.y=TRUE)
-write.csv(datwcoords, "C:/Users/Ginger/Documents/NatCap/GIS_local/USFS/NCEI_climate/normals_with_coords.csv",
           row.names=FALSE)
