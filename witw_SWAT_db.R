@@ -18,6 +18,9 @@ grz_c <- merge(grz_c, hru_areac, all.x=TRUE)
 grz_c$kg_consumed <- grz_c$GRZ_DAYS * grz_c$BIO_EAT * grz_c$AREA
 sum_consumed_by_hru_c <- aggregate(kg_consumed~UNIQUECOMB, data=grz_c, FUN=sum)  # kg consumed in each HRU across 5 years
 
+one_month <- grz_c[grz_c$YEAR == 1 & grz_c$MONTH == 5, ]  # 626 HRUs
+total_area <- sum(one_month$AREA)  # 3767 total ha
+
 # assume I should be looking at the 5-year rotational scenario
 rot5_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/SWAT_Ucross/SWAT_databases/Rotational/5 year rotational/SWATmodelthirdIteration.mdb"
 rot5_db <- odbcConnectAccess2007(rot5_file)
@@ -49,3 +52,4 @@ consumed_total$rot_minus_cont <- consumed_total$kg_consumed_rotation - consumed_
 write.csv(consumed_total, "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/SWAT_Ucross/consumed_total.csv",
           row.names=FALSE)
 
+sum(consumed_total$rot_minus_cont, na.rm=TRUE) / (3767*5) # average yearly difference per ha
