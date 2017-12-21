@@ -209,6 +209,48 @@ p <- p + geom_point()
 p <- p + facet_grid(~defoliation_step, scales="free")
 print(p)
 
+# stocking density test, Ucross
+img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/stocking_density_figs"
+
+# no forced intake
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/stocking_density_test/stocking_density_test_summary.csv")
+sum_df$gain_diff <- sum_df$gain_._diff * 100
+sum_df$pasture_diff <- sum_df$pasture_._diff * 100
+sum_df <- sum_df[, c('num_animals', 'num_pastures', 'gain_diff',
+                     'pasture_diff')]
+sum_res <- reshape(sum_df, idvar=c("num_animals", "num_pastures"),
+                   varying=c('gain_diff', 'pasture_diff'),
+                   v.names='diff', times=c('Animal gain', 'Pasture biomass'),
+                   direction="long")
+p <- ggplot(sum_res, aes(x=num_pastures, y=diff))
+p <- p + geom_point()
+p <- p + facet_grid(time~num_animals, scales='free')
+p <- p + xlab("Number of pastures")
+p <- p + ylab("Benefit of rotation (% relative to continuous)")
+pngname <- paste(img_dir, 'benefit_of_rotation_no_forced_intake.png', sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
+
+# intake forced to AUE
+sum_fi_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/stocking_density_test_force_intake/stocking_density_test_summary.csv")
+sum_fi_df$gain_diff <- sum_fi_df$gain_._diff * 100
+sum_fi_df$pasture_diff <- sum_fi_df$pasture_._diff * 100
+sum_fi_df <- sum_fi_df[, c('num_animals', 'num_pastures', 'gain_diff',
+                     'pasture_diff')]
+sum_fi_res <- reshape(sum_fi_df, idvar=c("num_animals", "num_pastures"),
+                   varying=c('gain_diff', 'pasture_diff'),
+                   v.names='diff', times=c('Animal gain', 'Pasture biomass'),
+                   direction="long")
+p <- ggplot(sum_fi_res, aes(x=num_pastures, y=diff))
+p <- p + geom_point()
+p <- p + facet_grid(time~num_animals, scales='free_y')
+p <- p + xlab("Number of pastures")
+p <- p + ylab("Benefit of rotation (% relative to continuous)")
+pngname <- paste(img_dir, 'benefit_of_rotation_forced_intake.png', sep="/")
+png(file=pngname, units="in", res=300, width=7, height=4)
+print(p)
+dev.off()
 
 # stocking density test
 all_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ortega-S_et_al/stocking_density_n_pasture_test_all_months/summary.csv")
