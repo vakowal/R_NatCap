@@ -94,15 +94,17 @@ colnames(means_t)[which(colnames(means_t) == 'Rongai gate')] <- "Rongai"
 colnames(means_t)[which(colnames(means_t) == 'Golf 7')] <- "Golf_7"
 colnames(means_t)[which(colnames(means_t) == 'Simira')] <- "Sirima"
 
-gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group4', 'Group3')]
+gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group4', 'Group3', 'Group5')]
 comb <- merge(means_t, gr_subs, by='Abbrev')
 
 gr1_means <- aggregate(comb[, 2:11], by=list(comb$Group1), FUN=sum)
 gr2_means <- aggregate(comb[, 2:11], by=list(comb$Group4), FUN=sum)
 gr3_means <- aggregate(comb[, 2:11], by=list(comb$Group3), FUN=sum)
+gr5_means <- aggregate(comb[, 2:11], by=list(comb$Group5), FUN=sum)
 colnames(gr1_means)[1] <- "group"
 colnames(gr2_means)[1] <- "group"
 colnames(gr3_means)[1] <- "group"
+colnames(gr5_means)[1] <- "group"
 
 # reshape for plotting
 gr1_res <- reshape(gr1_means, idvar="group", varying=list(2:11), timevar='site',
@@ -113,6 +115,9 @@ gr2_res <- reshape(gr2_means, idvar="group", varying=list(2:11), timevar='site',
                    new.row.names=1:1000)
 gr3_res <- reshape(gr3_means, idvar="group", varying=list(2:11), timevar='site',
                    v.names="mean_dung", times=colnames(gr3_means)[2:11], direction="long",
+                   new.row.names=1:1000)
+gr5_res <- reshape(gr5_means, idvar="group", varying=list(2:11), timevar='site',
+                   v.names="mean_dung", times=colnames(gr5_means)[2:11], direction="long",
                    new.row.names=1:1000)
 
 gr1_plot <- gr1_res[which(gr1_res$group == 'non-cattle'), ]
@@ -135,6 +140,31 @@ print(p)
 result_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/comparison_w_empirical_density/correlation_w_dung"
 comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/bc_12_mo_intensity.csv"
 c_df <- read.csv(comparison_csv)
+
+# package data for submission to PLOS ONE
+c_df <- c_df[, c('site', 'total_rem', 'perc_total_rem')]
+c_df$perc_total_rem <- c_df$perc_total_rem * 100
+colnames(c_df) <- c('site', 'back-calc_g/m2_removed', 'back-calc_%_removed')
+gr5_r2 <- as.data.frame(t(gr5_means[, 2:11]))
+colnames(gr5_r2) <- gr5_means$group
+gr5_r2$site <- row.names(gr5_r2)
+gr5_r2 <- gr5_r2[colnames(gr5_r2)[c(1:5, 7)]]
+fig4_dat <- merge(gr5_r2, c_df, by='site')
+# add biomass from back-calc
+id_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
+bc_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
+bc_df <- merge(bc_df, id_match, by='site')
+bc_df <- bc_df[, c('site', 'g_m2', 'sim_vs_emp', 'id')]
+bc_res <- reshape(bc_df, idvar=c('id', 'site'), timevar='sim_vs_emp', direction="wide")
+fig4_dat <- merge(fig4_dat, bc_res, by='site')
+fig4_dat <- fig4_dat[, colnames(fig4_dat)[c(9:12, 7:8, 2:6)]]
+dung_names <- unlist(lapply(colnames(fig4_dat)[7:11], function(x) paste(x, "dung", sep="_")),
+                     use.names=FALSE)
+colnames(fig4_dat) <- c('Site', 'biomass_empirical', 'biomass_sim_back-calc',
+                        'biomass_sim_default', "back-calc_g/m2_removed", "back-calc_%_removed",
+                        dung_names)
+write.csv(fig4_dat, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/fig4.csv",
+          row.names=FALSE)  # S4 Dataset
 
 g1_df <- gr1_res[which(gr1_res$group %in% c('browser', 'grazer', 'carnivore', 'mixed')), ]
 g2_df <- gr2_res

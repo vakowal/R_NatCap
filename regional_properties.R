@@ -149,6 +149,22 @@ t1 <- cor.test(m_df$mean_gazelle_equivalents, m_df$avg_annual_rainfall,
                method="pearson")
 t2 <- cor.test(m_df$mean_gazelle_equivalents, m_df$total_kgha)
 
+# package up for submission to PLOS ONE
+sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/back_calc_match_summary_2015_con.csv")
+sum_df <- sum_df[, c('g_m2', 'sim_vs_emp', 'site')]
+sum_res <- reshape(sum_df, idvar='site', timevar='sim_vs_emp',
+                   direction="wide")
+FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+sum_res <- merge(sum_res, FID_list, by.x='site', by.y='FID')
+comp_dat <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/composition_dat.csv")
+regional_dat <- merge(sum_res, comp_dat, by.x='NAME', by.y='Property')
+regional_dat <- regional_dat[, colnames(regional_dat)[c(2, 4, 3, 5:8)]]
+colnames(regional_dat) <- c('Regional_site', 'biomass_empirical', 'biomass_sim_back-calc', 
+                            'proportion_Pennisetum_stramineum', 'proportion_Themeda_triandra',
+                            'proportion_Pennisetum_mezianum', 'proportion_other_spp')
+write.csv(regional_dat, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/regional.csv",
+          row.names=FALSE)  # S3_Table
+
 # summarize match by back-calc management routine
 sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match_summary_2015.csv")
 
@@ -797,6 +813,13 @@ pngname <- paste(img_dir, "PM_proportion_by_property.png", sep="/")
 png(file=pngname, units="in", res=300, width=4, height=2)
 print(p)
 dev.off()
+
+# package for submission to PLOS ONE: percent PS, TT, PM and other
+proportion_table$sum_others <- 1 - rowSums(proportion_table[, c('PS', 'TT', 'PM')])
+comp_dat <- proportion_table[, c('PS', 'TT', 'PM', 'sum_others')]
+comp_dat$Property <- row.names(comp_dat)
+write.csv(comp_dat, paste(img_dir, 'composition_dat.csv', sep='/'),
+          row.names=FALSE)
 
 # average biomass across properties in 2014, for regional scenarios
 emp_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")

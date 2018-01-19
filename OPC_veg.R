@@ -99,6 +99,18 @@ for (r in (1:NROW(dung_gr_br))){
   dung_gr_br[r, 'year_month'] <- format(date, "%Y_%m")
 }
 
+# package up data for submission to PLOS ONE
+PDM_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
+dung_gb_subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'carnivore', 'mixed',
+                               'browser', 'perc_green', 'transect', 'year_month')]
+PDM_subs <- PDM_summary[, c('transect', 'PDM', 'biomass_kgha')]
+all_dat <- merge(dung_gb_subs, PDM_subs, by='transect')
+mean_by_month <- aggregate(all_dat[, c(2, 3, 7)], by=list(all_dat$year_month),
+                           FUN=mean, na.rm=TRUE)
+colnames(mean_by_month) <- c('Month', 'Bovid', 'Non-bovid grazer', 'Percent green hits')
+write.csv(mean_by_month, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/fig6.csv",
+          row.names=FALSE)  # S5 Dataset
+
 # month as covariate
 subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid',
                        'green_sum', 'perc_green', 'transect', 'year_month')]
@@ -598,6 +610,14 @@ for(spp in spp_list){
   print(p)
   dev.off()
 }
+
+# package up Jenny's data for submission to PLOS ONE
+summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
+sum_df = read.csv(summary_csv)
+sum_df <- sum_df[sum_df$sim_vs_emp == 'empirical', c('site', 'date', 'biomass')]
+colnames(sum_df) <- c('Site', 'Date', 'Biomass_g/m2')
+write.csv(sum_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/Jenny_sites.csv",
+          row.names=FALSE)  # S6 Dataset
 
 # back-calculated management of Jenny's sites (33 sites, 9.14.16)
 summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
