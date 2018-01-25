@@ -53,3 +53,24 @@ write.csv(consumed_total, "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/SWAT_Ucros
           row.names=FALSE)
 
 sum(consumed_total$rot_minus_cont, na.rm=TRUE) / (3767*5) # average yearly difference per ha
+
+#### model outputs describing standing biomass
+Ave_annual_values <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/WitW/SWAT_Ucross/SWAT_databases/Rotational/5 year rotational/Ave_annual_values.csv")
+Ave_annual_values$id <- paste(Ave_annual_values$HRU, Ave_annual_values$SUB, sep="_")
+Ave_annual_values <- Ave_annual_values[, c('id', 'BIOMth', 'YLDth')]
+grz_r$bio_eat_x_grz_days <- grz_r$GRZ_DAYS * grz_r$BIO_EAT
+yearly_consumed <- aggregate(bio_eat_x_grz_days~UNIQUECOMB + YEAR,
+                             data=grz_r, FUN=sum)
+ave_yearly_consumed <- aggregate(bio_eat_x_grz_days~UNIQUECOMB,
+                                 data=yearly_consumed, FUN=mean)
+std_yearly_consumed <- aggregate(bio_eat_x_grz_days~UNIQUECOMB,
+                                 data=yearly_consumed, FUN=sd)
+# get comparable biomass eaten from inputs
+rot5_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/SWAT_Ucross/SWAT_databases/Rotational/5 year rotational/SWATmodelthirdIteration.mdb"
+rot5_db <- odbcConnectAccess2007(rot5_file)
+mgt2_r <- sqlFetch(rot5_db, 'mgt2')
+grz_r <- mgt2_r[mgt2_r$MGT_OP == 9, ]
+mgt1_r <- sqlFetch(rot5_db, 'mgt1')
+unique(mgt1_r$BIO_MIN)  # 0, 50 (kg/ha)
+
+grz_r$UNIQUECOMB <- paste(grz_r$SUBBASIN, grz_r$LANDUSE, grz_r$SOIL, grz_r$SLOPE_CD, sep="_")
