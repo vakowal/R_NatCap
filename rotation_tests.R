@@ -92,8 +92,8 @@ comp_resh$date <- comp_resh$year + (1/12) * comp_resh$month
 p <- ggplot(comp_resh, aes(x=date, y=proportion_high_quality, group=treatment))
 p <- p + geom_line(aes(linetype=treatment))
 p <- p + facet_wrap(~num_animals)
-p <- p + ylab("Proportion nutritious grass")
-print(p)
+p <- p + ylab("Proportion desirable species")
+p <- p + theme(legend.position="bottom") + theme(legend.title=element_blank())
 pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/WitW/model_results/Ucross/prop_high_cp_10_130_250_anim.png"
 png(file=pngname, units="in", res=300, width=8, height=4)
 print(p)
