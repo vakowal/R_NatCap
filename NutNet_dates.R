@@ -18,12 +18,12 @@ rawdate$format <- NA
 done <- rawdate[is.na(rawdate$processed), ]
 rem <- rawdate[!rawdate$index %in% done$index, ]
 
-# separate subsets to be treated differently
+# manual fixes
 rem[rem$processed == "5/5, 5/11, 5/12/17", 'processed'] <- '5/9/17'
 rem[rem$processed == "21 Jun 2011 and 30 Aug 20", 'processed'] <- '2011'
 rem[rem$processed == "2011/5/25 & 2011/11/12", 'processed'] <- '2011'
 rem[rem$processed == "6/20 & 9/15/2016", 'processed'] <- '2016'
-rem[rem$processed == "2011231", 'processed'] <- '2011'
+rem[rem$processed == "2011231", 'processed'] <- '1/23/2011'
 rem[rem$processed == "2011237", 'processed'] <- '7/23/2011'
 rem[rem$processed == "2011238", 'processed'] <- '8/23/2011'
 rem[rem$processed == "2013/8/26", 'processed'] <- '8/26/2013'
@@ -45,16 +45,14 @@ for(r in 1:nrow(rem)){
   }
 }
 for(r in 1:nrow(rem)){
-  if(!is.na(rem[r, 'date3'])){
-    if(nchar(rem[r, 'date3']) == 2){
-      if(rem[r, 'date3'] > 17){
-        rem[r, 'date3'] <- NA
-        rem[r, 'processed'] <- paste(rem[r, 'date1'], rem[r, 'date2'], sep='/')
-      }
-      else {
-        rem[r, 'date3'] <- paste('20', rem[r, 'date3'], sep="")
-        rem[r, 'processed'] <- paste(rem[r, 'date1'], rem[r, 'date2'], rem[r, 'date3'], sep='/')
-      }
+  if(nchar(rem[r, 'date3']) == 2){
+    if(rem[r, 'date3'] > 17){
+      rem[r, 'date3'] <- rem[r, 'year']
+      rem[r, 'processed'] <- paste(rem[r, 'date1'], rem[r, 'date2'], rem[r, 'year'], sep='/')
+    }
+    else {
+      rem[r, 'date3'] <- paste('20', rem[r, 'date3'], sep="")
+      rem[r, 'processed'] <- paste(rem[r, 'date1'], rem[r, 'date2'], rem[r, 'date3'], sep='/')
     }
   }
 }
@@ -96,4 +94,12 @@ library(ggplot2)
 p <- ggplot(rem, aes(x=date_formatted, y=date_certain))
 p <- p + geom_point()
 print(p)  # sweet
+
+date_unknown$date_formatted <- as.Date(NA)
+dates_corrected <- rbind(rem, date_unknown)
+dates_corrected <- dates_corrected[, c('date', 'year', 'site_code',
+                                       'block', 'plot', 'subplot',
+                                       'date_certain', 'date_formatted')]
+save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/NutNet/dates_corrected.csv"
+write.csv(dates_corrected, save_as, row.names=FALSE)
 
