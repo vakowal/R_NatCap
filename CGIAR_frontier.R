@@ -17,7 +17,10 @@ imgdir <- paste(outer_dir, "frontier_figs", sep="/")
 suf_list <- list.files(outer_dir)
 suf_list <- suf_list[-c(1, 5, 6)]
 for(f in suf_list){
-  sum_df <- read.csv(paste(outer_dir, f, "score_summary.csv", sep="/"))
+  # sum_df <- read.csv(paste(outer_dir, f, "score_summary.csv", sep="/"))
+  f <- 'animal_weights_survey_default'
+  imgdir <- 'C:/Users/Ginger/Desktop'
+  sum_df <- read.csv("C:/Users/Ginger/Downloads/animal_weights_survey_default_beta_scores_summary.csv")
   
   p <- ggplot(sum_df, aes(x=sdr_score, y=swy_score))
   p <- p + geom_point()
@@ -37,10 +40,11 @@ for(f in suf_list){
   print(p)
   dev.off()
   
-  p <- ggplot(sum_df, aes(x=livestock_score, y=sdr_score))
+  p <- ggplot(sum_df, aes(x=livestock_score,  y=sdr_score))
   p <- p + geom_point()
   p <- p + xlab("Livestock score (average yearly kg gained)") + ylab("SDR score (tons sediment per year)")
   p <- p + print_theme
+  p <- p + scale_y_reverse()
   pngname <- paste(imgdir, paste("livestock_x_sdr_", f, ".png", sep=""), sep="/")
   png(file=pngname, units="in", res=300, width=4, height=4)
   print(p)
