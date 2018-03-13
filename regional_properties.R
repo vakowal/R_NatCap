@@ -1109,3 +1109,22 @@ pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/mode
 png(file=pngname, units="in", res=300, width=7, height=6)
 print(p)
 dev.off()
+
+# regional properties precip in 2014 and 2015, for Felicia, 3.13.18
+fid_match <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/Kenya_forage/regional_properties_Jul_8_2016_Mpala_split_FID_match.csv")
+prec_month <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_2014_2015_FEWS_RFE.csv")
+prec_year <- aggregate(prec~site+year, data=prec_month, FUN=sum)
+prec_year[prec_year$year == 14, 'year'] <- 2014
+prec_year[prec_year$year == 15, 'year'] <- 2015
+colnames(prec_year) <- c('FID', 'year', 'precip_mm')
+prec_year <- merge(prec_year, fid_match, by.x='site', by.y='FID')
+write.csv(prec_year, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE.csv",
+          row.names=FALSE)
+# reshape by hand (lame)
+prec_res <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE_reshape.csv")
+worldclim_prec <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+colnames(prec_res) <- c('FID', 'NAME', 'precip_mm_RFE_2014', 'precip_mm_RFE_2015')
+colnames(worldclim_prec)[5] <- 'precip_mm_avg_annual_Worldclim'
+merged <- merge(prec_res, worldclim_prec, by='NAME')
+write.csv(merged, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_FEWS_RFE_Worldclim.csv",
+          row.names=FALSE)
