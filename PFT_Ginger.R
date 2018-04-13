@@ -60,7 +60,7 @@ length(na.omit(as.vector(pft.array[, , 1]))) #80494
 
 # make rasters for PFTs we care about
 pft_df <- expand.grid(lon=lon, lat=lat)
-for(pft_idx in c(10:15)){
+for(pft_idx in c(1, 10:15)){
   zval <- as.vector(pft.array[, , pft_idx])
   xyz <- cbind(pft_df, zval)
   ras <- rasterFromXYZ(xyz, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs ")
