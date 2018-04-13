@@ -3,8 +3,77 @@
 
 library(RODBC)
 
-db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_boogie_11.15.17.accdb"
-# db <- "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
+# process rangeland metric variables and scores
+# SCP
+SCP_total <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/rangeland_metric/rangeland_metric_SCP.csv")
+SCP_variables <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/rangeland_metric/rangeland_metric_variables_SCP.csv")
+setdiff(SCP_total$Site, SCP_variables$Site.WCS.2017)  # 0
+setdiff(SCP_variables$Site.WCS.2017, SCP_total$Site)  # 0
+
+SCP_variables$year <- sapply(strsplit(as.character(SCP_variables$Site.WCS.2017), split="_"), `[`, 2)
+SCP_variables$site_id <- sapply(strsplit(as.character(SCP_variables$Site.WCS.2017), split="_"), `[`, 1)
+SCP_total$year <- sapply(strsplit(as.character(SCP_total$Site), split="_"), `[`, 2)
+SCP_total$site_id <- sapply(strsplit(as.character(SCP_total$Site), split="_"), `[`, 1)
+SCP_total <- SCP_total[, colnames(SCP_total)[3:7]]
+SCP_variables <- SCP_variables[, colnames(SCP_variables)[4:26]]
+SCP_rm <- merge(SCP_total, SCP_variables)
+
+# CBM
+cbm_list <- list()
+outer_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/rangeland_metric"
+for(ecosys in c('desert_steppe', 'semi_desert', 'true_desert')){
+  df <- read.csv(paste(outer_dir, paste('rangeland_metric_variables_CBM_',
+                                        ecosys, '.csv', sep=""), sep="/"),
+                 stringsAsFactors=FALSE, header=FALSE)
+  df_t <- as.data.frame(t(df), stringsAsFactors=FALSE)
+  colnames(df_t) <- df[, colnames(df)[1]]
+  df_t <- df_t[2:dim(df_t)[1], ]
+  colnames(df_t)[1] <- 'site_id'
+  df_t$site_id <- paste("V",
+                        formatC(as.integer(df_t$site_id), width=2, format="d", flag="0"),
+                        sep="")
+  df_t$Ecosystem <- ecosys
+  cbm_list[[ecosys]] <- df_t
+}
+intersect(cbm_list[[1]]$site_id, cbm_list[[2]]$site_id)  # 0
+intersect(cbm_list[[1]]$site_id, cbm_list[[3]]$site_id)  # 0
+intersect(cbm_list[[2]]$site_id, cbm_list[[3]]$site_id)  # 0; no sites duplicated btw ecosystems
+setdiff(colnames(cbm_list[[1]]), colnames(cbm_list[[2]]))  # 0
+setdiff(colnames(cbm_list[[1]]), colnames(cbm_list[[3]]))  # 0
+setdiff(colnames(cbm_list[[2]]), colnames(cbm_list[[3]]))  # 0; all cols shared
+CBM_rm <- do.call(rbind, cbm_list)
+# certain sites had different locations in 2016 and 2017 - identify these as belonging to 2017
+spatial_key <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/CBM_spatial_site_key.csv")
+spatial_key <- spatial_key[spatial_key$year_suf == 17, ]
+for(s in spatial_key$site_id){
+  CBM_rm[CBM_rm$site_id == s, 'site_id'] <- paste(s, "17", sep="_")
+}
+
+# re order columns, combine SCP with CBM
+CBM_rm <- CBM_rm[,  colnames(CBM_rm)[c(1:22, 24, 25)]]
+colnames(CBM_rm)[23] <- "Rangeland metric score"
+CBM_rm$year <- 2017
+CBM_rm$source <- 'CBM'
+SCP_rm <- SCP_rm[, colnames(SCP_rm)[c(2, 6:26, 3, 4, 1)]]
+SCP_rm$source <- 'SCP'
+colnames(SCP_rm) <- colnames(CBM_rm)
+rm_df <- rbind(CBM_rm, SCP_rm)  # <<<-- rangeland metric scores for CBM and SCP
+write.csv(rm_df, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/rangeland_metric_SCP_CBM_2017.csv",
+          row.names=FALSE)
+
+# authoritative biomass records (calculated below)
+SCP_herb_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv")
+SCP_herb_biomass$year <- sapply(strsplit(as.character(SCP_herb_biomass$Date), split="-"), `[`, 1)
+SCP_rm_biomass <- merge(SCP_herb_biomass, SCP_rm, all=TRUE)  # yay
+
+CBM_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/total_biomass_SCP_CBM.csv")
+CBM_biomass <- CBM_biomass[CBM_biomass$source == 'CBM', ]
+CBM_rm_biomass <- merge(CBM_biomass, CBM_rm, all=TRUE)  # confirms site match, but can't use b/c biomass data is all
+                                                        # from 2016, and RM data is just from 2017
+
+## database, biomass
+db <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_boogie_11.15.17.accdb"
+# db <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
 con2 <- odbcConnectAccess2007(db)
 
 # non-woody biomass, Boogie's sites
@@ -57,8 +126,8 @@ total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
 colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
 total_biomass_SCP$source <- 'SCP'
 
-CBM_sites <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_site_coordinates_2016_17.csv")
-CBM_biomass_16 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_biomass_data_2016.csv")
+CBM_sites <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_site_coordinates_2016_17.csv")
+CBM_biomass_16 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_biomass_data_2016.csv")
 ## TODO calc 2017 biomass from LPI data, using LPI and biomass data from 2016
 for(r in 1:NROW(CBM_sites)){
   if(length(strsplit(as.character(CBM_sites[r, 'id_GK']),
@@ -83,7 +152,7 @@ CBM_biomass$source <- 'CBM'
 
 biomass_combined <- rbind(CBM_biomass, total_biomass_SCP)
 write.csv(biomass_combined,
-          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/biomass_SCP_CBM.csv",
+          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/total_biomass_SCP_CBM.csv",
           row.names=FALSE)
 # check: compare biomass of SCP vs CBM sites in 2016
 wth_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_SCP_points_nearest_soum_ctr.csv")
