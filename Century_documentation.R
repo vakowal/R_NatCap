@@ -5,9 +5,9 @@
 # files crop.def, fix.def, graz.def, site.def
 
 # intermediate processed files:
-param_list_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_list_intermediate.csv"
-param_def_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_definitions_intermediate.csv"
-param_range_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_ranges_intermediate.csv"
+param_list_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_list_intermediate.csv"
+param_def_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_definitions_intermediate.csv"
+param_range_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_ranges_intermediate.csv"
 
 pdef <- read.csv(param_def_csv, stringsAsFactors=FALSE)
 cols <- colnames(pdef)[4:15]
@@ -25,7 +25,7 @@ pdef_processed <- pdef[(nchar(pdef$parameter) > 0),
                         keep_cols]
 pdef_processed <- pdef_processed[pdef_processed$parameter != '***', ]
 write.csv(pdef_processed,
-           "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_definitions.csv",
+           "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_definitions.csv",
            row.names=FALSE)
 
 # join parameter files together
@@ -39,7 +39,7 @@ param_list[param_list$parameter == "4-dec", 'parameter'] <- "dec4*"
 params <- merge(pdef_processed, param_list)
 
 # parameters to be removed marked in this file
-params_to_remove <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameters_to_remove.csv")
+params_to_remove <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameters_to_remove.csv")
 params <- merge(params, params_to_remove)
 params_necc <- params[params$fix_remove != 'yes', ]
 
@@ -57,7 +57,7 @@ init_cols <- c('parameter', 'definition', 'range',
 init_table <- init_table[order(init_table$row.index), init_cols]
 colnames(init_table) <- c("Variable name", "Definition", "Valid range",
                          "Example value", "Example value source")
-write.csv(init_table, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Initialization_variables.csv",
+write.csv(init_table, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Initialization_variables.csv",
           row.names=FALSE)
 
 p_table <- params_w_ranges[params_w_ranges$derivation == 'parameter', ]
@@ -73,7 +73,18 @@ for(r in 1:nrow(p_table)){
 p_cols <- c('parameter', 'definition', 'valid_values', 'example.value',
             'example.value.source', 'file')
 p_table <- p_table[order(p_table$file, p_table$row.index), p_cols]
-colnames(p_table) <- c("Parameter name", "Definition", "Valid values",
-                       "Example value", "Example value source", "Century input file")
-write.csv(p_table, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_table.csv",
+p_table[p_table$parameter=='dec4*', 'parameter'] <- 'dec4'  # mistake in Century docs
+# add column for rangeland production model parameter names
+p_table$rp_name <- p_table$parameter
+p_table$rp_name <- gsub("\\(", "_", p_table$rp_name)
+p_table$rp_name <- gsub("\\,", "_", p_table$rp_name)
+p_table$rp_name <- gsub("\\)", "", p_table$rp_name)
+p_table$char_of <- NA
+p_table[p_table$file == 'fix.100', 'char_of'] <- 'site'
+p_table[p_table$file == 'site.100', 'char_of'] <- 'site'
+p_table[p_table$file == 'crop.100', 'char_of'] <- 'PFT'
+colnames(p_table) <- c("Century parameter name", "Definition", "Valid values",
+                       "Example value", "Example value source", "Century input file",
+                       "Rangeland production model name", "Property of")
+write.csv(p_table, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameter_table.csv",
           row.names=FALSE)
