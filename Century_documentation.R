@@ -40,7 +40,8 @@ params <- merge(pdef_processed, param_list)
 
 # parameters to be removed marked in this file
 params_to_remove <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_parameters_to_remove.csv")
-params <- merge(params, params_to_remove)
+params_to_remove <- params_to_remove[, c('parameter', 'fix_remove')]
+params <- merge(params, params_to_remove, all=TRUE)
 params_necc <- params[params$fix_remove != 'yes', ]
 
 # make tables for inclusion in design doc
@@ -83,6 +84,7 @@ p_table$char_of <- NA
 p_table[p_table$file == 'fix.100', 'char_of'] <- 'site'
 p_table[p_table$file == 'site.100', 'char_of'] <- 'site'
 p_table[p_table$file == 'crop.100', 'char_of'] <- 'PFT'
+p_table[p_table$rp_name == 'nlaypg', 'char_of'] <- 'PFT'
 colnames(p_table) <- c("Century parameter name", "Definition", "Valid values",
                        "Example value", "Example value source", "Century input file",
                        "Rangeland production model name", "Property of")
