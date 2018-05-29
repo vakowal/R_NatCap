@@ -88,6 +88,31 @@ for(n_idx in c('annual_potential', 'perennial_cover')){
   }
 }
 
+# reclassify EVT for inclusion in Maxent modeling
+evt_key <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Landfire/US_140EVT_04252017/CSV_Data/LF_140EVT_09152016.csv")
+evt_nussear_res_file <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/landfire_evt_res_to_nussear.tif"
+evt <- raster(evt_nussear_res_file)
+evt_key_subs <- evt_key[evt_key$VALUE %in% unique(values(evt)), ]
+evt_introduced_classes <- evt_key_subs[grep("^Introduced", evt_key_subs$CLASSNAME), 'VALUE']
+evt_native_classes <- setdiff(evt_key_subs$VALUE, evt_introduced_classes)
+evt_introduced_only <- evt
+for(n_class in evt_native_classes){
+  evt_introduced_only[evt_introduced_only == n_class] <- NA
+}
+evt_introduced_combined <- evt_introduced_only
+for(value in evt_introduced_classes){
+  evt_introduced_combined[evt_introduced_combined == value] <- 1
+}
+
+save_dir <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/maxent_predictors"
+writeRaster(evt_introduced_only,
+            filename=paste(save_dir, "evt_introduced_classes_only.asc", sep="/"),
+            format='ascii', prj=TRUE)
+writeRaster(evt_introduced_combined,
+            filename=paste(save_dir, "evt_introduced_classes_combined.asc", sep="/"),
+            format='ascii', prj=TRUE)
+
+
 # EVT's fine resolution
 evt_evt_res_file <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/landfire_evt.tif"
 annual_evt_res_file <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/annProx_res_to_evt.tif"
