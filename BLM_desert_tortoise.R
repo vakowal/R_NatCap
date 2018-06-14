@@ -97,7 +97,7 @@ evt_introduced_classes <- evt_key_subs[grep("^Introduced", evt_key_subs$CLASSNAM
 evt_native_classes <- setdiff(evt_key_subs$VALUE, evt_introduced_classes)
 evt_introduced_only <- evt
 for(n_class in evt_native_classes){
-  evt_introduced_only[evt_introduced_only == n_class] <- NA
+  evt_introduced_only[evt_introduced_only == n_class] <- 0
 }
 evt_introduced_combined <- evt_introduced_only
 for(value in evt_introduced_classes){
@@ -112,6 +112,26 @@ writeRaster(evt_introduced_combined,
             filename=paste(save_dir, "evt_introduced_classes_combined.asc", sep="/"),
             format='ascii', prj=TRUE)
 
+# point to raster: tortoise observations
+torts_shp <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/tort_obs_combined_proj.shp"
+torts_pt <- shapefile(torts_shp)
+evt_nussear_res_file <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/landfire_evt_res_to_nussear.tif"
+template_raster <- raster(evt_nussear_res_file)
+tort_ras <- rasterize(torts_pt, template_raster, field=1)
+tort_ras_nodata <- reclassify(tort_ras, cbind(NA, 0))
+tort_ras_nodata_masked <- mask(tort_ras_nodata, template_raster)
+writeRaster(tort_ras_nodata_masked,
+            filename="C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/tort_presence.asc",
+            format='ascii', prj=TRUE, overwrite=TRUE)
+
+# random pixels inside area without presence
+tort_absence <- reclassify(tort_ras_nodata_masked, cbind(1, NA))
+random_background_points <- sampleRandom(tort_absence, 7138, cells=TRUE)
+tort_absence[random_background_points[, 1]] <- 1
+background_points <- reclassify(tort_absence, cbind(0, NA))
+writeRaster(background_points,
+            filename="C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/tort_background_points.asc",
+            format='ascii', prj=TRUE, overwrite=TRUE)
 
 # EVT's fine resolution
 evt_evt_res_file <- "C:/Users/ginge/Documents/NatCap/GIS_local/BLM/Mojave/desert_tortoise/native_introduced_habitat/landfire_evt.tif"
