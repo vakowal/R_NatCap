@@ -57,9 +57,20 @@ p <- p + ggtitle("normalized modeled index >= EO index")
 print(p)
 
 # real data: NDVI and EVI vs modeled aglivc
-modeled_normalized_path <- "C:/Users/ginge/Desktop/test_animal_distribution_dir/NDVI/normalized_biomass.tif"
-EO_normalized_path <- "C:/Users/ginge/Desktop/test_animal_distribution_dir/NDVI/normalized_EO_index.tif"
-modeled_translated_path <- "C:/Users/ginge/Desktop/test_animal_distribution_dir/NDVI/modeled_translated.tif"
+poster_theme <- theme_bw() + theme(strip.text.y=element_text(size=18), 
+                     strip.text.x=element_text(size=18), 
+                     axis.title.x=element_text(size=22), 
+                     axis.title.y=element_text(size=22),
+                     axis.text=element_text(size=18),
+                     plot.title=element_text(size=10, face="bold"),
+                     legend.text=element_text(size=10),
+                     legend.title=element_text(size=10),
+                     panel.border=element_rect(size=2))
+
+outerdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/iems_2018/animal_spatial_distribution"
+modeled_normalized_path <- paste(outerdir, "NDVI/normalized_biomass.tif", sep="/")
+EO_normalized_path <- paste(outerdir, "NDVI/normalized_EO_index.tif", sep="/")
+modeled_translated_path <- paste(outerdir, "NDVI/modeled_translated.tif", sep="/")
 
 # plot points from raster
 real_df <- data.frame('modeled_normalized'=values(raster(modeled_normalized_path)),
@@ -68,12 +79,15 @@ real_df <- data.frame('modeled_normalized'=values(raster(modeled_normalized_path
 
 p <- ggplot(real_df, aes(x=EO_normalized, y=modeled_normalized))
 p <- p + geom_point()
-p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-p <- p + ggtitle("normalized indices")
+p <- p + geom_abline(slope=1, intercept=0, linetype=2, size=1.6)
+# p <- p + ggtitle("normalized indices")
+p <- p + xlab("Normalized NDVI") + ylab("Normalized modeled aboveground biomass")
+p <- p + poster_theme
+p <- p + xlim(0,1)
 print(p)
 
-pngname <- "C:/Users/ginge/Desktop/test_animal_distribution_dir/NDVI/figs/normalized_indices_without_extreme_point.png"
-png(file=pngname, units="in", res=300, width=4.5, height=4)
+pngname <- paste(outerdir, "NDVI/figs/normalized_indices_without_extreme_point.png", sep="/")
+png(file=pngname, units="in", res=300, width=7, height=6.5)
 print(p)
 dev.off()
 
@@ -83,7 +97,7 @@ p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 p <- p + ggtitle("normalized modeled index >= EO index")
 print(p)
 
-pngname <- "C:/Users/ginge/Desktop/test_animal_distribution_dir/EVI/figs/EO_vs_modeled_translateds_without_extreme_point.png"
+pngname <- paste(outerdir, "NDVI/figs/EO_vs_modeled_translateds_without_extreme_point.png", sep="/")
 png(file=pngname, units="in", res=300, width=4.5, height=4)
 print(p)
 dev.off()
