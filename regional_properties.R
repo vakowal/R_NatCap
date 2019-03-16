@@ -12,7 +12,7 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # regional scenarios: mean densities of each ecolclass within each property
-biom_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/biomass_summary.csv")
+biom_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/biomass_summary.csv")
 num_r <- length(unique(biom_df$site)) * 6
 sum_df <- data.frame('site'=character(num_r), 'diff'=numeric(num_r),
                      'class_comparison'=character(num_r),
@@ -51,13 +51,13 @@ p <- p + geom_point()
 p <- p + facet_wrap(~biom_type)
 p <- p + ylab("Difference (g/m2)") + xlab("")
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/diff_plot.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities_within_property/diff_plot.png"
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
 
 # felicia's data, same display
-fel_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.csv")
+fel_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.csv")
 fel_df$class_comparison <- factor(fel_df$class_comparison,
                                   levels=c('livestock_minus_integrated', 'livestock_minus_wildlife',
                                            'integrated_minus_wildlife'),
@@ -70,19 +70,19 @@ p <- ggplot(fel_df, aes(x=class_comparison, y=diff))
 p <- p + geom_point()
 p <- p + facet_wrap(~biom_type)
 p <- p + ylab("Difference (g/m2)") + xlab("")
-pngname = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.png"
+pngname = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Kenya_Ticks_methods/Felicia_fig2_diffs.png"
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
 
 # estimated stocking density (with back-calc mgmt) vs rainfall
-gain_back_calc_sd <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+gain_back_calc_sd <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
 m_df <- merge(gain_back_calc_sd, precip_df, by.x="site", by.y="FID")
 m_df$cp_opt <- 'constant'
 summary(m_df$avg_yearly_gain)
-gain_varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL_est_densities/gain_summary.csv")
+gain_varying_cp <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL_est_densities/gain_summary.csv")
 v_df <- merge(gain_varying_cp, precip_df, by.x="site", by.y="FID")
 v_df$cp_opt <- 'varying'
 combdf <- rbind(m_df, v_df)
@@ -91,21 +91,21 @@ p <- ggplot(combdf, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
 p <- p + geom_point() + ylab("Average annual liveweight gain (kg/ha)")
 p <- p + xlab("Average annual rainfall (cm)")
 p <- p + facet_wrap(~cp_opt) + print_theme
-pngname = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/gain_est_densities_v_rainfall.png"
+pngname = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/gain_est_densities_v_rainfall.png"
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
 
 # remaining biomass after cattle offtake
-est_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_est_density_constant_cp.csv")
-cons_dens_gaz <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_0.3_constant_cp.csv")
+est_dens_gaz <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_est_density_constant_cp.csv")
+cons_dens_gaz <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/mean_gazelles_0.3_constant_cp.csv")
 colnames(est_dens_gaz)[2] <- 'mean_gaz_est_dens'
 colnames(cons_dens_gaz)[2] <- 'mean_gaz_const_dens'
 gaz_df <- merge(est_dens_gaz, cons_dens_gaz, by='site')
 gaz_df <- merge(gaz_df, precip_df, by.x='site', by.y='FID')
-write.csv(gaz_df, 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/gazelles_summary.csv')
+write.csv(gaz_df, 'C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis/gazelles_summary.csv')
 
-rem_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/biomass_remaining_summary.csv")
+rem_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/biomass_remaining_summary.csv")
 rem_df$date <- as.Date(paste(rem_df$year, rem_df$month, '01', sep="-"),
                        format='%Y-%m-%d')
 rem_df$site <- factor(rem_df$site)
@@ -122,7 +122,7 @@ colnames(mean_gazelles_c) <- c('site', 'mean_gazelle_equivalents')
 mean_gazelles_c$cp_opt <- 'constant'
 
 gaz_df <- rbind(mean_gazelles_c, mean_gazelles_v)
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
 m_df <- merge(gaz_df, precip_df, by.x="site", by.y="FID")
 
@@ -133,15 +133,15 @@ p <- p + facet_wrap(~cp_opt) + print_theme
 print(p)
 p2 <- p
 
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
 pngname = paste(imgdir, "gazelle_equiv_constant_vs_varying_cp_GL_0.3.png", sep="/")
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p2)
 dev.off()
 
 # correlation between mean gazelles by property, and precip, and biomass
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
-zero_dens_biomass <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/mean_total_biomass_by_site.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+zero_dens_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/mean_total_biomass_by_site.csv")
 
 m_df <- merge(mean_gazelles, precip_df, by.x="site", by.y="FID")
 m_df <- merge(m_df, zero_dens_biomass, by="site")
@@ -150,23 +150,23 @@ t1 <- cor.test(m_df$mean_gazelle_equivalents, m_df$avg_annual_rainfall,
 t2 <- cor.test(m_df$mean_gazelle_equivalents, m_df$total_kgha)
 
 # package up for submission to PLOS ONE
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/back_calc_match_summary_2015_con.csv")
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/back_calc_match_summary_2015_con.csv")
 sum_df <- sum_df[, c('g_m2', 'sim_vs_emp', 'site')]
 sum_res <- reshape(sum_df, idvar='site', timevar='sim_vs_emp',
                    direction="wide")
-FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+FID_list <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 sum_res <- merge(sum_res, FID_list, by.x='site', by.y='FID')
-comp_dat <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/composition_dat.csv")
+comp_dat <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/composition_dat.csv")
 regional_dat <- merge(sum_res, comp_dat, by.x='NAME', by.y='Property')
 regional_dat <- regional_dat[, colnames(regional_dat)[c(2, 4, 3, 5:8)]]
 colnames(regional_dat) <- c('Regional_site', 'biomass_empirical', 'biomass_sim_back-calc', 
                             'proportion_Pennisetum_stramineum', 'proportion_Themeda_triandra',
                             'proportion_Pennisetum_mezianum', 'proportion_other_spp')
-write.csv(regional_dat, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/regional.csv",
+write.csv(regional_dat, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/regional.csv",
           row.names=FALSE)  # S3_Table
 
 # summarize match by back-calc management routine
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match_summary_2015.csv")
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match_summary_2015.csv")
 
 p <- ggplot(sum_df, aes(x=site, y=g_m2, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
@@ -175,14 +175,14 @@ p <- p + facet_wrap(~year + live_or_total, scales="free")
 p <- p + ylab('biomass (grams per square m)')
 print(p)
 
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis"
 pngname <- paste(img_dir, "back_calc_match_summary_2015_constrained.png", sep="/")
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
 
 # add error bars for min-max empirical measurements
-emp_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
+emp_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
 emp_min <- emp_summary[which(emp_summary$Year == 2015), c("FID", "min_gm2")]
 emp_min$min_max <- 'min'
 emp_max <- emp_summary[which(emp_summary$Year == 2015), c("FID", "max_gm2")]
@@ -205,15 +205,15 @@ p <- p + geom_point(aes(colour=sim_vs_emp))
 p <- p + ylab('biomass (grams per square m)')
 print(p)
 
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis"
 pngname <- paste(img_dir, "back_calc_match_summary_2015_min-max_empirical_modify_24_months.png", sep="/")
 png(file=pngname, units="in", res=300, width=7, height=5)
 print(p)
 dev.off()
 
 # compare intensity in shared months: back-calc match 2015, and 2014
-summary_2015 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
-summary_2014 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2014_total/2014_total_schedule_summary.csv")
+summary_2015 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
+summary_2014 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2014_total/2014_total_schedule_summary.csv")
 cols_to_keep <- c("date", "site", "total_rem")
 summary_2015 <- summary_2015[, cols_to_keep]
 colnames(summary_2015)[3] <- 'g_m2_removed_match_2015'
@@ -237,9 +237,9 @@ dev.off()
 
 # compare intensity in shared months: back-calc to match 2015,
 # running forward from 2014 match (constrained) and not (unconstrained)
-summary_2015 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
-summary_2015_con <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_schedule_summary.csv")
-summary_2014 <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2014_total/2014_total_schedule_summary.csv")
+summary_2015 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
+summary_2015_con <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_schedule_summary.csv")
+summary_2014 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2014_total/2014_total_schedule_summary.csv")
 
 cols_to_keep <- c("date", "site", "total_rem")
 summary_2015 <- summary_2015[, cols_to_keep]
@@ -281,8 +281,8 @@ print(p)
 dev.off()
 
 # compare to back-calc intensity for 2015
-bc_2015_unc <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
-bc_2015_con <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_con_schedule_summary.csv")
+bc_2015_unc <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_2015_total/2015_total_schedule_summary.csv")
+bc_2015_con <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_con_schedule_summary.csv")
 
 # summarize back-calc intensity in last 6 and 12 months
 nrows <- length(unique(bc_2015_con$site)) * 2
@@ -319,22 +319,22 @@ for(per in c(6, 12)){
   }
 }
 bc_summary <- rbind(bc_summary_con, bc_summary_unc)
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/match_2015_intensity_summary.csv"
+save_as <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/match_2015_intensity_summary.csv"
 write.csv(bc_summary, save_as, row.names=FALSE)
 
 bc_summary <- read.csv(save_as)
 
 # summarize intensity across 24 months matching both 2014 and 2015
-bc_2015_con <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_con_schedule_summary.csv")
+bc_2015_con <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/forward_from_2014/back_calc_match 2015/2015_total_con_schedule_summary.csv")
 intensity_df <- aggregate(total_rem~site, data=bc_2015_con, FUN=mean)
 colnames(intensity_df)[2] <- 'average_monthly_gm2_removed'
-save_as <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/intensity_summary_24mo_match_2015_constrained.csv'
+save_as <- 'C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/intensity_summary_24mo_match_2015_constrained.csv'
 write.csv(intensity_df, save_as, row.names=FALSE)
 
 # compare grazing intensity in back-calc history and reported cattle density
-results_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/comparison_with_reported_density"
-est_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
-FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+results_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/comparison_with_reported_density"
+est_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
+FID_list <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
 est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
 est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
@@ -381,8 +381,8 @@ save_as <- paste(results_dir, "correlation_summary_NOMAKURIAN.csv", sep="/")
 write.csv(cor_record, save_as)
 
 # compare stocking density estimated by back-calc management routine with reported cattle densities
-est_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
-FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+est_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/reg_cattle_estimates_11.30.16.csv")
+FID_list <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 est_df$property_cattle <- (est_df$PropCattle0 + est_df$PropCattleT.6) / 2
 est_df$non_property_cattle <- (est_df$NonPropCattle0 + est_df$NonPropCattleT.6) / 2
 est_df$property_non_property_cattle <- est_df$property_cattle + est_df$non_property_cattle
@@ -391,9 +391,9 @@ est_df$prop_non_density <- est_df$property_non_property_cattle / est_df$LwfPropS
 est_df <- merge(est_df, FID_list, by.x="Property", by.y="NAME", all.x=TRUE)
 
 est_df <- est_df[, c('FID', "prop_density", "prop_non_density", "Property")]
-back_calc_sd <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/regional_density_est.csv")
+back_calc_sd <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/regional_density_est.csv")
 est_back_calc_df <- merge(est_df, back_calc_sd, by.x="FID", by.y="site")
-
+write.csv(est_back_calc_df, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/back-calc_reported")
 est_back_calc_df <- est_back_calc_df[which(est_back_calc_df$Property != "Makurian"), ]
 p <- ggplot(est_back_calc_df, aes(x=prop_non_density, y=avg_animals_per_ha))
 p <- p + geom_point()
@@ -401,11 +401,11 @@ p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 print(p)
 
 est_df <- est_df[, c('LwfPropSizeHa', 'FID')]
-prod_uniform_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/gain_summary.csv")
+prod_uniform_dens <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/gain_summary.csv")
 prod_uniform_dens <- prod_uniform_dens[, c('site', 'total_yearly_delta_weight_kg_per_ha')]
 colnames(prod_uniform_dens)[2] <- 'yearly_herd_gain_uniform_dens'
 
-prod_est_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
+prod_est_dens <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL_est_densities/gain_summary.csv")
 prod_est_dens <- prod_est_dens[, c('site', 'total_yearly_delta_weight_kg_per_ha')]
 colnames(prod_est_dens)[2] <- 'yearly_herd_gain_est_dens'
 
@@ -422,9 +422,9 @@ count <- function(values){
   return(length(values))
 }
 
-pdm_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_combined.csv"
+pdm_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_combined.csv"
 pdm_df <- read.csv(pdm_csv)
-FID_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv"
+FID_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv"
 FID_list <- read.csv(FID_csv)
 
 PDM_count <- aggregate(PDM~Year + Transect + Property, data=pdm_df, FUN=count)
@@ -466,12 +466,12 @@ property_summary$sim_date <- property_summary$average_date
 for(i in (1:length(property_summary$Property))){
   property_summary[i, 'sim_date'] <- closest_date(property_summary[i, 'average_date'], date_list)
 }
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv"
+save_as <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv"
 write.csv(property_summary, save_as, row.names=FALSE)
 
 # pin hits summarized by Felicia
-hits_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv")
-metadata <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RS_vegetation_2014_2015_metadata.csv")
+hits_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv")
+metadata <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RS_vegetation_2014_2015_metadata.csv")
 
 metadata$Date.sampled <- as.Date(metadata$Date.sampled, format="%m/%d/%Y")
 sample_dates <- aggregate(Date.sampled~Property+Year, data=metadata, FUN=mean.Date)
@@ -485,7 +485,7 @@ p <- p + geom_point()
 print(p)
 
 # compare empirical and simulated biomass: regional properties
-sim_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
+sim_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
 sim_df$date <- paste(sim_df$month, "28", sim_df$year, sep="-")
 sim_df$date <- as.Date(sim_df$date, format="%m-%d-%Y")
 
@@ -536,7 +536,7 @@ for(r in seq(1, nrows)){
   site_df[r, 'sim_date'] <- as.character.Date(sim_date)
   site_df[r, 'FID'] <- unique(sim_df[which(sim_df$Property == prop), 'site'])
 }
-save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/regional_veg_match_file.csv"
+save_as <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/regional_veg_match_file.csv"
 write.csv(site_df, save_as, row.names=FALSE)
  
 # plot sim vs emp by date
@@ -546,7 +546,7 @@ p <- p + geom_line()
 p <- p + facet_wrap(~Year, scales="free")
 print(p)
 
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/results_analysis"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/results_analysis"
 pngname <- paste(img_dir, "empirical_vs_sim_by_date-zero_dens.png", sep="/")
 png(file=pngname, units="in", res=300, width=10, height=5)
 print(p)
@@ -609,8 +609,8 @@ print(p)
 dev.off()
 
 # how much does biomass in absence of grazing differ btw 6 weather stations?
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip"
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip"
 
 sum_df$site <- as.factor(sum_df$site)
 
@@ -624,7 +624,7 @@ write.table(means_by_site, save_as, sep=",", row.names=FALSE)
 
 # how much does precip differ between FEWS RFE, Worldclim, and OPC weather stations?
 lines <- c("solid", "longdash", "dotted")
-prec_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/prec_source_summary_OPC.csv")
+prec_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/prec_source_summary_OPC.csv")
 
 p <- ggplot(prec_summary, aes(x=date, y=prec_cm, group=Source))
 p <- p + geom_point(aes(colour=Source))
@@ -633,13 +633,13 @@ p <- p + scale_linetype_manual(values=lines)
 p <- p + print_theme
 print(p)
 
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/FEWS_Worldclim_OPC.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/FEWS_Worldclim_OPC.png"
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
 # npp vs precip
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/regional_average_annual_precip_centroid.csv")
 precip_npp <- merge(zero_dens_sum, precip_df, by.x="site", by.y="FID")
 p <- ggplot(precip_npp, aes(x=avg_annual_rainfall, y=kgha_monthly_mean))
 p <- p + geom_point()
@@ -647,9 +647,9 @@ print(p)
       
 # productivity vs precip
 # one stocking density (mean across properties)
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
-outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties"
+outer_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties"
 df_list <- list()
 for(cp_opt in c('constant', 'varying')){
   produc_dir <- paste(outer_dir, paste("herd_avg_uncalibrated_0.3_", cp_opt, "_cp_GL", sep=""), sep="/")
@@ -668,13 +668,13 @@ p <- p + xlab("Average annual rainfall (cm)") + ylab("Average annual liveweight 
 p <- p + print_theme
 p <- p + facet_wrap(~cp_treatment)
 print(p)
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
 pngname = paste(imgdir, "gain_v_rainfall_constant_vs_varying_cp_GL_0.3.png", sep="/")
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
 
-offtake_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/offtake_summary.csv")
+offtake_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/offtake_summary.csv")
 offtake_df <- merge(offtake_df, precip_df, by.x="site", by.y="FID")
 p <- ggplot(offtake_df, aes(x=avg_offtake_constant_cp, y=avg_offtake_varying_cp))
 p <- p + geom_point()
@@ -685,7 +685,7 @@ p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 p <- p + print_theme + xlab("Offtake (kg/ha): fixed % crude protein")
 p <- p + ylab("Offtake (kg/ha): varying % crude protein")
 print(p)
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
 pngname = paste(imgdir, "offtake_constant_vs_varying_cp_GL_0.3.png", sep="/")
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
@@ -694,7 +694,7 @@ dev.off()
 p <- ggplot(offtake_df, aes(x=avg_annual_rainfall, y=avg_offtake_varying_cp))
 p <- p + geom_point() + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_varying_cp_GL/offtake_v_rainfall.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_varying_cp_GL/offtake_v_rainfall.png"
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
@@ -702,17 +702,17 @@ dev.off()
 p <- ggplot(offtake_df, aes(x=avg_annual_rainfall, y=avg_offtake_constant_cp))
 p <- p + geom_point() + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/offtake_v_rainfall.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_0.3_constant_cp_GL/offtake_v_rainfall.png"
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
 
 # range of stocking densities
-zero_dens <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+zero_dens <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/combined_summary.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
-varying_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL/gain_summary.csv")
-constant_cp <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL/gain_summary.csv")
+varying_cp <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_varying_cp_GL/gain_summary.csv")
+constant_cp <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/herd_avg_uncalibrated_constant_cp_GL/gain_summary.csv")
 
 varying_cp$cp_opt <- 'varying'
 constant_cp$cp_opt <- 'constant'
@@ -721,7 +721,7 @@ produc_df <- merge(produc_df, precip_df, by.x='site', by.y='FID')
 produc_df$cp_opt <- factor(produc_df$cp_opt, levels=c('constant', 'varying'),
                            labels=c('Constant % crude protein', 'Varying % crude protein'))
 
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/summary_figs_analysis"
 p <- ggplot(produc_df, aes(x=avg_annual_rainfall, y=avg_yearly_gain))
 p <- p + geom_point()
 p <- p + facet_grid(density ~ cp_opt, scales="free")
@@ -747,7 +747,7 @@ find_sp_id <- function(abbrev){
   return(sp_id)
 }
 
-pin_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RegionalPinframe2014_15_7July2016.csv")
+pin_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/RegionalPinframe2014_15_7July2016.csv")
 pin_df <- pin_df[, (1:84)]
 
 pin_df$trans_pos <- paste(pin_df$Date, pin_df$Property, pin_df$Position_m, sep="#")
@@ -776,7 +776,7 @@ summed_by_sp <- t(sp_sum)
 library(vegan)
 nmds_res <- metaMDS(summed_by_sp, distance="bray", k=3)
 plot(nmds_res)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/NMDS_by_property_3_axes.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys/NMDS_by_property_3_axes.png"
 png(file=pngname, units="in", res=300, width=3, height=3)
 plot(nmds_res)
 dev.off()
@@ -785,7 +785,7 @@ dominant_spp <- as.data.frame(apply(summed_by_sp, MARGIN=1, FUN=which.max))
 colnames(dominant_spp) <- 'dominant'
 hist(dominant_spp$dominant, breaks=50)
 ## dominant spp are "PS" and "TT"
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/regional_surveys"
 proportion_table <- as.data.frame(prop.table(summed_by_sp, 1))
 proportion_table$property <- rownames(proportion_table)
 proportion_table$property <- factor(proportion_table$property,
@@ -818,12 +818,22 @@ dev.off()
 proportion_table$sum_others <- 1 - rowSums(proportion_table[, c('PS', 'TT', 'PM')])
 comp_dat <- proportion_table[, c('PS', 'TT', 'PM', 'sum_others')]
 comp_dat$Property <- row.names(comp_dat)
+property_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/precip_perturbations/property_df.csv"
+property_df <- read.csv(property_csv, stringsAsFactors=FALSE)
+property_df <- property_df[, c("Property", "Felicia_id")]
+comp_dat[comp_dat$Property == "Mpala_ranch", "Property"] <- "Mpala_Ranch"
+comp_dat[comp_dat$Property == "Mpala_research", "Property"] <- "Mpala"
+comp_dat <- merge(comp_dat, property_df, by="Property")
+comp_dat <- comp_dat[order(comp_dat$Felicia_id), c("Felicia_id", "PS", "TT", "PM", "sum_others")]
+colnames(comp_dat) <- c("Property", "proportion_Pennisetum_stramineum",
+                        "proportion_Themeda_triandra", "proportion_Pennisetum_mezianum",
+                        "proportion_other_spp")
 write.csv(comp_dat, paste(img_dir, 'composition_dat.csv', sep='/'),
           row.names=FALSE)
 
 # average biomass across properties in 2014, for regional scenarios
-emp_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
-science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+emp_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
+science_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
 science_df <- science_df[science_df$included_science_ms == "Y", c("Property", "included_science_ms")]
 emp_summary <- merge(emp_summary, science_df, by="Property")
 emp_2014 <- emp_summary[emp_summary$Year == 2014, ]
@@ -840,21 +850,21 @@ match_date <- closest_date(avg_date, date_list)
 
 # compare biomass in back-calculated vs empirical animal numbers
 library(ggplot2)
-plotdf <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary/mean_across_properties_vs_back_calc.csv")
+plotdf <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary/mean_across_properties_vs_back_calc.csv")
 p <- ggplot(plotdf, aes(x=time, y=biomass, group=label))
 p <- p + geom_line(aes(linetype=label))
 p <- p + facet_wrap(~biomass_type)
 p <- p + xlab("date")
 p <- p + theme(legend.position="bottom")
 print(p)
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
 pngname <- paste(img_dir, "biomass_back_calc_vs_mean_across_properties.png", sep="/")
 png(file=pngname, units="in", res=300, width=8, height=4)
 print(p)
 dev.off()
 
 # compare simulated 2015 biomass in 3 ecol classes
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities"
+outerdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities"
 classes <- c('livestock', 'integrated', 'wildlife')
 df_list <- list()
 for(cl in classes){
@@ -877,14 +887,14 @@ p <- ggplot(sum_res, aes(x=ecol_class, y=biomass))
 p <- p + geom_point()
 p <- p + facet_wrap(~label, nrow=1, scales="free")
 print(p)
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_densities/figs_summary"
 pngname <- paste(img_dir, "sim_biomass_ecol_classes.png", sep="/")
 png(file=pngname, units="in", res=300, width=8, height=3.5)
 print(p)
 dev.off()
 
 # simulated biomass with empirical densities, by property
-comp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/biomass_comparison.csv")
+comp_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/biomass_comparison.csv")
 comp_df$diff <- comp_df$biomass_emp_densities - comp_df$biomass_back_calc
 p <- ggplot(comp_df, aes(x=site, y=diff))
 p <- p + geom_point()
@@ -895,11 +905,11 @@ ave_diff_by_multiplier = aggregate(diff~density_multiplier, data=comp_df, FUN=me
 ave_diff_by_multiplier
 
 # merge with empirical biomass
-emp_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
+emp_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_PDM_summary.csv")
 emp_df <- emp_df[emp_df$Year == 2015, c("FID", "Property", "mean_biomass_gm2")]
 plot_df <- merge(emp_df, comp_df, by.x="FID", by.y="site")
 
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mult_7"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mult_7"
 p <- ggplot(plot_df, aes(x=mean_biomass_gm2, y=biomass_back_calc))
 p <- p + geom_point()
 print(p)
@@ -931,13 +941,13 @@ for(dens in unique(plot_df$density_multiplier)){
 subs <- plot_df[, c('FID', 'Property', 'mean_biomass_gm2',
                     'biomass_back_calc', 'biomass_emp_densities',
                     'density_multiplier')]
-write.csv(subs, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
+write.csv(subs, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
           row.names=FALSE)
-subs <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
+subs <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/biomass_summary_empirical_densities_vs_empirical.csv",
                  stringsAsFactors=FALSE)
 subs$perc_diff <- (subs$biomass_emp_densities - subs$mean_biomass_gm2) / subs$mean_biomass_gm2
   
-science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+science_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
 comp_df <- merge(subs, science_df, by="Property", all=TRUE)
 comp_df$EcolClass <- as.factor(comp_df$EcolClass)
 comp_df <- comp_df[comp_df$density_multiplier == 1, ]
@@ -954,7 +964,7 @@ p <- p + xlim(lims) + ylim(lims)
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
 p <- p + xlab("Empirical biomass (g/m2)") + ylab("Simulated biomass (g/m2)")
 print(p)
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary"
 pngname <- paste(img_dir, "empirical_vs_simulated_2015_biomass_mult=1.png", sep="/")
 png(file=pngname, units="in", res=300, width=5.5, height=4)
 print(p)
@@ -970,7 +980,7 @@ p <- p + xlab("Empirical biomass (g/m2)") + ylab("Simulated biomass (g/m2)")
 print(p)
 
 # mismatch vs .......
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mismatch_vs"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/mismatch_vs"
 comp_df <- comp_df[comp_df$included_science_ms == "Y", ]
 comp_df <- comp_df[comp_df$density_multiplier == 1, ]
 comp_df$mismatch <- comp_df$biomass_emp_densities - comp_df$mean_biomass_gm2
@@ -982,16 +992,16 @@ png(file=pngname, units="in", res=300, width=4, height=3)
 print(p)
 dev.off()
 
-dung_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
+dung_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
 comp_df <- merge(comp_df, dung_df, by.x="FID", by.y="Property")
 comp_df$livestock <- comp_df$bovid + comp_df$shoat
 comp_df$total_animals <- rowSums(comp_df[colnames(dung_df)[1:8]])
-precip_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 precip_df$avg_annual_rainfall <- precip_df$avg_annual_rainfall / 10
 comp_df <- merge(precip_df, comp_df, by="FID")
-soil_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Soil/Regional_average_soil.csv")
+soil_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Soil/Regional_average_soil.csv")
 comp_df <- merge(comp_df, soil_df, by="FID")
-zero_dens_biomass <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/mean_total_biomass_by_site.csv")
+zero_dens_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/zero_dens/Worldclim_precip/mean_total_biomass_by_site.csv")
 zero_dens_biomass$biomass_without_grazing <- zero_dens_biomass$total_kgha
 comp_df <- merge(comp_df, zero_dens_biomass, by.x="FID", by.y="site")
 
@@ -1010,10 +1020,10 @@ for(ycol in c('livestock', 'shoat', 'bovid', 'total_animals',
 
 
 # simulated biomass in 3 ecol classes, each property separately
-outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/1.00"
-science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+outer_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/1.00"
+science_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
 science_df <- science_df[science_df$included_science_ms == "Y", c("EcolClass", "Property")]
-FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+FID_list <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 property_df <- merge(science_df, FID_list, by.x="Property", by.y='NAME')
 for(r in 1:NROW(property_df)){
   fid <- property_df[r, 'FID']
@@ -1038,7 +1048,7 @@ p <- ggplot(sum_res, aes(x=EcolClass, y=biomass))
 p <- p + geom_boxplot()
 p <- p + facet_wrap(~label, nrow=1, scales="free")
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_biomass_summary.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_biomass_summary.png"
 png(file=pngname, units="in", res=300, width=8, height=3.5)
 print(p)
 dev.off()
@@ -1054,16 +1064,16 @@ p <- ggplot(sum_res, aes(x=EcolClass, y=gain))
 p <- p + geom_boxplot()
 p <- p + facet_wrap(~label, nrow=1, scales="free")
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_livestock_gain.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/empirical_density_x_1_livestock_gain.png"
 png(file=pngname, units="in", res=300, width=8, height=3.5)
 print(p)
 dev.off()
 
 # relationship between ending bimoass and total # animals
-outer_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult"
-science_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+outer_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult"
+science_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
 science_df <- science_df[science_df$included_science_ms == "Y", c("EcolClass", "Property")]
-FID_list <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
+FID_list <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv")
 property_df <- merge(science_df, FID_list, by.x="Property", by.y='NAME')
 df_list <- list()
 for(m in c('1.00', '1.20', '1.50', '2.00', '5.00', '7.00', '10.00')){
@@ -1084,10 +1094,10 @@ for(m in c('1.00', '1.20', '1.50', '2.00', '5.00', '7.00', '10.00')){
 }
 m_df <- do.call(rbind, df_list)
 # now add animal densities per property
-dung_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
+dung_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means_grouped.csv")
 # weight the density of each animal group by body size (calculated as average unit weight of animals in that group,
 # weighted by their average density across properties)
-body_weight_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/group10_avg_body_weights.csv",
+body_weight_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/group10_avg_body_weights.csv",
                            stringsAsFactors=FALSE)
 body_weight_df$Group10_group <- gsub("-", ".", body_weight_df$Group10_group)
 weighted_density_df <- dung_df
@@ -1105,26 +1115,26 @@ p <- p + geom_point()
 p <- p + facet_wrap(~multiplier)
 p <- p + xlab("Animal sum weighted by body weight") + ylab("2015 biomass")
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/animal_density_v_2015_biomass.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_scenarios/empirical_forward_from_2014_density_mult/figs_summary/animal_density_v_2015_biomass.png"
 png(file=pngname, units="in", res=300, width=7, height=6)
 print(p)
 dev.off()
 
 # regional properties precip in 2014 and 2015, for Felicia, 3.13.18
-fid_match <- read.csv("C:/Users/Ginger/Documents/NatCap/GIS_local/Kenya_forage/regional_properties_Jul_8_2016_Mpala_split_FID_match.csv")
-prec_month <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_2014_2015_FEWS_RFE.csv")
+fid_match <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya_forage/regional_properties_Jul_8_2016_Mpala_split_FID_match.csv")
+prec_month <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_2014_2015_FEWS_RFE.csv")
 prec_year <- aggregate(prec~site+year, data=prec_month, FUN=sum)
 prec_year[prec_year$year == 14, 'year'] <- 2014
 prec_year[prec_year$year == 15, 'year'] <- 2015
 colnames(prec_year) <- c('FID', 'year', 'precip_mm')
 prec_year <- merge(prec_year, fid_match, by.x='site', by.y='FID')
-write.csv(prec_year, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE.csv",
+write.csv(prec_year, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE.csv",
           row.names=FALSE)
 # reshape by hand (lame)
-prec_res <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE_reshape.csv")
-worldclim_prec <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+prec_res <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE_reshape.csv")
+worldclim_prec <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
 colnames(prec_res) <- c('FID', 'NAME', 'precip_mm_RFE_2014', 'precip_mm_RFE_2015')
 colnames(worldclim_prec)[5] <- 'precip_mm_avg_annual_Worldclim'
 merged <- merge(prec_res, worldclim_prec, by='NAME')
-write.csv(merged, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_FEWS_RFE_Worldclim.csv",
+write.csv(merged, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_FEWS_RFE_Worldclim.csv",
           row.names=FALSE)

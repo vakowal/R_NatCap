@@ -45,9 +45,9 @@ save_as <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Keny
 write.csv(comb_df, file=save_as, row.names=FALSE)
 
 # dung around weather stations summarized in python 
-outerdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/OPC_weather_stations"
-points_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_weather_stations_coordinates.csv"
-group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+outerdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/OPC_weather_stations"
+points_file <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_weather_stations_coordinates.csv"
+group_key <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
 gr_key_df <- read.csv(group_key)
 
 # bovids, all transects around weather station 2.15.17
@@ -350,7 +350,7 @@ p <- p + geom_point()
 print(p)
 
 ### Regional properties: dung
-dung_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015.csv"
+dung_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015.csv"
 rdung_df <- read.csv(dung_csv)
 rdung_df <- rdung_df[which(rdung_df$Position_m > 0), ]
 rdung_df <- rdung_df[, c(1:4, 6:29)]

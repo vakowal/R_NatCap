@@ -10,7 +10,7 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
 # pin frame data
-pin_df <- read.csv("C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
+pin_df <- read.csv("C:/Users/ginge/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
 pin_df <- pin_df[, (1:59)]
 
 pin_df$trans_pos <- paste(pin_df$Date, pin_df$Site, pin_df$Position_m, sep="_")
@@ -44,17 +44,17 @@ colnames(green_brown_summary) <- 'transect'
 green_brown_summary$green_sum <- rowSums(pin_mean[, (green_col_idx)])
 green_brown_summary$brown_sum <- rowSums(brown_cols[, -1])
 green_brown_summary$perc_green <- green_brown_summary$green_sum / (green_brown_summary$green_sum + green_brown_summary$brown_sum)
-write.csv(green_brown_summary, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+write.csv(green_brown_summary, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
           row.names=FALSE)
 
 # compare with all groups' dung
-green_brown_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+green_brown_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
                                 stringsAsFactors=FALSE)
-dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv",
+dung_sum <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv",
                      stringsAsFactors=FALSE)
 dung_sum$bovid <- dung_sum$Buf + dung_sum$Cow
 
-group_key <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+group_key <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
 gr_key_df <- read.csv(group_key)
 gr_subs <- gr_key_df[, c('Abbrev', 'Group1', 'Group5', 'Group3', 'Group6')]
 means_t <- as.data.frame(t(dung_sum[, c(2:24, 29)]))
@@ -100,7 +100,7 @@ for (r in (1:NROW(dung_gr_br))){
 }
 
 # package up data for submission to PLOS ONE
-PDM_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
+PDM_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
 dung_gb_subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'carnivore', 'mixed',
                                'browser', 'perc_green', 'transect', 'year_month')]
 PDM_subs <- PDM_summary[, c('transect', 'PDM', 'biomass_kgha')]
@@ -108,7 +108,7 @@ all_dat <- merge(dung_gb_subs, PDM_subs, by='transect')
 mean_by_month <- aggregate(all_dat[, c(2, 3, 7)], by=list(all_dat$year_month),
                            FUN=mean, na.rm=TRUE)
 colnames(mean_by_month) <- c('Month', 'Bovid', 'Non-bovid grazer', 'Percent green hits')
-write.csv(mean_by_month, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/fig6.csv",
+write.csv(mean_by_month, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/fig6.csv",
           row.names=FALSE)  # S5 Dataset
 
 # month as covariate
@@ -127,7 +127,7 @@ for(gr in c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid')){
 }
 
 # barplot of average precip on OPC, for empirical sampling months
-precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
+precip <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
 precip$date <- as.Date(paste(precip$Year, precip$month, '01', sep="-"),
                        format='%Y-%m-%d')
 ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
@@ -142,7 +142,7 @@ p <- p + geom_bar(stat='identity')
 p <- p + scale_x_discrete(labels=labs)
 p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sampling_mos.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sampling_mos.png"
 png(file=pngname, units="in", res=300, width=2.04, height=1.725)
 print(p)
 dev.off()
@@ -160,7 +160,7 @@ p <- p + geom_bar(stat='identity')
 p <- p + scale_x_discrete(labels=labs)
 p <- p + xlab("Month") + ylab("Precipitation (cm)") + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sim_mos.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_sim_mos.png"
 png(file=pngname, units="in", res=300, width=2.79, height=2.09)
 print(p)
 dev.off()
@@ -191,9 +191,9 @@ for(gr in c('bovid', 'grazer_ex_bovid', 'grazer_inc_bovid')){
   }
 }
 
-write.csv(sum_df, file="C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv", row.names=FALSE)
+write.csv(sum_df, file="C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv", row.names=FALSE)
 
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv")
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/veg~dung_by_month_lm_summary.csv")
 sum_df$year_month <- as.character(sum_df$year_month)
 for (r in (1:NROW(sum_df))){
   month <- unlist(strsplit((sum_df[r, 'year_month']), split="_"))[2]
@@ -226,7 +226,7 @@ p <- p + xlab("Month") + ylab("Dung: estimate")
 p <- p + theme(legend.position="none")
 print(p)
 
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/perc_green~dung_by_month_lm_estimate_start_2013.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/perc_green~dung_by_month_lm_estimate_start_2013.png"
 png(file=pngname, units="in", res=300, width=4, height=2)
 print(p)
 dev.off()
@@ -234,11 +234,11 @@ dev.off()
 # how many transects per month of sampling?
 transect_count <- aggregate(dung_gr_br$transect, by=list(dung_gr_br$year_month),
                             FUN=count)
-write.csv(transect_count, file="C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_transect_count_by_month.csv",
+write.csv(transect_count, file="C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_transect_count_by_month.csv",
           row.names=FALSE)
 
 # precip as covariate
-precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
+precip <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_OPC_precip.csv")
 precip$date <- as.Date(paste(precip$Year, precip$month, '01', sep="-"),
                        format='%Y-%m-%d')
 ave_precip <- aggregate(precip_cm~date, data=precip, FUN=mean)
@@ -247,7 +247,7 @@ precip_df <- precip[, c('date', 'precip_cm', 'site')]
 precip_df <- rbind(precip_df, ave_precip)
 OPC_avg_2013_5 <- aggregate(precip_df[, 2:13], by=list(precip_df$Year), FUN=mean)
 colnames(OPC_avg_2013_5)[1] <- 'Year'
-write.csv(OPC_avg_2013_5, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2013_2014_2015_OPC_ave_precip.csv",
+write.csv(OPC_avg_2013_5, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2013_2014_2015_OPC_ave_precip.csv",
           row.names=FALSE)
 p <- ggplot(precip_df, aes(x=date, y=precip_cm, group=site))
 p <- p + geom_line(aes(colour=site))
@@ -263,7 +263,7 @@ p <- p + geom_bar(stat='identity')
 p <- p + xlab("Month") + ylab("Precipitation (cm)")
 p <- p + facet_wrap(~Year, ncol=1) + print_theme
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_2014_2015.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_precip_2014_2015.png"
 png(file=pngname, units="in", res=300, width=5, height=6)
 print(p)
 dev.off()
@@ -271,7 +271,7 @@ dev.off()
 ave_precip <- aggregate(precip_cm ~ Year + month, data=precip, FUN=mean)
 ave_precip$month <- as.numeric(ave_precip$month)
 ave_precip$month <- sprintf("%02d", ave_precip$month)
-pdm_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
+pdm_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
 dung_gr_br <- merge(dung_gr_br, ave_precip, by=c('Year', 'month'), all.x=TRUE)
 dung_gr_br <- merge(dung_gr_br, pdm_summary)
 
@@ -290,7 +290,7 @@ biomass_fit <- lm(biomass_kgha ~ precip_cm, data=dung_gr_br)
 AIC(biomass_fit)
 summary(biomass_fit)
 
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_v_perc_green_figs"
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_v_perc_green_figs"
 for(group in c('bovid', 'grazer_ex_bovid')){ # unique(gr_key_df$Group6)){
   qs <- quantile(dung_gr_br[, group], probs=c(0.25, 0.75))
   dung_gr_br$dung_level <- NA
@@ -309,10 +309,10 @@ for(group in c('bovid', 'grazer_ex_bovid')){ # unique(gr_key_df$Group6)){
 
 
 # compare with bovid dung
-green_brown_summary <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
+green_brown_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/pinframe_green_brown_summary.csv",
                                 stringsAsFactors=FALSE)
 # restricted to 2 km of weather stations
-dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/bovid_dung_weather_2km.csv",
+dung_sum <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/bovid_dung_weather_2km.csv",
                      stringsAsFactors=FALSE)
 dung_gr_br <- merge(dung_sum, green_brown_summary, by='transect')
 dung_gr_br$Date <- as.Date(dung_gr_br$Date, format="%Y-%m-%d")
@@ -324,10 +324,10 @@ dung_gr_br[which(dung_gr_br$site == 'Loirugurugu'), 'site'] <- 'Loirugu'
 dung_gr_br[which(dung_gr_br$site == 'Rongai gate'), 'site'] <- 'Rongai'
 dung_gr_br[which(dung_gr_br$site == 'Simira'), 'site'] <- 'Sirima'
 
-precip <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_precip.csv")
+precip <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/2014_2015_precip.csv")
 precip$month <- sprintf("%02d", precip$month)
 sum_df <- merge(dung_gr_br, precip, by=c("site", "Year", "month"), all.x=TRUE)
-write.csv(sum_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/precip_live_dead_dung_summary.csv",
+write.csv(sum_df, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/precip_live_dead_dung_summary.csv",
           row.names=FALSE)
 
 ## testing: use previous month's rainfall
@@ -347,7 +347,7 @@ AIC(green_sum_fit)
 summary(perc_g_fit)
 summary(green_sum_fit)
 
-dung_sum <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
+dung_sum <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
 dung_gr_br <- merge(dung_sum, green_brown_summary, by='transect')
 dung_gr_br$bovid <- dung_gr_br$Buf + dung_gr_br$Cow
 dung_gr_br$Date <- as.Date(dung_gr_br$Date, format="%d-%b-%y")
@@ -402,12 +402,12 @@ green_biomass_cor_summary <- sum_df
 perc_gr_cor_summary <- sum_df
 
 # live:dead vs back-calc grazing intensity
-comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
+comparison_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/bc_12_mo_intensity.csv"
 b_c_intens_df <- read.csv(comparison_csv)
-b_c_live_dead <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/live_dead_summary.csv")
+b_c_live_dead <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/live_dead_summary.csv")
 b_c_df <- merge(b_c_intens_df, b_c_live_dead, by='site')
 
-img_dir <- "C:/Users/Ginger/Desktop"
+img_dir <- "C:/Users/ginge/Desktop"
 p <- ggplot(b_c_df, aes(x=total_rem, y=avg_ratio_live_dead))
 p <- p + geom_point()
 p <- p + xlab("grazing intensity") + ylab("avg live:dead")
@@ -433,8 +433,8 @@ print(p)
 dev.off()
 
 # summarize match by back-calc management routine
-id_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
+id_match <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
 sum_df <- merge(sum_df, id_match, by='site')
 sum_df$sim_vs_emp <- factor(sum_df$sim_vs_emp, levels=c("sim_default",
                                                         "sim_calc",
@@ -447,14 +447,38 @@ p <- p + ylab('Biomass (grams per square m)') + xlab("Site")
 p <- p + scale_x_continuous(breaks=seq(1, 8))
 p <- p + print_theme
 p <- p + theme(legend.position="none")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.png"
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
 
+# figure edit: two panels for back-calc match summary
+id_match <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
+sum_df <- merge(sum_df, id_match, by='site')
+simulated <- sum_df[sum_df$sim_vs_emp != 'emp', ]
+simulated$source <- ""
+simulated[simulated$sim_vs_emp == 'sim_default', 'source'] <- 'Default schedule'
+simulated[simulated$sim_vs_emp == 'sim_calc', 'source'] <- 'Calibrated schedule'
+simulated$source <- factor(simulated$source, levels=c('Default schedule', 'Calibrated schedule'))
+empirical <- sum_df[sum_df$sim_vs_emp == 'emp', ]
+
+p <- ggplot(simulated, aes(x=order, y=g_m2))
+p <- p + geom_point(data=empirical, aes(x=order, y=g_m2), size=2, shape=1)
+p <- p + geom_point(size=2, shape=17)  # , aes(color=source))
+p <- p + facet_wrap(~source)
+p <- p + print_theme + theme(panel.grid.minor=element_blank())
+p <- p + ylab('Biomass (grams per square m)') + xlab("Site")
+p <- p + scale_x_continuous(breaks=seq(1, 8))
+p <- p + theme(legend.position="none")
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary_2panel.png"
+png(file=pngname, units="in", res=300, width=6, height=3)
+print(p)
+dev.off()
+
 # how much does biomass in absence of grazing differ btw 6 weather stations?
-sum_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens/combined_summary.csv")
-img_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens"
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens/combined_summary.csv")
+img_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens"
 
 sum_df$site <- factor(sum_df$site, levels=c('Loirugu', 'Rongai',
                                             'Kamok', 'Loidien', 
@@ -478,7 +502,7 @@ print(p)
 dev.off()
 
 ## precip on OPC 2.15.17
-indir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input"
+indir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input"
 sites <- c('Golf_7', 'Sirima', 'Kamok', 'Loidien',
            'Research', 'Loirugu', 'Serat', 'Rongai')
 widths <- c(6, 6, rep(7, 12))
@@ -497,7 +521,7 @@ precip_df <- do.call(rbind, df_list)
 precip_res <- reshape(precip_df, idvar="site", varying=c(2:13),
                       v.names="precip_cm", direction="long", timevar='month',
                       new.row.names=1:1000)
-write.csv(precip_res, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/2014_2015_precip.csv",
+write.csv(precip_res, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/2014_2015_precip.csv",
           row.names=FALSE)
 
 # plot average monthly precipitation by site
@@ -516,7 +540,7 @@ p <- ggplot(plot_df, aes(x=month, y=ave_precip, group=site))
 p <- p + geom_point(aes(colour=site))
 p <- p + geom_line(aes(colour=site)) + ylab("average monthly precipitation (cm)")
 print(p)
-pngname <- "C:/Users/Ginger/Desktop/OPC_precip_line.png"
+pngname <- "C:/Users/ginge/Desktop/OPC_precip_line.png"
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
@@ -536,21 +560,21 @@ plot_df <- do.call(rbind, trans_list)
 p <- ggplot(plot_df, aes(x=site, y=yearly_precip))
 p <- p + geom_boxplot() + ylab("annual precipitation (cm)")
 print(p)
-pngname <- "C:/Users/Ginger/Desktop/OPC_boxplot.png"
+pngname <- "C:/Users/ginge/Desktop/OPC_boxplot.png"
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
 
 # integrated test: empirical stocking density simulations compared to empirical biomass measurements
-x10_comp_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_x10_OPC_veg_9.30.16_by_weather.csv"
+x10_comp_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_x10_OPC_veg_9.30.16_by_weather.csv"
 x10df <- read.csv(x10_comp_csv)
 x10df <- x10df[which(x10df$sim_vs_emp == 'sim'), ]
 x10df$multiplier <- '10'
 
-grz_months <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/grazing_months.csv")
-comparison_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_OPC_veg_9.30.16_by_weather.csv"
-veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather.csv"
+grz_months <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/grazing_months.csv")
+comparison_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_OPC_veg_9.30.16_by_weather.csv"
+veg_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather.csv"
 comp_df <- read.csv(comparison_csv)
 veg_df <- read.csv(veg_csv)
 veg_df <- veg_df[which(veg_df$year == 15), ]
@@ -564,7 +588,7 @@ p <- p + geom_line(aes(x=month, y=biomass_kg_ha, colour=sim_vs_emp),
                    data=comp_df)
 p <- p + geom_point(aes(x=month, y=mean_biomass_kgha), data=grz_months)
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison.png"
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
@@ -579,14 +603,14 @@ p <- p + geom_line(aes(colour=multiplier))
 p <- p + geom_point(aes(x=month, y=mean_biomass_kgha), data=grz_months)
 p <- p + facet_wrap(~site, scales='free_x')
 print(p)
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/empirical_density_vs_10x_empirical_density.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/empirical_density_vs_10x_empirical_density.png"
 png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
 # regional veg summary
 ## pin hits summarized by Felicia
-veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
+veg_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/HitsSummary_Aug_10_2016.csv"
 veg_df <- read.csv(veg_csv)
 
 veg_df[is.na(veg_df)] <- 0
@@ -600,7 +624,7 @@ for(i in c(1:length(spp_list))){
     veg_df[, prop_g_list[i]] + veg_df[, prop_b_list[i]]
 }
 
-fig_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/regional_veg_composition_plots"
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Felicia/regional_veg_composition_plots"
 for(spp in spp_list){
   col <- paste("prop_total_", spp, sep="")
   p <- ggplot(veg_df, aes_string(x="X", y=col))
@@ -612,15 +636,15 @@ for(spp in spp_list){
 }
 
 # package up Jenny's data for submission to PLOS ONE
-summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
+summary_csv = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
 sum_df = read.csv(summary_csv)
 sum_df <- sum_df[sum_df$sim_vs_emp == 'empirical', c('site', 'date', 'biomass')]
 colnames(sum_df) <- c('Site', 'Date', 'Biomass_g/m2')
-write.csv(sum_df, "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/Jenny_sites.csv",
+write.csv(sum_df, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/MS_drafts/resubmission/data/Jenny_sites.csv",
           row.names=FALSE)  # S6 Dataset
 
 # back-calculated management of Jenny's sites (33 sites, 9.14.16)
-summary_csv = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
+summary_csv = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/comparison_summary_sim_ext.csv"
 sum_df = read.csv(summary_csv)
 
 failed <- c('N4', 'M10', 'W06', 'GO', 'LO3', 'LO4')
@@ -629,7 +653,7 @@ succeeded <- setdiff(unique(sum_df$site), failed)
 p <- ggplot(sum_df, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp)) + geom_line(aes(colour=sim_vs_emp))
 p <- p + facet_wrap(~site, ncol=10, scales='free')
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/summary_sim_ext.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/summary_sim_ext.png"
 png(file=pngname, units="in", res=300, width=18, height=8)
 print(p)
 dev.off()
@@ -658,7 +682,7 @@ p <- ggplot(interpdf, aes(x=date, y=biomass, group=sim_vs_emp))
 p <- p + geom_point(aes(colour=sim_vs_emp))
 p <- p + geom_line(aes(colour=sim_vs_emp))
 p <- p + facet_wrap(~site, ncol=10, scales='free')
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_emp_meas_date.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_emp_meas_date.png"
 png(file=pngname, units="in", res=300, width=18, height=8)
 print(p)
 dev.off()
@@ -729,13 +753,13 @@ p <- p + facet_wrap(~site, ncol=4, scales='free_x')
 p <- p + ylab("Biomass (g/m2)")
 p <- p + labs(linetype="") + print_theme
 p <- p + scale_x_date(date_breaks = "1 month", date_labels = "%b '%y")
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_fixed_y.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_fixed_y.png"
 png(file=pngname, units="in", res=300, width=9, height=12)
 print(p)
 dev.off()
 
 p <- p + facet_wrap(~site, ncol=4, scales='free')
-pngname <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_free_y.png"
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/interpolated_points_succeeded_free_y.png"
 png(file=pngname, units="in", res=300, width=10, height=12)
 print(p)
 dev.off()
@@ -752,7 +776,7 @@ count <- function(values){
 }
 
 # make sure pinframe data matches with metadata
-pin_df <- read.csv("C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
+pin_df <- read.csv("C:/Users/ginge/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_pinframe.csv")
 pin_df <- pin_df[, (1:59)]
 
 pin_df$trans_pos <- paste(pin_df$Date, pin_df$Site, pin_df$Position_m, sep="_")
@@ -764,7 +788,7 @@ pin_pos_sum$transect <- paste(pin_pos_sum$X1, pin_pos_sum$X2, sep="_")
 pin_mean <- aggregate(pin_pos_sum[, 2:55], by=list(pin_pos_sum$transect), FUN=mean)
 colnames(pin_mean)[1] <- 'transect'
 
-metadata_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
+metadata_csv <- "C:/Users/ginge/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
 meta_df <- read.csv(metadata_csv)
 veg_df <- pin_mean
 
@@ -789,8 +813,8 @@ for (id in meta_ids){
 in_meta_not_veg <- mismatch
 
 # analysis of veg data 9.30.16
-metadata_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
-PDM_csv <- "C:/Users/Ginger/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_PDM_dung.csv"
+metadata_csv <- "C:/Users/ginge/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_metadata.csv"
+PDM_csv <- "C:/Users/ginge/Box Sync/Kenya Fame and Fortune Starts Here Data Portal/Ol_Pej/Project files_Ol Pejeta/OPC_veg_data_9.30.16_PDM_dung.csv"
 
 meta_df <- read.csv(metadata_csv)
 veg_df <- read.csv(PDM_csv)
@@ -890,14 +914,14 @@ for(site in site_list){
 }
 summary_df <- do.call(rbind, df_list)
 
-diagnostic_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_sample_size.csv"
-veg_csv <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather_unrestricted_by_trees_shrubs.csv"
+diagnostic_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_sample_size.csv"
+veg_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_veg_9.30.16_by_weather_unrestricted_by_trees_shrubs.csv"
 write.csv(diagnostic_df, file=diagnostic_csv, row.names=FALSE)
 write.csv(summary_df, file=veg_csv, row.names=FALSE)
 
 # analysis of veg data 11.25.15
-outdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
-file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_11.25.15.csv"
+outdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger"
+file <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/OPC_veg_data_11.25.15.csv"
 
 data <- read.csv(file)
 # restrict empirical biomass measurements to sites with few trees and shrubs
@@ -930,10 +954,10 @@ areas <- unique(data[c('Area')])
 months <- unique(data["date"])
 
 ############## older analyses
-Jenny_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Jenny_biomass_reshaped.txt"
-Sharon_file = "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Vegetation data_July-August_2014_biomass.txt"
+Jenny_file <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Jenny_biomass_reshaped.txt"
+Sharon_file = "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Vegetation data_July-August_2014_biomass.txt"
 
-cp_file <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/CP_combined.txt"
+cp_file <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/CP_combined.txt"
 
 ## Jenny's crude protein data
 cp_dat <- read.table(cp_file, header = TRUE, sep = "\t")
