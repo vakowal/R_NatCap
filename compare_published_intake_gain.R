@@ -15,7 +15,7 @@ print_theme <- theme(strip.text.y=element_text(size=10),
 print_theme_l <- theme_bw() + theme(axis.title=element_text(size=22),
                        axis.text=element_text(size=22))
 
-data_dir <- 'C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations'
+data_dir <- 'C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations'
   
 # published values
 pub_dat <- read.csv(paste(data_dir, "published_values.csv", sep="/"), header=TRUE,
@@ -89,7 +89,7 @@ pub_dat <- pub_dat[pub_dat$Ref == "Shem_et_al", ]
 # simulated values
 study <- 'Shem_et_al_1995'
 sim_l <- list()
-sim_dir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12/summary_unsupplemented"
+sim_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12/summary_unsupplemented"
 sim_dat <- read.csv(paste(sim_dir, "summary.csv",  sep="/"), header=TRUE,
                       stringsAsFactors=FALSE)  # "summary_unsupplemented_CK13x2_CG2=1_CM2div10_CM12div10_unreduced.csv",
 sim_l[[study]] <- sim_dat
@@ -107,15 +107,17 @@ combined = merge(sim_mean_intake, sim_mean_gain)
 combined = merge(combined, pub_dat, by='grass_label', all=TRUE)
 combined$sim_gain_per_intake <- combined$sim_daily_gain / combined$sim_intake_forage
 combined$gain_per_intake <- combined$daily_gain / combined$intake_forage
-combined$diff_intake <- combined$sim_intake_forage - combined$intake_forage
+# bias in intake: observed - predicted
+combined$diff_intake <- combined$intake_forage - combined$sim_intake_forage
 combined$diff_gpi <- combined$sim_gain_per_intake - combined$gain_per_intake
 
-diff_intake_SRW <- aggregate(diff_intake~SRW, data=combined, FUN=mean)
+# mean bias in predicting intake, for each SRW
+mean_bias_intake_by_SRW <- aggregate(diff_intake~SRW, data=combined, FUN=mean)
 diff_gpi_SRW <- aggregate(diff_gpi~SRW, data=combined, FUN=mean)
 mean_intake_SRW <- aggregate(intake_forage~SRW, data=combined, FUN=mean)
 mean_gpi_SRW <- aggregate(gain_per_intake~SRW, data=combined, FUN=mean)
 
-imgdir <- "C:/Users/Ginger/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_12/summary_unsupplemented"
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/Shem_et_al_1995/revisions_10_19/summary_unsupplemented"
 
 numr <- length(unique(combined$SRW))
 cor_df <- data.frame("SRW"=numeric(numr),
@@ -179,15 +181,15 @@ for(SRW in unique(combined$SRW)){
 }
 
 # plots for MS: best matched SRW
-subs <- combined[combined$SRW == 215, ]
-p <- ggplot(subs, aes(x=intake_forage, y=sim_intake_forage))
+subs <- combined[combined$SRW == 160, ]
+p <- ggplot(subs, aes(x=sim_intake_forage, y=intake_forage))
 p <- p + geom_point() + print_theme
-p <- p + xlab('Empirical daily intake (kg)') + ylab('Simulated daily intake (kg)')
+p <- p + ylab('Empirical intake (kg/day)') + xlab('Simulated intake (kg/day)')
 min_val <- min(c(subs$intake_forage, subs$sim_intake_forage) - 0.1)
 max_val <- max(c(subs$intake_forage, subs$sim_intake_forage) + 0.1)
 p <- p + xlim(c(min_val, max_val)) + ylim(c(min_val, max_val))
 p <- p + geom_abline(slope=1, intercept=0, linetype=2)
-pngname <- paste(imgdir, "intake_SRW215_MS.png", sep="/")
+pngname <- paste(imgdir, "intake_SRW160_MS.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.5, height=3.5)
 print(p)
 dev.off()

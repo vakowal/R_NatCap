@@ -52,14 +52,6 @@ params_w_ranges$file <- factor(params_w_ranges$file,
                                levels=c("fix.100", "site.100", "crop.100", "graz.100"))
 params_w_ranges$range <- as.character(do.call(paste, c(params_w_ranges[c('range.lower.bound', 'range.upper.bound')],
                                                        sep=" - ")))
-init_table <- params_w_ranges[params_w_ranges$derivation == 'spin-up', ]
-init_cols <- c('parameter', 'definition', 'range',
-              'example.value', 'example.value.source')
-init_table <- init_table[order(init_table$row.index), init_cols]
-colnames(init_table) <- c("Variable name", "Definition", "Valid range",
-                         "Example value", "Example value source")
-write.csv(init_table, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Initialization_variables.csv",
-          row.names=FALSE)
 
 p_table <- params_w_ranges[params_w_ranges$derivation == 'parameter', ]
 # p_table$possible.values <- gsub(";", ",", p_table$possible.values, fixed=TRUE)
@@ -84,7 +76,7 @@ p_table$char_of <- NA
 p_table[p_table$file == 'fix.100', 'char_of'] <- 'site'
 p_table[p_table$file == 'site.100', 'char_of'] <- 'site'
 p_table[p_table$file == 'crop.100', 'char_of'] <- 'PFT'
-p_table[p_table$file == 'graz.100', 'char_of'] <- 'PFT'
+p_table[p_table$file == 'graz.100', 'char_of'] <- 'animal'
 p_table[p_table$rp_name == 'nlaypg', 'char_of'] <- 'PFT'
 colnames(p_table) <- c("Century parameter name", "Definition", "Valid values",
                        "Example value", "Example value source", "Century input file",
@@ -137,3 +129,11 @@ vars_combined[grep("^annual accumulator", vars_combined$definition), 'derivation
 write.csv(vars_combined,
           "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/GK_doc/Century_output_variables.csv",
           row.names=FALSE)
+
+### Freer parameter documentation
+freer_values <- "C:/Users/ginge/Desktop/freer_vals.csv"
+freer_labels <- "C:/Users/ginge/Desktop/freer_param_labels.csv"
+val_df <- read.csv(freer_values)
+label_df <- read.csv(freer_labels)
+freer_df <- merge(val_df, label_df, all.x=TRUE)
+write.csv(freer_df, "C:/Users/ginge/Desktop/freer_interm.csv") # fill in labels

@@ -1,6 +1,9 @@
 # what is effect of rotation on the forage model?
 
 library(ggplot2)
+library(extrafont)
+font_import()
+loadfonts(device="win") 
 print_theme <- theme(strip.text.y=element_text(size=9), 
                      strip.text.x=element_text(size=9), 
                      axis.title.x=element_text(size=9), 
@@ -17,19 +20,35 @@ imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/WitW/model_results/Ucross/Jan_20
 sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/WitW/model_results/Ucross/Jan_2019/stocking_density_test/stocking_density_test_summary.csv",
                    stringsAsFactors=FALSE)
 
-sum_df <- sum_df[sum_df$date > 2006, ]
-sum_df$month <- (sum_df$date %% 2006) * 12
+# how does offtake differ between treatments?
+off_df <- sum_df
+off_df <- off_df[off_df$date < 2003, ]
+off_df <- off_df[off_df$treatment == 'rotation', ]
+off_df$month <- (off_df$date %% 2002) * 12
+off_df$num_pastures <- factor(off_df$num_pastures, levels=c(2, 6, 10),
+                              labels=c('2 pastures', '6 pastures', '10 pastures'))
+p <- ggplot(off_df, aes(x=month, y=total_offtake))
+p <- p + geom_point()
+p <- p + facet_grid(stocking_rate~num_pastures)
+print(p)
+
+sum_df <- sum_df[sum_df$date < 2003, ]  # > 2006
+sum_df$month <- (sum_df$date %% 2003) * 12
 sum_df$stocking_rate <- round(sum_df$stocking_rate, digits=2)
 sum_df$diet_sufficiency_prior <- sum_df$diet_sufficiency
 sum_df$diet_sufficiency <- sum_df$diet_sufficiency_prior + 1
 sum_df[sum_df$treatment=='continuous', 'treatment'] <- 'Continuous'
 sum_df[sum_df$treatment=='rotation', 'treatment'] <- 'Rotational'
+sum_df$num_pastures <- factor(sum_df$num_pastures, levels=c(2, 6, 10),
+                               labels=c('2 pastures', '6 pastures', '10 pastures'))
 
 # ribbon of biomass across rotational pastures
 rot_p_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/WitW/model_results/Ucross/Jan_2019/stocking_density_test/rotation_pasture_biomass.csv")
-rot_p_df <- rot_p_df[rot_p_df$date > 2006, ]
-rot_p_df$month <- (rot_p_df$date %% 2006) * 12
+# rot_p_df <- rot_p_df[rot_p_df$date < 2003, ]  # > 2006
+rot_p_df$month <- (rot_p_df$date %% 2003) * 12
 rot_p_df$stocking_rate <- round(rot_p_df$stocking_rate, digits=2)
+rot_p_df$num_pastures <- factor(rot_p_df$num_pastures, levels=c(2, 6, 10),
+                              labels=c('2 pastures', '6 pastures', '10 pastures'))
 min_rot_biomass_df <- aggregate(rot_p_df$pasture_kgha ~ rot_p_df$month + rot_p_df$stocking_rate + rot_p_df$num_pastures,
                              FUN=min)
 colnames(min_rot_biomass_df) <- c('month', 'stocking_rate', 'num_pastures', 'min_rot_biomass')
@@ -40,33 +59,58 @@ rot_biomass_df <- merge(min_rot_biomass_df, max_rot_biomass_df)
 rot_biomass_df$treatment <- 'Rotational'
 plot_df <- merge(sum_df, rot_biomass_df, all=TRUE)
 
-# simple plot: pasture biomass in continuous vs rotation
-p <- ggplot(plot_df, aes(x=month, y=pasture_kgha, group=treatment))
-p <- p + geom_line(aes(linetype=treatment))
+# separate plot: all pastures in rotational scenarios
+p <- ggplot(rot_p_df, aes(x=month, y=pasture_kgha, group=pasture_index))
+p <- p + geom_line(size=0.05)
 p <- p + facet_grid(stocking_rate~num_pastures)
-p <- p + xlab("Month") + ylab("Average biomass (kg/ha)") + print_theme
-p <- p + geom_ribbon(aes(x=month, ymin=min_rot_biomass, ymax=max_rot_biomass), alpha=0.2)
+p <- p + xlab("Month") + ylab("Pasture biomass (kg/ha)") + print_theme
 p <- p + scale_x_continuous(breaks=seq(2, 12, by=4))
 p <- p + scale_y_continuous(breaks=c(1000, 2000))
-p <- p + theme(legend.title=element_blank(), legend.position="bottom")
+p <- p + theme(legend.title=element_blank(), legend.position="bottom",
+               text=element_text(family="Times New Roman"))
 print(p)
-pngname <- paste(imgdir, "average_biomass_summary.png", sep="/")
+pngname <- paste(imgdir, "rotational_biomass_all_pastures.png", sep="/")
 png(file=pngname, units="in", res=300, width=3.34, height=3)
 print(p)
 dev.off()
 
+# simple plot: pasture biomass in continuous vs rotation
+# p <- ggplot(plot_df, aes(x=month, y=pasture_kgha, group=treatment))
+plot_df <- sum_df
+p <- ggplot(plot_df, aes(x=date, y=pasture_kgha, group=treatment))
+p <- p + geom_line(aes(linetype=treatment))
+p <- p + facet_grid(stocking_rate~num_pastures)
+# p <- p + xlab("Month") + ylab("Average biomass (kg/ha)") + print_theme
+p <- p + xlab("Date") + ylab("Average biomass (kg/ha)") + print_theme
+# p <- p + geom_ribbon(aes(x=month, ymin=min_rot_biomass, ymax=max_rot_biomass), alpha=0.2)
+# p <- p + scale_x_continuous(breaks=seq(2, 12, by=4))
+p <- p + scale_y_continuous(breaks=c(1000, 2000))
+p <- p + theme(legend.title=element_blank(), legend.position="bottom",
+               text=element_text(family="Times New Roman"))
+print(p)
+pngname <- paste(imgdir, "average_biomass_summary_no_ribbon_all_years.png", sep="/")
+# png(file=pngname, units="in", res=300, width=3.34, height=3)  # original size
+png(file=pngname, units="in", res=300, width=7.25, height=5)  # full-page size
+print(p)
+dev.off()
+
 # diet sufficiency in continuous vs rotation
-animal_performance_df <- sum_df[sum_df$diet_sufficiency != 0, ]
+# animal_performance_df <- sum_df[sum_df$diet_sufficiency != 0, ]
+animal_performance_df <- sum_df
+animal_performance_df[animal_performance_df == 0] <- NA
 animal_performance_df <- animal_performance_df[!(is.na(animal_performance_df$date)), ]
-p <- ggplot(animal_performance_df, aes(x=month, y=diet_sufficiency, group=treatment))
+# p <- ggplot(animal_performance_df, aes(x=month, y=diet_sufficiency, group=treatment))
+p <- ggplot(animal_performance_df, aes(x=date, y=diet_sufficiency, group=treatment))
 p <- p + geom_abline(intercept=1, slope=0, color='grey42', size=0.4)
 p <- p + geom_line(aes(linetype=treatment))
 p <- p + facet_grid(stocking_rate~num_pastures)
-p <- p + xlab("Month") + ylab("Diet sufficiency") + print_theme
-p <- p + theme(legend.position="bottom", legend.title=element_blank())
-# print(p)
-pngname <- paste(imgdir, "diet_sufficiency_summary.png", sep="/")
-png(file=pngname, units="in", res=300, width=3.34, height=3)
+p <- p + xlab("Date") + ylab("Diet sufficiency") + print_theme
+p <- p + theme(legend.position="bottom", legend.title=element_blank(),
+               text=element_text(family="Times New Roman"))
+print(p)
+pngname <- paste(imgdir, "diet_sufficiency_summary_all_years.png", sep="/")
+# png(file=pngname, units="in", res=300, width=3.34, height=3)  # original size
+png(file=pngname, units="in", res=300, width=7.25, height=5)  # full-page size
 print(p)
 dev.off()
 

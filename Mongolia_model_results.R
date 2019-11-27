@@ -1,6 +1,189 @@
 # examine Mongolia simulations
-
 library(ggplot2)
+
+# results of back-calculate to match 2016 sites
+back_calc_match_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/chirps_prec_back_calc/match_summary.csv"
+back_calc_match_df <- read.csv(back_calc_match_csv)
+back_calc_match_df$diff <- back_calc_match_df$Simulated_biomass - back_calc_match_df$Empirical_biomass
+back_calc_match_df$schedule <- 'calibrated'
+back_calc_match_df[back_calc_match_df$Iteration == 0, 'schedule'] <- 'default'
+back_calc_reshape <- reshape(back_calc_match_df, idvar='site', timevar='schedule',
+                             v.names=c('diff', 'Empirical_biomass', 'Simulated_biomass'),
+                             direction='wide')
+back_calc_reshape <- back_calc_reshape[, c('site', 'Empirical_biomass.default', 'Simulated_biomass.default',
+                                           'Simulated_biomass.calibrated', 'diff.default', 'diff.calibrated')]
+for (r in 1:NROW(back_calc_reshape)) {
+  if (is.na(back_calc_reshape[r, 'Simulated_biomass.calibrated'])) {
+    back_calc_reshape[r, 'Simulated_biomass.calibrated'] <- back_calc_reshape[r, 'Simulated_biomass.default']
+    back_calc_reshape[r, 'diff.calibrated'] <- back_calc_reshape[r, 'diff.default']
+  }
+}
+colnames(back_calc_reshape)[2] <- 'Empirical_biomass'
+write.csv(back_calc_reshape, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/chirps_prec_back_calc/match_diff_summary.csv",
+          row.names=FALSE)
+
+# distribution of ending mismatch, after calibration:
+hist(back_calc_reshape$diff.calibrated, breaks=100)
+summary(back_calc_reshape$diff.calibrated)
+# number of sites that were successfully matched
+dim(back_calc_reshape[abs(back_calc_reshape$diff.calibrated) < 5, ])  # 19
+# number of sites where we couldn't impose enough grazing
+dim(back_calc_reshape[back_calc_reshape$diff.calibrated > 5, ])  # 79
+# number of sites where we couldn't remove enough grazing
+dim(back_calc_reshape[back_calc_reshape$diff.calibrated < -5, ])  # 24
+
+# model outputs vs empirical biomass, potential (no grazing) vs standing (after grazing)
+sum_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/SCP_sites/CBM_SCP_sites_2016_herb_biomass_potential_standing_run_7.30.19.csv"
+sum_df <- read.csv(sum_csv)
+sum_df[sum_df == -9999] <- NA
+sum_df$Herb_biomass_prior <- sum_df$Herb_biomass
+sum_df$Herb_biomass <- sum_df$Herb_biomass_prior * 10
+
+cor_df <- data.frame('modeled_biomass_source'=character(),
+                     'spearman_rho'=numeric(), 'spearman_pval'=numeric(), 
+                     'pearson_cor'=numeric(), 'pearson_pval'=numeric(),
+                     stringsAsFactors=FALSE)
+p <- ggplot(sum_df, aes(x=Herb_biomass, y=potential))
+p <- p + geom_point()
+print(p)
+cor_potential_p <- cor.test(sum_df$Herb_biomass, sum_df$potential,
+                                  method='pearson')
+cor_potential_s <- cor.test(sum_df$Herb_biomass, sum_df$potential,
+                                   method='spearman')
+i <- 1
+cor_df[i, 'modeled_biomass_source'] <- 'potential'
+cor_df[i, 'spearman_rho'] <- cor_potential_s[[4]]
+cor_df[i, 'spearman_pval'] <- cor_potential_s[[3]]
+cor_df[i, 'pearson_cor'] <- cor_potential_p[[4]]
+cor_df[i, 'pearson_pval'] <- cor_potential_p[[3]]
+
+p <- ggplot(sum_df, aes(x=Herb_biomass, y=standing))
+p <- p + geom_point()
+print(p)
+cor_standing_p <- cor.test(sum_df$Herb_biomass, sum_df$standing,
+                                  method='pearson')
+cor_standing_s <- cor.test(sum_df$Herb_biomass, sum_df$standing,
+                                   method='spearman')
+i <- 2
+cor_df[i, 'modeled_biomass_source'] <- 'standing'
+cor_df[i, 'spearman_rho'] <- cor_standing_s[[4]]
+cor_df[i, 'spearman_pval'] <- cor_standing_s[[3]]
+cor_df[i, 'pearson_cor'] <- cor_standing_p[[4]]
+cor_df[i, 'pearson_pval'] <- cor_standing_p[[3]]
+write.csv(cor_df, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/SCP_sites/correlation_summary_empirical_vs_modeled.csv")
+
+# reshape to plot potential and standing on same plot
+pot_df <- sum_df[, c('Herb_biomass', 'potential')]
+pot_df$modeled_biomass <- pot_df$potential
+pot_df$source <- 'potential'
+pot_df <- pot_df[, c('Herb_biomass', 'modeled_biomass', 'source')]
+std_df <- sum_df[, c('Herb_biomass', 'standing')]
+std_df$modeled_biomass <- std_df$standing
+std_df$source <- 'standing'
+std_df <- std_df[, c('Herb_biomass', 'modeled_biomass', 'source')]
+long_df <- rbind(pot_df, std_df)
+p <- ggplot(long_df, aes(x=Herb_biomass, y=modeled_biomass))
+p <- p + geom_point(aes(color=source))
+p <- p + xlab("Empirical biomass (kg/ha)") + ylab("Modeled biomass (kg/ha)")
+print(p)
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/SCP_sites/empirical_vs_modeled_potential_standing.png"
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+# plot 10 sites at a time:
+# biomass (observed from NDVI vs potential without grazing vs standing after grazing)
+output_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/pyCentury_dev_documents/biomass_WCS_sampling_points/line_plots_emp_vs_zero_sd"
+site_id_list <- unique(sum_df$site_id)
+plot_idx <- 1
+for (i in seq(1, 153, by=10)) {
+  site_id_subs <- site_id_list[c(i:(i+9))]
+  rand_df <- sum_df[(sum_df$site_id %in% site_id_subs), ]
+  p <- ggplot(rand_df, aes(x=step, y=biomass))
+  p <- p + geom_line(aes(color=biomass_source))
+  p <- p + facet_grid(source~site_id)
+  p <- p + ggtitle(sprintf("plot #%s", plot_idx))
+  pngname <- paste(output_dir, sprintf('biomass_plot_%d.png', plot_idx), sep='/')
+  png(file=pngname, units="in", res=300, width=10, height=3)
+  print(p)
+  dev.off()
+  plot_idx <- plot_idx + 1
+}
+
+# animal diet sufficiency
+anim_df <- sum_df[sum_df$source == 'empirical_sd', ]
+output_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/pyCentury_dev_documents/biomass_WCS_sampling_points/line_plots_emp_vs_zero_sd"
+site_id_list <- unique(sum_df$site_id)
+plot_idx <- 1
+for (i in seq(1, 150, by=15)) {
+  site_id_subs <- site_id_list[c(i:(i+14))]
+  rand_df <- anim_df[(anim_df$site_id %in% site_id_subs), ]
+  p <- ggplot(rand_df, aes(x=step, y=diet_sufficiency))
+  p <- p + geom_line()
+  p <- p + facet_wrap(~site_id, nrow=3)
+  p <- p + ggtitle(sprintf("plot #%s", plot_idx))
+  pngname <- paste(output_dir, sprintf('diet_sufficiency_plot_%d.png', plot_idx), sep='/')
+  png(file=pngname, units="in", res=300, width=8, height=6)
+  print(p)
+  dev.off()
+  plot_idx <- plot_idx + 1
+}
+
+# simulated results at sampling points with zero stocking density:
+# beta model vs new model
+sum_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/pyCentury_dev_documents/biomass_WCS_sampling_points/modeled_biomass_summary.csv"
+sum_df <- read.csv(sum_csv, stringsAsFactors=FALSE)
+
+# line plots comparing beta to new model, in groups of 15 sites
+output_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/pyCentury_dev_documents/biomass_WCS_sampling_points/line_plots"
+site_id_list <- unique(sum_df$site_id)
+plot_idx <- 1
+for (i in seq(1, 150, by=15)) {
+  site_id_subs <- site_id_list[c(i:(i+14))]
+  rand_df <- sum_df[(sum_df$site_id %in% site_id_subs) &
+                      (sum_df$green_biomass_gm2 > -10), ]
+  p <- ggplot(rand_df, aes(x=step, y=green_biomass_gm2))
+  p <- p + geom_line(aes(colour=source))
+  p <- p + facet_wrap(~site_id, nrow=3)
+  p <- p + ggtitle(sprintf("plot #%s", plot_idx))
+  pngname <- paste(output_dir, sprintf('green_biomass_%d.png', plot_idx), sep='/')
+  png(file=pngname, units="in", res=300, width=8, height=6)
+  print(p)
+  dev.off()
+  plot_idx <- plot_idx + 1
+}
+plot_idx <- 1
+for (i in seq(1, 150, by=15)) {
+  site_id_subs <- site_id_list[c(i:(i+14))]
+  rand_df <- sum_df[(sum_df$site_id %in% site_id_subs) &
+                      (sum_df$dead_biomass_gm2 > -10), ]
+  p <- ggplot(rand_df, aes(x=step, y=dead_biomass_gm2))
+  p <- p + geom_line(aes(colour=source))
+  p <- p + facet_wrap(~site_id, nrow=3)
+  p <- p + ggtitle(sprintf("plot #%s", plot_idx))
+  pngname <- paste(output_dir, sprintf('dead_biomass_%d.png', plot_idx), sep='/')
+  png(file=pngname, units="in", res=300, width=8, height=6)
+  print(p)
+  dev.off()
+  plot_idx <- plot_idx + 1
+}
+plot_idx <- 1
+for (i in seq(1, 150, by=15)) {
+  site_id_subs <- site_id_list[c(i:(i+14))]
+  rand_df <- sum_df[(sum_df$site_id %in% site_id_subs) &
+                      (sum_df$dead_biomass_gm2 > -10), ]
+  p <- ggplot(rand_df, aes(x=step, y=total_biomass_gm2))
+  p <- p + geom_line(aes(colour=source))
+  p <- p + facet_wrap(~site_id, nrow=3)
+  p <- p + ggtitle(sprintf("plot #%s", plot_idx))
+  pngname <- paste(output_dir, sprintf('total_biomass_%d.png', plot_idx), sep='/')
+  png(file=pngname, units="in", res=300, width=8, height=6)
+  print(p)
+  dev.off()
+  plot_idx <- plot_idx + 1
+}
+
+###
 
 match_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/climate/NAMEM/soum_ctr_match_table.csv")
 
@@ -195,7 +378,7 @@ print(p)
 dev.off()
 
 # make map of CHIRPS pixel-based model results
-ch_df <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/model_results/CHIRPS_pixels/biomass_summary_zero_sd_chirps_GCD_G.csv")
+ch_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/CHIRPS_pixels/biomass_summary_zero_sd_chirps_GCD_G.csv")
 aug_df <- ch_df[ch_df$month == 9, colnames(ch_df)[c(2:5, 9)]]
 aug_wide <- reshape(aug_df, idvar='site_id', timevar='year', direction="wide")
 aug_wide$total_forage_kgha_2016 <- aug_wide$total_biomass_gm2.2016 * 10
@@ -428,3 +611,180 @@ for(year in c(2016, 2017, 'avg')){
     i <- i + 1
   }
 }
+
+# process extended NAMEM climate data
+raw_csv = "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/NAMEM/Jul 2017-Aug 2018 Precip and Temp Data.csv"
+raw_df <- read.csv(raw_csv, stringsAsFactors=FALSE)
+raw_df[raw_df$Station_name == "Bayan Ovoo", "Station_name"] <- "Bayan-Ovoo"
+
+temp_df <- raw_df[, c("Station_name", "Year", "Month", "Day", "temp_C")]
+min_temp <- aggregate(temp_df$temp_C~temp_df$Station_name + temp_df$Year + temp_df$Month,
+                      FUN=min)
+colnames(min_temp) <- c('station_name', 'year', 'month', 'tmin')
+max_temp <- aggregate(temp_df$temp_C~temp_df$Station_name + temp_df$Year + temp_df$Month,
+                      FUN=max)
+colnames(max_temp) <- c('station_name', 'year', 'month', 'tmax')
+temp_df <- merge(min_temp, max_temp)
+temp_df[temp_df$station_name == "Bayan Ovoo", "station_name"] <- "Bayan-Ovoo"
+write.csv(temp_df, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/NAMEM/temp_2017-2018.csv",
+          row.names=FALSE)
+
+precip_df <- raw_df[, c("Station_name", "Year", "Month", "Day", "precip_mm")]
+sum_precip <- aggregate(precip_df$precip_mm~precip_df$Station_name + precip_df$Year + precip_df$Month,
+                        FUN=sum)
+colnames(sum_precip) <- c('station_name', 'year', 'month', 'precip_mm')
+write.csv(sum_precip, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/NAMEM/precip_2017-2018.csv",
+          row.names=FALSE)
+
+## Modeled biomass vs empirical cover at WCS exclosure sites, NAMEM and CHIRPS
+norm <- function(vec){
+  normalized = (vec - min(vec)) / (max(vec) - min(vec))
+  return(normalized)
+}
+
+figdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/figs"
+sim_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/simulated_biomass_summary.csv")
+sim_summary <- sim_summary[sim_summary$month == 9, ]
+emp_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Chantsa/RangelandExcloData_WCS2018_V2_20190503OA_exclosure_data.csv")
+
+emp_summary[emp_summary$Inside.Outside == 'Inside ', 'Inside.Outside'] <- 'Inside'
+emp_summary$grass_forb_cover <- rowSums(emp_summary[, 12:15])
+
+emp_cols <- c('Year', 'Exclosure.number', 'X100.1000', 'TOTAL.VEG.COVER', 'grass_forb_cover')
+emp_summary <- emp_summary[emp_summary$Inside.Outside == 'Inside', emp_cols]
+emp_agg <- aggregate(emp_summary$grass_forb_cover~emp_summary$Year + emp_summary$Exclosure.number,
+                     FUN=mean)  # mean of 100 and 1000 levels within sampling date / site
+colnames(emp_agg) <- c('Year', 'Exclosure.number', 'grass_forb_cover_mean')
+
+p <- ggplot(emp_agg, aes(x=Exclosure.number, y=grass_forb_cover_mean))
+p <- p + geom_point() + facet_wrap(~Year)
+p <- p + xlab("Exclosure") + ylab("Herbaceous cover (%)")
+pngname <- paste(figdir, "emp_mean_herbaceous_cover.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=2.5)
+print(p)
+dev.off()
+
+p <- ggplot(sim_summary, aes(x=site_id, y=total_biomass_gm2))
+p <- p + geom_point()
+p <- p + facet_grid(climate_source~year)
+p <- p + xlab("Exclosure") + ylab("Herbaceous biomass (g/m2)")
+pngname <- paste(figdir, "sim_biomass_month9.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+# normalized biomass and cover to combine the two datasets
+sim_summary$site_id <- gsub("F", "", sim_summary$site_id)
+namem_df <- sim_summary[sim_summary$climate_source == 'namem', ]
+namem_norm_df <- data.frame('year'=namem_df$year, 'source'=namem_df$climate_source,
+                            'site_id'=namem_df$site_id, 'norm_value'=norm(namem_df$total_biomass_gm2))
+chirps_df <- sim_summary[sim_summary$climate_source == 'chirps', ]
+chirps_norm_df <- data.frame('year'=chirps_df$year, 'source'=chirps_df$climate_source,
+                            'site_id'=chirps_df$site_id, 'norm_value'=norm(chirps_df$total_biomass_gm2))
+emp_norm_df <- data.frame('year'=emp_agg$Year, 'source'=rep("empirical", length(emp_agg$Year)),
+                          'site_id'=emp_agg$Exclosure.number, 'norm_value'=norm(emp_agg$grass_forb_cover_mean))
+comb_norm_df <- do.call(rbind, list(chirps_norm_df, namem_norm_df, emp_norm_df))
+
+# empirical rank calculated outside of R
+normalized_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/normalized.csv")
+normalized_df$source <- factor(normalized_df$source, levels=c("empirical", "chirps", "namem"))
+
+p <- ggplot(normalized_df, aes(x=site_id, y=norm_value))
+p <- p + geom_point(aes(shape=source), size=3) +
+                    scale_shape_manual(values=c(17, 24, 16))
+# p <- p + facet_grid(source~year)
+p <- p + facet_wrap(~year)
+print(p)  # whoa that doesn't look good
+
+p <- ggplot(normalized_df, aes(x=emp_rank, y=norm_value))
+p <- p + geom_point()
+p <- p + facet_grid(source~year)
+p <- p + xlab("Exclosure rank") + ylab("Normalized biomass or cover")
+print(p)
+pngname <- paste(figdir, "norm_sim_emp_ranked.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+## Simulated biomass at all WCS monitoring sites, chirps prec, zero sd
+sim_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/chirps_prec/zero_sd/biomass_summary_zero_sd_chirps_GCD_G.csv")
+sim_df <- sim_df[sim_df$year > 2015, ]
+max_green_biomass_per_year <- aggregate(sim_df$green_biomass_gm2~sim_df$year + sim_df$site_id,
+                                  FUN=max)
+colnames(max_green_biomass_per_year) <- c('year', 'site_id', 'green_biomass_gm2')
+max_green_biomass_per_year$year <- as.factor(max_green_biomass_per_year$year)
+max_total_biomass_per_year <- aggregate(sim_df$total_biomass_gm2~sim_df$year + sim_df$site_id,
+                                  FUN=max)
+colnames(max_total_biomass_per_year) <- c('year', 'site_id', 'total_biomass_gm2')
+max_total_biomass_per_year$year <- as.factor(max_total_biomass_per_year$year)
+p <- ggplot(max_total_biomass_per_year, aes(x=site_id, y=total_biomass_gm2))
+p <- p + geom_point(aes(color=year))
+print(p)
+p <- ggplot(max_green_biomass_per_year, aes(x=site_id, y=green_biomass_gm2))
+p <- p + geom_point(aes(color=year))
+print(p)
+
+figdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/chirps_prec/zero_sd"
+p <- ggplot(max_green_biomass_per_year, aes(x=year, y=green_biomass_gm2))
+p <- p + geom_boxplot()
+p <- p + ylab("Maximum green biomass (gC m-2)")
+print(p)
+pngname <- paste(figdir, "Max_green_biomass_across_sites_per_year.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(max_total_biomass_per_year, aes(x=year, y=total_biomass_gm2))
+p <- p + geom_boxplot()
+p <- p + ylab("Maximum total biomass (gC m-2)")
+print(p)
+pngname <- paste(figdir, "Max_total_biomass_across_sites_per_year.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+
+summary(max_green_biomass_per_year[max_green_biomass_per_year$year == 2016, 'green_biomass_gm2'])
+summary(max_green_biomass_per_year[max_green_biomass_per_year$year == 2017, 'green_biomass_gm2'])
+
+### compare biomass calculated from NDVI via regression to modeled biomass
+print_theme <- theme(strip.text.y=element_text(size=10), 
+                     strip.text.x=element_text(size=9), 
+                     axis.title.x=element_text(size=10), 
+                     axis.title.y=element_text(size=10),
+                     axis.text=element_text(size=10),
+                     plot.title=element_text(size=7, face="bold"),
+                     legend.text=element_text(size=10),
+                     legend.title=element_text(size=10)) + theme_bw()
+
+eo_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/CBM_SCP_sites_2016_2017_NDVI_herb_biomass_new.csv")
+modeled_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/SCP_sites/biomass_summary_zero_sd_namem_chirps_GCD_G.csv")
+
+eo_df$ndvi_scaled <- eo_df$NDVI / 10000  # match the order of mangnitude of Lingling's regression analysis
+eo_df$herb_biomass_from_NDVI <- 206.73 * eo_df$ndvi_scaled - 11.002  # Lingling's regression: linear, herbaceous biomass
+eo_df[eo_df$Day < 15, 'match_month'] <- 7
+eo_df[eo_df$Day >= 15, 'match_month'] <- 8
+
+modeled_df <- modeled_df[modeled_df$climate_source == 'chirps_prec', ]
+biomass_summary_df <- merge(modeled_df, eo_df, by.x=c('site_id', 'year', 'month'),
+                            by.y=c('site_ID', 'Year', 'match_month'))
+maximum_biomass <- max(c(biomass_summary_df$total_biomass_gm2, biomass_summary_df$herb_biomass_from_NDVI))
+p <- ggplot(biomass_summary_df, aes(x=total_biomass_gm2, y=herb_biomass_from_NDVI))
+p <- p + geom_point()
+p <- p + xlim(0, maximum_biomass + 2)
+p <- p + ylim(0, maximum_biomass + 2)
+p <- p + geom_abline(slope=1, intercept=0, size=0.05)
+p <- p + xlab("Modeled biomass (gC m-2)") + ylab("Observed biomass from NDVI (gC m-2)")
+p <- p + print_theme
+print(p)
+figdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_vs_EO"
+pngname <- paste(figdir, "obs_potential_biomass_SCP_sites.png", sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=3.5)
+print(p)
+dev.off()
+
+# calculate index of grazing pressure: difference between potential and observed biomass
+biomass_summary_df$grazing_pressure <- biomass_summary_df$total_biomass_gm2 - biomass_summary_df$herb_biomass_from_NDVI
+estimated_grazing_pressure <- biomass_summary_df[, c('site_id', 'year', 'Month', 'Day', 'grazing_pressure')]
+write.csv(estimated_grazing_pressure, paste(figdir, "est_grazing_pressure_SCP_sites.csv", sep="/"), row.names=FALSE)
+
+write.csv(biomass_summary_df, paste(figdir, "biomass_summary_NDVI_modeled_no_grazing.csv", sep="/"), row.names=FALSE)

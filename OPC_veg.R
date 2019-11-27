@@ -436,9 +436,31 @@ dev.off()
 id_match <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
 sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
 sum_df <- merge(sum_df, id_match, by='site')
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_ann_precip.csv")
+sum_df <- merge(sum_df, precip_df, by='site')
 sum_df$sim_vs_emp <- factor(sum_df$sim_vs_emp, levels=c("sim_default",
                                                         "sim_calc",
                                                         "emp"))
+# summary statistics to quantify improvement in model performance with back-calculated mgmt
+sum_df$kg_ha <- sum_df$g_m2 * 10
+reshape_subs <- sum_df[, c('site', 'sim_vs_emp', 'kg_ha', 'avg_annual_precip_cm')]
+reshape_df <- reshape(reshape_subs, idvar='site', timevar='sim_vs_emp', v.names='kg_ha', direction='wide')
+n <- length(reshape_df$site)
+reshape_df$o_minus_p_def <- reshape_df$kg_ha.emp - reshape_df$kg_ha.sim_default
+reshape_df$o_minus_p_calc <- reshape_df$kg_ha.emp - reshape_df$kg_ha.sim_calc
+reshape_df$o_minus_p_sq_def <- reshape_df$o_minus_p_def ^ 2
+reshape_df$o_minus_p_sq_calc <- reshape_df$o_minus_p_calc ^ 2
+# mean bias
+mean_bias_calc <- sum(reshape_df$o_minus_p_calc) / n  # -5.84625 kg/ha
+# delta MSEP, mean squared error of prediction
+reshape_df$def_sq_minus_calc_sq <- reshape_df$o_minus_p_sq_def - reshape_df$o_minus_p_sq_calc
+delta_msep <- sum(reshape_df$def_sq_minus_calc_sq) / n
+
+# difference in error of prediction between default and sim, by avg annual precip
+p <- ggplot(reshape_df, aes(x=avg_annual_precip_cm, y=def_sq_minus_calc_sq))
+p <- p + geom_point()
+print(p)
+cor.test(reshape_df$avg_annual_precip_cm, reshape_df$def_sq_minus_calc_sq)
 
 p <- ggplot(sum_df, aes(x=order, y=g_m2, group=sim_vs_emp))
 p <- p + geom_point(aes(shape=sim_vs_emp), size=3) +
@@ -456,25 +478,39 @@ dev.off()
 id_match <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/OPC_weather_id_match.csv")
 sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary.csv")
 sum_df <- merge(sum_df, id_match, by='site')
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_ann_precip.csv")
+sum_df <- merge(sum_df, precip_df, by='site')
 simulated <- sum_df[sum_df$sim_vs_emp != 'emp', ]
 simulated$source <- ""
 simulated[simulated$sim_vs_emp == 'sim_default', 'source'] <- 'Default schedule'
 simulated[simulated$sim_vs_emp == 'sim_calc', 'source'] <- 'Calibrated schedule'
 simulated$source <- factor(simulated$source, levels=c('Default schedule', 'Calibrated schedule'))
 empirical <- sum_df[sum_df$sim_vs_emp == 'emp', ]
+simulated$kg_ha <- simulated$g_m2 * 10
+empirical$kg_ha <- empirical$g_m2 * 10
 
-p <- ggplot(simulated, aes(x=order, y=g_m2))
-p <- p + geom_point(data=empirical, aes(x=order, y=g_m2), size=2, shape=1)
+# plot by rank order, empirical biomass
+p <- ggplot(simulated, aes(x=order, y=kg_ha))
+p <- p + geom_point(data=empirical, aes(x=order, y=kg_ha), size=2, shape=1)
 p <- p + geom_point(size=2, shape=17)  # , aes(color=source))
 p <- p + facet_wrap(~source)
 p <- p + print_theme + theme(panel.grid.minor=element_blank())
-p <- p + ylab('Biomass (grams per square m)') + xlab("Site")
+p <- p + ylab('Biomass (kg per ha)') + xlab("Site")
 p <- p + scale_x_continuous(breaks=seq(1, 8))
 p <- p + theme(legend.position="none")
 pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC/back_calc_match_last_measurement/summary_figs/match_summary_2panel.png"
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
+
+# plot by precip, empirical biomass
+p <- ggplot(simulated, aes(x=avg_annual_precip_cm, y=kg_ha))
+p <- p + geom_point(data=empirical, aes(x=avg_annual_precip_cm, y=kg_ha))
+p <- p + geom_point(size=2, shape=17)  # , aes(color=source))
+p <- p + facet_wrap(~source)
+print(p)
+
+# correlation between default vs calibrated sim biomass and precip
 
 # how much does biomass in absence of grazing differ btw 6 weather stations?
 sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/zero_dens/combined_summary.csv")
@@ -565,6 +601,30 @@ png(file=pngname, units="in", res=300, width=8, height=5)
 print(p)
 dev.off()
 
+# annual precipitation on OPC weather stations, all years
+indir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/CENTURY4.6/Kenya/input"
+sites <- c('Golf_7', 'Sirima', 'Kamok', 'Loidien',
+           'Research', 'Loirugu', 'Serat', 'Rongai')
+widths <- c(6, 6, rep(7, 12))
+df_list <- list()
+for(s in sites){
+  fwf <- paste(indir, "/", s, ".wth", sep="")
+  df <- read.fwf(fwf, widths=widths)
+  prec_df <- df[which(df$V1 == 'prec  '), ]
+  prec_df <- prec_df[, -1]
+  prec_df$site <- s
+  colnames(prec_df) <- c('Year', seq(1, 12), 'site')
+  df_list[[s]] <- prec_df
+}
+precip_df <- do.call(rbind, df_list)
+precip_res <- reshape(precip_df, idvar="site", varying=c(2:13),
+                      v.names="precip_cm", direction="long", timevar='month',
+                      new.row.names=1:10000)
+ann_precip <- aggregate(precip_cm~site+Year, data=precip_res, FUN=sum)
+avg_ann_precip <- aggregate(precip_cm~site, data=ann_precip, FUN=mean)
+colnames(avg_ann_precip) <- c('site', 'avg_annual_precip_cm')
+write.csv(avg_ann_precip, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_ann_precip.csv",
+          row.names=FALSE)
 
 # integrated test: empirical stocking density simulations compared to empirical biomass measurements
 x10_comp_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Verification_calculations/OPC_integrated_test/empirical_stocking_density/comparison_x10_OPC_veg_9.30.16_by_weather.csv"
@@ -707,10 +767,37 @@ for(site in unique(interpdf$site)){
 }
 diffdf <- do.call(rbind, df_list)
 
+# add average annual precip at each weather site
+match_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/jenny_site_summary_open.csv")
+match_df <- match_df[, c('site', 'closest_weather')]
+diffdf <- merge(diffdf, match_df)
+precip_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_avg_ann_precip.csv")
+precip_df$closest_weather <- tolower(precip_df$closest_weather)
+colnames(precip_df)[1] <- 'closest_weather'
+diffdf <- merge(diffdf, precip_df)
 # how well does simulated change in biomass explain
 # empirical change in biomass?
 cor0 <- cor.test(diffdf$emp_delta, diffdf$sim_delta)
 cor0
+
+# does difference between sim and emp growth in biomass vary by avg annual precip at the site?
+diffdf$obs_minus_pred <- diffdf$emp_delta - diffdf$sim_delta
+diffdf$obs_minus_pred_sq <- diffdf$obs_minus_pred ^ 2
+succ_diffdf <- diffdf[diffdf$site %in% succeeded, ]
+# raw diff: observed minus predicted
+p <- ggplot(succ_diffdf, aes(x=avg_annual_precip_cm, y=obs_minus_pred, group=avg_annual_precip_cm))
+p <- p + geom_boxplot()
+p <- p + xlab("Average annual precipitation (cm)") + ylab("Observed - Predicted biomass growth")
+p <- p + print_theme
+print(p)
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Jenny/Comparisons_with_CENTURY/back_calc_mgmt_9.13.16/figs/obs_minus_pred_by_avg_annual_rainfall.png"
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+# sample size in each precip bin
+weather_stn_sample_size <- aggregate(obs_minus_pred~avg_annual_precip_cm,
+                                     data=succ_diffdf, FUN=length)
 
 succ_interp <- interpdf[which(interpdf$site %in% succeeded), ]
 # convert dates to Date to facilitate plotting

@@ -12,17 +12,20 @@ print_theme <- theme(strip.text.y=element_text(size=10),
                      legend.text=element_text(size=10),
                      legend.title=element_text(size=10)) + theme_bw()
 
-outer_dir <- "C:/Users/Ginger/Dropbox/Optimization/CGIAR-WLE/Peru_optimization_results_11.8.16"
-imgdir <- paste(outer_dir, "frontier_figs", sep="/")
+# previous to 8.15.19
+# outer_dir <- "C:/Users/Ginger/Dropbox/Optimization/CGIAR-WLE/Peru_optimization_results_11.8.16"
+# imgdir <- paste(outer_dir, "frontier_figs", sep="/")
 suf_list <- list.files(outer_dir)
 suf_list <- suf_list[-c(1, 5, 6)]
-for(f in suf_list){
+# for(f in suf_list){
   # sum_df <- read.csv(paste(outer_dir, f, "score_summary.csv", sep="/"))
-  f <- 'animal_weights_survey_default'
-  imgdir <- 'C:/Users/Ginger/Desktop'
-  sum_df <- read.csv("C:/Users/Ginger/Downloads/animal_weights_survey_default_beta_scores_summary.csv")
+  # f <- 'animal_weights_survey_default'
+  f <- 'animal_weights_literature_default_beta'
+  imgdir <- 'C:/Users/ginge/Desktop'
+  # sum_df <- read.csv("C:/Users/Ginger/Downloads/animal_weights_survey_default_beta_scores_summary.csv")
+  sum_df <- read.csv("C:/Users/ginge/Desktop/es_optimization_data_inputs/animal_weights_literature_default_beta/output/animal_weights_literature_default_beta_scores_summary.csv")
   
-  p <- ggplot(sum_df, aes(x=sdr_score, y=swy_score))
+  p <- ggplot(sum_df, aes(x=sdrlit_score, y=swylit_score))
   p <- p + geom_point()
   p <- p + xlab("SDR score (tons sediment per year)") + ylab("SWY score (mm?)")
   p <- p + print_theme
@@ -40,16 +43,16 @@ for(f in suf_list){
   print(p)
   dev.off()
   
-  p <- ggplot(sum_df, aes(x=livestock_score,  y=sdr_score))
+  p <- ggplot(sum_df, aes(x=livestocklit_score,  y=sdrlit_score))
   p <- p + geom_point()
-  p <- p + xlab("Livestock score (average yearly kg gained)") + ylab("SDR score (tons sediment per year)")
+  p <- p + xlab("Livestock score (average yearly kg gained)") + ylab("Sediment score (t/yr)")
   p <- p + print_theme
   p <- p + scale_y_reverse()
   pngname <- paste(imgdir, paste("livestock_x_sdr_", f, ".png", sep=""), sep="/")
   png(file=pngname, units="in", res=300, width=4, height=4)
   print(p)
   dev.off()
-}
+#}
 
 sum_df$water_obj_score <- sum_df$sdr_score * sum_df$sdr_weight + sum
 p <- ggplot(sum_df, aes(x=livestock_score, y=swy_score, group=sdr_score))

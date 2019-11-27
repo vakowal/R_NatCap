@@ -1,9 +1,103 @@
 # USFS hemlock decline
-
-# GSMNP veg monitoring database
 library(RODBC)
 library(ggplot2)
+print_theme <- theme(strip.text.y=element_text(size=9),
+                     strip.text.x=element_text(size=9),
+                     axis.title.x=element_text(size=9),
+                     axis.title.y=element_text(size=9),
+                     axis.text=element_text(size=8),
+                     plot.title=element_text(size=10, face="bold"),
+                     legend.text=element_text(size=9),
+                     legend.title=element_text(size=10)) + theme_bw()
 
+# precip sensitivity
+imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/USFS/model_runs/precip_scenarios/figs"
+precip_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/USFS/model_runs/precip_scenarios/precip_scenario_summary.csv"
+precip_df <- read.csv(precip_csv)
+precip_df$lulc_scenario <- factor(precip_df$lulc_scenario,
+                                  levels=c('pre-decline', 'post-decline'),
+                                  labels=c('Pre-decline', 'Post-decline'))
+# points
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_QF))
+p <- p + geom_point(aes(shape=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual quickflow")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'quickflow.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_aet))
+p <- p + geom_point(aes(shape=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual evapotranspiration")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'evapotranspiration.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_B))
+p <- p + geom_point(aes(shape=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual baseflow")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'baseflow.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+# lines
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_QF))
+p <- p + geom_line(aes(linetype=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual quickflow")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'quickflow_line.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_aet))
+p <- p + geom_line(aes(linetype=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual evapotranspiration")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'evapotranspiration_line.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+p <- ggplot(precip_df, aes(x=precip_multiply_factor, y=sum_B))
+p <- p + geom_line(aes(linetype=lulc_scenario))
+p <- p + xlab("Precipitation multiplication factor") + ylab("Average annual baseflow")
+p <- p + print_theme + theme(legend.title = element_blank())
+pngname = paste(imgdir, 'baseflow_line.png', sep='/')
+png(file=pngname, units="in", res=400, width=4.6, height=3)
+print(p)
+dev.off()
+
+# distribution of L sum avail: water available for transpiration
+library(raster)
+outer_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/USFS/model_runs/precip_scenarios"
+df_list <- list()
+i <- 1
+for (mult_factor in c(0.5, 0.7, 0.9, 1.1, 1.3, 1.5)) {
+  raster_path <- paste(outer_dir, paste(mult_factor, 'x', sep=''),
+    'L_sum_avail_post_minus_pre.tif', sep='/')
+  diff_raster <- raster(raster_path)
+  df <- data.frame('Lsum_avail_post_minus_pre'=c(values(diff_raster)),
+    'multiplication_factor'=(rep(mult_factor, length(c(values(diff_raster))))))
+  df_list[[i]] <- df
+  i <- i + 1
+}
+diff_df <- do.call(rbind, df_list)
+diff_df$multiplication_factor <- factor(diff_df$multiplication_factor)
+p <- ggplot(diff_df, aes(x=multiplication_factor, y=Lsum_avail_post_minus_pre))
+p <- p + geom_boxplot()
+p <- p + xlab("Precipitation multiplication factor") + ylab("Delta L_sum_avail") + print_theme
+pngname <- paste(outer_dir, 'figs', "l_sum_avail_diff.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+# GSMNP veg monitoring database
 imgdir <- "C:/Users/ginge/Dropbox/NatCap_backup/USFS/NPS_veg_monitoring/GK_analysis"
 
 # Meghan Mulroy's data

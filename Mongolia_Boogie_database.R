@@ -61,20 +61,11 @@ rm_df <- rbind(CBM_rm, SCP_rm)  # <<<-- rangeland metric scores for CBM and SCP
 write.csv(rm_df, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/rangeland_metric_SCP_CBM_2017.csv",
           row.names=FALSE)
 
-# authoritative biomass records (calculated below)
-SCP_herb_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv")
-SCP_herb_biomass$year <- sapply(strsplit(as.character(SCP_herb_biomass$Date), split="-"), `[`, 1)
-SCP_rm_biomass <- merge(SCP_herb_biomass, SCP_rm, all=TRUE)  # yay
-
-CBM_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/total_biomass_SCP_CBM.csv")
-CBM_biomass <- CBM_biomass[CBM_biomass$source == 'CBM', ]
-CBM_rm_biomass <- merge(CBM_biomass, CBM_rm, all=TRUE)  # confirms site match, but can't use b/c biomass data is all
-                                                        # from 2016, and RM data is just from 2017
-
 ## database, biomass
 db <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_boogie_11.15.17.accdb"
 # db <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/cashmere_Rangeland_monitoring.accdb"
 con2 <- odbcConnectAccess2007(db)
+sqlTables(con2, tableType="TABLE")$TABLE_NAME
 
 # non-woody biomass, Boogie's sites
 biomass_SCP <- sqlFetch(con2, "Biomass", stringsAsFactors=FALSE)
@@ -94,41 +85,12 @@ total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
 colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
 total_biomass_SCP$source <- 'SCP'
 write.csv(total_biomass_SCP,
-          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv",
+          "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv",
           row.names=FALSE)
 
-# make one table with all field measurements currently available
-biomass_SCP <- sqlFetch(con2, "Biomass")
-biomass_SCP$DATE <- as.Date(biomass_SCP$DATE, format="%d/%m/%Y")
-biomass_SCP$dry_calc <- biomass_SCP$dry
-biomass_SCP[is.na(biomass_SCP$dry), 'dry_calc'] <- biomass_SCP[is.na(biomass_SCP$dry), 'wet'] * 0.45561
-
-total_biomass_d <- aggregate(dry ~ `2017ID` + DATE, data=biomass_SCP,
-                            FUN=sum)  # this is total biomass for 2016 dates
-total_biomass_w <- aggregate(wet ~ `2017ID` + DATE, data=biomass_SCP,
-                             FUN=sum)
-sum_biomass <- merge(total_biomass_d, total_biomass_w)
-dry_from_wet <- lm(dry~wet + 0, data=sum_biomass)
-# Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# wet  0.45561    0.01047   43.51   <2e-16 ***
-#   ---
-#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-# 
-# Residual standard error: 25.05 on 49 degrees of freedom
-# Multiple R-squared:  0.9748,	Adjusted R-squared:  0.9742 
-# F-statistic:  1893 on 1 and 49 DF,  p-value: < 2.2e-16
-
-biomass_SCP[is.na(biomass_SCP$FREQUENCY), 'FREQUENCY'] <- 4
-biomass_SCP$dry_calc_gm2 <- biomass_SCP$dry_calc / biomass_SCP$FREQUENCY
-total_biomass_SCP <- aggregate(dry_calc_gm2 ~ `2017ID` + DATE, data=biomass_SCP,
-                               FUN=sum) # dry biomass, all SCP samples
-colnames(total_biomass_SCP) <- c("site_id", "Date", "biomass_g_m2")
-total_biomass_SCP$source <- 'SCP'
-
+# CBM biomass, from Seegii
 CBM_sites <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_site_coordinates_2016_17.csv")
 CBM_biomass_16 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_biomass_data_2016.csv")
-## TODO calc 2017 biomass from LPI data, using LPI and biomass data from 2016
 for(r in 1:NROW(CBM_sites)){
   if(length(strsplit(as.character(CBM_sites[r, 'id_GK']),
                      split="_")[[1]]) > 1){
@@ -143,17 +105,44 @@ CBM_sites <- CBM_sites[CBM_sites$year_suf != 17, ]
 CBM_sites <- CBM_sites[, c('Plot_ID', 'id_GK')]  # this is the dataframe
   # that translates "Plot_ID" to "site_id" that I used for simulations, for 2016 sites
 CBM_biomass <- merge(CBM_sites, CBM_biomass_16, by='Plot_ID', all.y=TRUE)
+# merge with growth form df to select only non-shrub veg
+CBM_spp_growth_form_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_biomass_16_species_growth_form.csv")
+CBM_biomass_merge_growth_form <- merge(CBM_biomass, CBM_spp_growth_form_df)
+CBM_biomass_merge_growth_form <- CBM_biomass_merge_growth_form[
+                                  CBM_biomass_merge_growth_form$GrowthHabit != "Woody", ]
+CBM_biomass_non_woody <- aggregate(Average_biomass~id_GK + Date, data=CBM_biomass_merge_growth_form,
+                                   FUN=sum)
 CBM_biomass <- aggregate(Average_biomass~id_GK + Date, data=CBM_biomass,
                          FUN=sum)
-CBM_biomass$Date <- as.Date(CBM_biomass$Date, format="%m/%d/%Y")
-CBM_biomass <- CBM_biomass[, c('id_GK', 'Date', 'Average_biomass')]
-colnames(CBM_biomass) <- c('site_id', 'Date', 'biomass_g_m2')
-CBM_biomass$source <- 'CBM'
-
-biomass_combined <- rbind(CBM_biomass, total_biomass_SCP)
-write.csv(biomass_combined,
-          "C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/total_biomass_SCP_CBM.csv",
+CBM_biomass_non_woody$Date <- as.Date(CBM_biomass_non_woody$Date, format="%m/%d/%Y")
+CBM_biomass_non_woody <- CBM_biomass_non_woody[, c('id_GK', 'Date', 'Average_biomass')]
+colnames(CBM_biomass_non_woody) <- c('site_id', 'Date', 'biomass_g_m2')
+CBM_biomass_non_woody$source <- 'CBM'
+write.csv(CBM_biomass_non_woody,
+          "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_herb_biomass_2016.csv",
           row.names=FALSE)
+
+# one table: herbaceous biomass in 2016 (to match with back-calc mgmt)
+cbm_herb_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_herb_biomass_2016.csv")
+scp_herb_biomass <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/SCP_herb_biomass.csv")
+biomass_combined <- rbind(scp_herb_biomass, cbm_herb_biomass)
+# restrict by date
+biomass_combined$Date <- as.Date(biomass_combined$Date, format="%Y-%m-%d")
+biomass_2016 <- biomass_combined[(biomass_combined$Date >= "2016-01-01") &
+                                   (biomass_combined$Date <= "2016-12-31"), ]
+# add "Century date"
+biomass_2016$day <- format(biomass_2016$Date, format="%d")
+biomass_2016$date <- 2016.67  # days in second half of August: assign to end of August
+biomass_2016[biomass_2016$day <= 15, 'date'] <- 2016.58  # days in first half of August: assign to end of July
+biomass_2016 <- biomass_2016[!duplicated(biomass_2016), ]
+write.csv(biomass_2016,
+          "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/herbaceous_biomass_2016_SCP_CBM.csv",
+          row.names=FALSE)
+# throwaway
+p <- ggplot(biomass_2016, aes(x=source, y=biomass_g_m2))
+p <- p + geom_boxplot()
+print(p)
+
 # check: compare biomass of SCP vs CBM sites in 2016
 wth_match <- read.csv("C:/Users/Ginger/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/CBM_SCP_points_nearest_soum_ctr.csv")
 wth_match <- wth_match[, c('site_id', 'NEAR_DIST', 'name_en')]

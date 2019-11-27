@@ -1138,3 +1138,8 @@ colnames(worldclim_prec)[5] <- 'precip_mm_avg_annual_Worldclim'
 merged <- merge(prec_res, worldclim_prec, by='NAME')
 write.csv(merged, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_precip_FEWS_RFE_Worldclim.csv",
           row.names=FALSE)
+
+# how did rainfall in 2014 and 2015 compare on each property, from FEWS?
+fews_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_annual_precip_2014_2015_FEWS_RFE.csv")
+fews_df$diff <- fews_df$precip_mm_2015 - fews_df$precip_mm_2014
+hist(fews_df$diff, breaks=50)

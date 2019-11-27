@@ -57,7 +57,7 @@ precip_suff <- precip_suff[precip_suff$conception_step == -4, ]
 p <- ggplot(precip_suff, aes(x=rainfall_cm, y=num_months_insufficient))
 p <- p + geom_point()
 p <- p + facet_wrap(~density)
-p <- p + ylab("Number months with insufficient diet")
+p <- p + ylab("Number months \n with insufficient diet")
 p <- p + xlab("Annual precipitation (cm)")
 p <- p + print_theme
 print(p)
@@ -93,8 +93,8 @@ write.csv(nodups, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_mode
 
 ## max viable density with precip perturb
 library(ggplot2)
-# sum_df <- remove invalid rows, as above
-sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/precip_perturbations/num_months_insufficient_summary_2018-10-02--23_19_12.csv")
+# sum_df <- nodups  # invalid rows were removed as above
+sum_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/precip_perturbations/num_months_insufficient_summary_2018-10-18--18_14_10.csv")
 # how many site / precip scenario combinations should there be? 360
 change_perc_series <- c(-0.8, -0.4, 0, 0.4, 0.8, 1.2)
 site_list <- c(0, 1, 2, 6, 10, 12, 13, 27, 21, 24)
@@ -177,13 +177,11 @@ print(p)
 dev.off()
 
 model <- lm(density~PCI*tot_precip + site, data=sum_perturb_df)
-library(lm.beta)
-lm.final.beta <- lm.beta(model)
-print(lm.final.beta)
-summary(lm.final.beta)
-coef(lm.final.beta)
+summary(model)
 
 model_resid <- resid(model)
+model_fitted <- fitted(model)
+plot(model_fitted, model_resid, ylab="Residuals", xlab="Fitted")
 plot(sum_perturb_df$tot_precip, model_resid, ylab="Residuals",
      xlab="Precip")
 plot(sum_perturb_df$PCI, model_resid, ylab="Residuals",
@@ -260,15 +258,23 @@ viable_scenarios$space_wl_minrepdensity <- viable_scenarios$mvdensity.0 - min_re
 
 # formatted table for manuscript
 ms_table <- viable_scenarios
-ms_table <- ms_table[, c("Felicia_id", "EcolClass", "prop_non_density", "mvdensity.0",
+ms_table <- ms_table[, c("FID", "Felicia_id", "EcolClass", "prop_non_density", "mvdensity.0",
                          "space_wl.0", "space_wl.-0.6", "space_wl.0.6",
                          "space_wl_maxrepdensity", "space_wl_minrepdensity")]
-colnames(ms_table) <- c("Property", "Ecological classification", "Stocking rate", "Maximum viable density",
+colnames(ms_table) <- c("FID", "Property", "Ecological classification", "Stocking rate", "Maximum viable density",
                         "Space for wildlife current", "Space for wildlife low rainfall", "Space for wildlife high rainfall",
                         "Space for wildlife high stocking", "Space for wildlife low stocking")
+# join average annual precip in cm from Worldclim
+worldclim_prec <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/regional_average_annual_precip_centroid.csv")
+worldclim_prec$avg_annual_rainfall_cm <- worldclim_prec$avg_annual_rainfall_mm / 10.
+worldclim_prec <- worldclim_prec[, c('FID', 'avg_annual_rainfall_cm')]
+ms_table <- merge(worldclim_prec, ms_table, by='FID')
+ms_table <- ms_table[, c("Property", "Ecological classification", "avg_annual_rainfall_cm",
+                         "Maximum viable density", "Stocking rate", "Space for wildlife current")]
+colnames(ms_table)[3] <- "Average annual rainfall (cm)"
 ms_table <- ms_table[order(ms_table$Property), ]
 write.csv(ms_table,
-          "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/precip_perturbations/space_wildlife_climate_mgmt_scenarios.csv",
+          "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/precip_perturbations/Space_wildlife_illustration_supplement.csv",
           row.names=FALSE)
 
 # percent change space_wl = change in space for wildlife in climate/mgmt scenarios
@@ -300,7 +306,7 @@ photocopy_pal <- c('#fef0d9','#fdcc8a','#fc8d59','#d7301f')
 p <- ggplot(pch_long, aes(perc_change_100, fill=scenario))
 p <- p + geom_density(alpha=0.7)
 p <- p + ylab("Density")
-p <- p + xlab("Space for wildlife: percent change from current")
+p <- p + xlab(" Viable wild grazer density: \n percent change from current")
 p <- p + theme(axis.title=element_text(size=10),
                axis.text=element_text(size=8.5),
                panel.background=element_rect(fill="white", colour="grey50"),

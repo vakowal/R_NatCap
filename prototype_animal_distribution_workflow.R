@@ -11,10 +11,18 @@ library(raster)
 library(ggplot2)
 
 # fake data
-modeled_index <- runif(100, 1, 100)
-EO_index <- modeled_index * 1.3 + runif(100, -50, 50)
+modeled_index <- runif(100, 100, 200)
+EO_index <- modeled_index + runif(100, -50, 5)
 total_animals <- 100
 
+plotdf <- data.frame('potential_biomass'=modeled_index, 'observed_biomass'=EO_index)
+
+p <- ggplot(plotdf, aes(x=potential_biomass, y=observed_biomass))
+p <- p + geom_point()
+p <- p + geom_abline(intercept = 0, slope=1)
+print(p)
+
+# OLD WAY #
 # normalize each index relative to its minimum and maximum values inside the AOI
 modeled_normalized <- (
   (modeled_index - min(modeled_index)) / (max(modeled_index) - min(modeled_index)))

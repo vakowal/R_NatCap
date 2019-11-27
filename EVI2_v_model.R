@@ -43,3 +43,33 @@ pngname <- "C:/Users/ginge/Desktop/modeled_biomass.png" # paste(img_dir, "biomas
 png(file=pngname, units="in", res=300, width=7.5, height=5)
 print(p)
 dev.off()
+
+# throwaway: make an example plot of biomass
+subs_df <- summary_df[summary_df$source == 'modeled_green' & summary_df$site_label == 'X0', ]
+p <- ggplot(subs_df, aes(x=month, y=biomass, group=site_label))
+p <- p + geom_line()
+p <- p + geom_point()
+p <- p + scale_x_continuous(limits = c(1, 12), breaks=seq(1, 12, by = 2))
+p <- p + labs(x ='Month', y =("Biomass (gC m-2)")) + print_theme
+print(p)
+pngname <- "C:/Users/ginge/Desktop/rangeland_model_FWAT_6.11.19/biomass_time_series.png"
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
+
+# make a fake plot of diet sufficiency
+diet_suff_df <- data.frame(
+  seq(1, 12, by=1), 
+  c(0.8, 0.9, 1.2, 1.24, 1.3, 1.5, 1.55, 1.6, 1.1, 0.9, 0.8, 0.7)
+)
+colnames(diet_suff_df) <- c('Month', 'Diet_sufficiency')
+p <- ggplot(diet_suff_df, aes(x=Month, y=Diet_sufficiency))
+p <- p + geom_point() + geom_line() + print_theme
+p <- p + geom_abline(slope=0, intercept=1, color='grey42', size=0.3)
+p <- p + ylab("Diet sufficiency")
+p <- p + scale_x_continuous(limits = c(1, 12), breaks=seq(1, 12, by = 2))
+print(p)
+pngname <- "C:/Users/ginge/Desktop/rangeland_model_FWAT_6.11.19/diet_sufficiency_time_series.png"
+png(file=pngname, units="in", res=300, width=4, height=3)
+print(p)
+dev.off()
