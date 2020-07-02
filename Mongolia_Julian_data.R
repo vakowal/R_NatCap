@@ -151,37 +151,7 @@ plot_centroid <- dcast(spatial_melt, plotid ~ variable, mean)
 write.csv(plot_centroid, paste(data_dir, 'plot_centroids.csv', sep='/'),
           row.names=FALSE)
 
-# drivers of animal density: temporal vs spatial
-# site metadata
-veg_dat <- read.table(paste(data_dir, 'raw_data', 'Mongol_dat.txt', sep='/'),
-                      header=TRUE)
-metadata_df <- veg_dat[!duplicated(veg_dat$code), c('site', 'plot', 'distance', 'hotspot_type', 'code')]
-dung_df <- read.csv(paste(processed_dir, 'dung_data.csv', sep='/'))
-dung_site_df <- merge(metadata_df, dung_df, by=c('site', 'plot', 'code'), all=TRUE)
-dung_lm <- lm(MLU~site + distance + hotspot_type + year, data=dung_site_df)
-summary(dung_lm)
-
-dung_site_df$year <- factor(dung_site_df$year)
-dung_site_df$site <- factor(dung_site_df$site)
-p <- ggplot(dung_site_df, aes(x=site, y=MLU))
-p <- p + geom_boxplot() + ylab("Livestock density (MLU)")
-p <- p + facet_grid(~year)
-print(p)
-pngname <- paste(processed_dir, "MLU_by_site_year.png", sep='/')
-png(file=pngname, units="in", res=300, width=7, height=4)
-print(p)
-dev.off()
-
-p <- ggplot(dung_site_df, aes(x=year, y=MLU))
-p <- p + geom_boxplot() + ylab("Livestock density (MLU)")
-p <- p + facet_wrap(~site, scales='free')
-print(p)
-pngname <- paste(processed_dir, "MLU_by_year_site.png", sep='/')
-png(file=pngname, units="in", res=300, width=5, height=8)
-print(p)
-dev.off()
-
-# explore Century results at Julian's sites
+# Century results at Julian's sites
 biomass_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/Century_outputs/biomass_summary.csv")
 biomass_df$year <- floor(biomass_df$time)
 biomass_df$month <- round((biomass_df$time - biomass_df$year) * 12, digits=0)
@@ -383,6 +353,176 @@ png(file=pngname, units="in", res=300, width=7, height=4)
 print(p)
 dev.off()
 
+# compare biomass estimated by RPM: zero_sd vs uniform vs via_ndvi
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
+
+# zero density
+zero_sd_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd"
+step_key_df <- read.csv(
+  paste(zero_sd_dir, "step_key.csv", sep='/'))
+colnames(step_key_df) <- c('year', 'month', 'step')
+zero_sd_df <- read.csv(
+  paste(zero_sd_dir, "RPM_biomass_plot_centroids_zero_sd.csv", sep='/'))
+zero_sd_df <- merge(step_key_df, zero_sd_df)
+zero_sd_df <- zero_sd_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+zero_sd_df$method <- 'zero_sd'
+
+# uniform density
+uniform_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/uniform_density_mMLU_per_site"
+uniform_df <- read.csv(
+  paste(uniform_dir,
+    "RPM_biomass_plot_centroids_uniform_density_mMLU_per_site.csv", sep='/'))
+uniform_df <- merge(step_key_df, uniform_df)
+uniform_df <- uniform_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+uniform_df$method <- 'uniform'
+
+# via NDVI
+via_ndvi_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/compare_to_ndvi"
+ndvi_df = read.csv(
+  paste(via_ndvi_dir, "RPM_biomass_plot_centroids_compare_to_ndvi.csv", sep='/'))
+ndvi_step_key_df = read.csv(paste(via_ndvi_dir, 'step_key.csv', sep='/'))
+colnames(ndvi_step_key_df) <- c('year', 'month', 'step')
+ndvi_df <- merge(ndvi_df, ndvi_step_key_df)
+ndvi_df <- ndvi_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+ndvi_df$method <- 'via_ndvi'
+
+rpm_df <- rbind(zero_sd_df, uniform_df, ndvi_df)
+plot_out <- strsplit(as.character(rpm_df$plotid), '[ ]')
+plot_df <- data.frame(do.call(rbind, plot_out))
+colnames(plot_df) <- c('site', 'plot')
+rpm_df <- cbind(rpm_df, plot_df)
+date_fun <- function(year, month) {
+  return(year + month/12)
+}
+rpm_df$date <- 0
+for (r in 1:nrow(rpm_df)){
+  rpm_df[r, 'date'] <- date_fun(rpm_df[r, 'year'], rpm_df[r, 'month'])
+}
+date_subs <- rpm_df[rpm_df$year >= 2014, ]
+date_subs$site <- factor(date_subs$site, levels=1:15)
+date_subs$method <- factor(date_subs$method,
+                           levels=c('zero_sd', 'uniform', 'via_ndvi'),
+                           labels=c('Without grazing', 'Uniform density', 'Disaggregated via NDVI'))
+date_subs$plot <- factor(date_subs$plot,
+                         levels=c('A', 'B', 'C', 'D', 'E'),
+                         labels=c('50 m', '150 m', '350 m', '750 m', '1500 m'))
+# for all sites
+p <- ggplot(date_subs, aes(x=date, y=total_biomass_gm2, group=method))
+p <- p + geom_line(aes(color=method)) + facet_grid(site~plot, scales='free')
+p <- p + xlab("Date") + ylab("Standing biomass (g/m2)")
+p <- p + scale_x_continuous(breaks=c(2014, 2015))
+p <- p + theme(legend.position='bottom',
+               legend.direction='horizontal')
+pngname <- paste(fig_dir, "RPM_biomass_zerosd_uniform_ndvi_all_sites.png", sep='/')
+png(file=pngname, units="in", res=300, width=7, height=10)
+print(p)
+dev.off()
+# for sites 12 and 13 only (site with highest animal density)
+subs_13 <- date_subs[(date_subs$site==13) | (date_subs$site==12), ]
+p <- ggplot(subs_13, aes(x=date, y=total_biomass_gm2, group=method))
+p <- p + geom_line(aes(color=method)) + facet_grid(site~plot, scales='free')
+p <- p + xlab("Date") + ylab("Standing biomass (g/m2)")
+p <- p + scale_x_continuous(breaks=c(2014, 2015))
+p <- p + theme(legend.position='bottom',
+               legend.direction='horizontal')
+pngname <- paste(fig_dir, "RPM_biomass_zerosd_uniform_ndvi_sites12_13.png", sep='/')
+png(file=pngname, units="in", res=300, width=8, height=4)
+print(p)
+dev.off()
+
+# analyze difference between biomass: via NDVI vs uniform animal density
+diff_fig_dir <- paste(fig_dir, 'biomass_ndvi_minus_uniform', sep='/')
+dir.create(diff_fig_dir)
+method_comp_df <- date_subs[(date_subs$method == 'uniform') |
+                              (date_subs$method == 'via_ndvi'), ]
+method_df <- reshape(method_comp_df, v.names='total_biomass_gm2',
+                     timevar='method',
+                     idvar=c('year', 'month', 'site', 'plot', 'date'),
+                     direction="wide")
+method_df$diff_ndvi_minus_uniform <- method_df$total_biomass_gm2.via_ndvi - method_df$total_biomass_gm2.uniform
+
+# monthly diff between the two methods
+p <- ggplot(method_df, aes(x=plot, y=diff_ndvi_minus_uniform))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~year, scales='free')
+print(p)
+p <- ggplot(method_df, aes(x=plot, y=diff_ndvi_minus_uniform))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~site, scales='free')
+print(p)
+pngname <- paste(diff_fig_dir, "monthly_difference_by_site_x_plot.png", sep='/')
+png(file=pngname, units="in", res=300, width=6, height=8)
+print(p)
+dev.off()
+
+# yearly mean diff between the two methods
+mean_yearly_diff <- aggregate(diff_ndvi_minus_uniform~year + plotid + site + plot, method_df, FUN=mean)
+colnames(mean_yearly_diff) <- c('year', 'plotid', 'site', 'plot', 'yearly_diff_mean')
+mean_yearly_diff$year <- factor(mean_yearly_diff$year)
+mean_yearly_diff$site <- factor(mean_yearly_diff$site, levels=1:15)
+mean_yearly_diff$plot <- factor(mean_yearly_diff$plot,
+                         levels=c('A', 'B', 'C', 'D', 'E'),
+                         labels=c('50 m', '150 m', '350 m', '750 m', '1500 m'))
+p <- ggplot(mean_yearly_diff, aes(x=site, y=yearly_diff_mean))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~year, scales='free')
+pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_site.png", sep='/')
+png(file=pngname, units="in", res=300, width=5, height=3)
+print(p)
+dev.off()
+p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_diff_mean))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~year, scales='free')
+p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean:\n Biomass[via NDVI] - Biomass[uniform]")
+pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_plot.png", sep='/')
+png(file=pngname, units="in", res=300, width=5, height=3)
+print(p)
+dev.off()
+p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_diff_mean))
+p <- p + geom_boxplot()
+p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean:\n Biomass[via NDVI] - Biomass[uniform]")
+pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_plot_both_years.png", sep='/')
+png(file=pngname, units="in", res=300, width=3, height=3)
+print(p)
+dev.off()
+
+# ANOVA: analysis of the difference in biomass between uniform and via NDVI
+# on monthly basis (each observation = difference at 1 plot in 1 month)
+method_df$plot <- factor(method_df$plot)
+method_df$site <- factor(method_df$site)
+method_df$year <- factor(method_df$year)
+anova_test <- aov(diff_ndvi_minus_uniform ~ plot + site + year, method_df)
+summary(anova_test)
+
+anova_test2 <- aov(diff_ndvi_minus_uniform ~ plot*site + year, method_df)
+summary(anova_test2)
+
+par(mfrow=c(2,2))
+plot(anova_test2)  # residuals are ... ok?
+
+# post-hoc test: sig differences between groups
+TukeyHSD(anova_test2)  # between plots, only A and E are significantly different
+
+# Kruskal-Wallis, a nonparametric alternative to a one-way anova
+kruskal.test(diff_ndvi_minus_uniform ~ plot, method_df)
+pairwise.wilcox.test(method_df$diff_ndvi_minus_uniform, method_df$plot)
+
+# on yearly basis (each observation = average yearly difference at 1 plot in 1 year)
+mean_yearly_diff$plot <- factor(mean_yearly_diff$plot)
+mean_yearly_diff$site <- factor(mean_yearly_diff$site)
+mean_yearly_diff$year <- factor(mean_yearly_diff$year)
+anova_test <- aov(yearly_diff_mean ~ plot + site + year, mean_yearly_diff)
+summary(anova_test)
+anova_test3 <- aov(yearly_diff_mean ~ plot*site + year, mean_yearly_diff)
+summary(anova_test)
+plot(anova_test)
+
+kruskal.test(yearly_diff_mean ~ plot, mean_yearly_diff)
+pairwise.wilcox.test(mean_yearly_diff$yearly_diff_mean, method_df$plot)
+
 # compare animal density estimated via NDVI to empirical
 sim_density_df <- read.csv(
   paste(via_ndvi_dir, "RPM_density_plot_centroids_compare_to_ndvi.csv", sep='/'))
@@ -391,20 +531,6 @@ plot_out <- strsplit(as.character(sim_density_df$plotid), '[ ]')
 plot_df <- data.frame(do.call(rbind, plot_out))
 colnames(plot_df) <- c('site', 'plot')
 sim_density_df <- cbind(sim_density_df, plot_df)
-
-# restrict plot to steps in 2014-2015
-subs_density <- sim_density_df[sim_density_df$year >= 2014, ]
-subs_density$site <- as.factor(subs_density$site)
-# include only the extreme distance treatments, combine A+B
-low_distance <- subs_density[(subs_density$plot=='A') |
-                               (subs_density$plot=='B'), ]
-low_dist_mean <- aggregate(animal_density~site + step, low_distance, FUN=mean)
-low_dist_mean$plot <- 'AB'
-high_dist <- subs_density[(subs_density$plot=='E'), colnames(low_dist_mean)]
-low_dist_mean$distance <- '50-150 m'
-high_dist$distance <- '1500 m'
-dist_subs <- rbind(low_dist_mean, high_dist)
-dist_subs$distance <- factor(dist_subs$distance, levels=c('50-150 m', '1500 m'))
 # empirical dung data
 dung_df_path <- paste(processed_dir, 'dung_data.csv', sep='/')
 dung_df <- read.csv(dung_df_path)
@@ -412,38 +538,15 @@ code_out <- strsplit(as.character(dung_df$code), '[[:alpha:]]')
 code_df <- data.frame(do.call(rbind, code_out))
 colnames(code_df) <- c('site', 'replicate')
 dung_df <- cbind(dung_df, code_df)
-emp_low_dist <- dung_df[(dung_df$plot=='A') |
-                        (dung_df$plot=='B'), c('site', 'replicate', 'year', 'MLU')]
-emp_low_dist$plot <- 'AB'
-high_dist <- dung_df[(dung_df$plot=='E'), colnames(emp_low_dist)]
-emp_low_dist$distance <- '50-150 m'
-high_dist$distance <- '1500 m'
-emp_subs <- rbind(emp_low_dist, high_dist)
-emp_subs$step <- 0
-emp_subs[emp_subs$year == 2014, 'step'] <- ndvi_step_key_df[
-  (ndvi_step_key_df$year == 2014) & (ndvi_step_key_df$month == 8), 'step']
-emp_subs[emp_subs$year == 2015, 'step'] <- ndvi_step_key_df[
-  (ndvi_step_key_df$year == 2015) & (ndvi_step_key_df$month == 8), 'step']
-# emp_subs$step <- as.factor(emp_subs$step)
-# correct MLU by the same factor I used above to calculate site-level total animals
-emp_subs$MLU_cor <- emp_subs$MLU / 7.58
-emp_subs$distance <- factor(emp_subs$distance, levels=c('50-150 m', '1500 m'))
 
-p <- ggplot(dist_subs, aes(x=step, y=animal_density, group=distance))
-p <- p + geom_line(aes(color=distance)) + facet_wrap(~site, nrow=3, scales='free')
-p <- p + xlab("Step (month)") + ylab("Animal density (animals/ha)")
-pngname <- paste(fig_dir, "RPM_density_comparison_to_ndvi_50-150m_1500m.png", sep='/')
-png(file=pngname, units="in", res=300, width=8, height=4.5)
-print(p)
-dev.off()
-
-p <- p + geom_jitter(data=emp_subs, aes(x=step, y=MLU_cor, color=distance), width=1)
-pngname <- paste(fig_dir, "RPM_density_comparison_to_ndvi_50-150m_1500m_with_empirical.png", sep='/')
-png(file=pngname, units="in", res=300, width=8, height=4.5)
-print(p)
-dev.off()
-
-# distances A and E only
+# restrict plot to steps in 2014-2015
+subs_density <- sim_density_df[sim_density_df$year >= 2014, ]
+subs_density$date <- 0
+for (r in 1:nrow(subs_density)){
+  subs_density[r, 'date'] <- date_fun(subs_density[r, 'year'], subs_density[r, 'month'])
+}
+subs_density$site <- factor(subs_density$site, levels=c(1:15))
+# include only the extreme distance treatments, distances A and E only
 low_distance <- subs_density[(subs_density$plot=='A'), ]
 high_dist <- subs_density[(subs_density$plot=='E'), colnames(low_distance)]
 low_distance$distance <- '50 m'
@@ -456,25 +559,62 @@ high_dist <- dung_df[(dung_df$plot=='E'), colnames(emp_low_dist)]
 emp_low_dist$distance <- '50 m'
 high_dist$distance <- '1500 m'
 emp_subs <- rbind(emp_low_dist, high_dist)
-emp_subs$step <- 0
-emp_subs[emp_subs$year == 2014, 'step'] <- ndvi_step_key_df[
-  (ndvi_step_key_df$year == 2014) & (ndvi_step_key_df$month == 8), 'step']
-emp_subs[emp_subs$year == 2015, 'step'] <- ndvi_step_key_df[
-  (ndvi_step_key_df$year == 2015) & (ndvi_step_key_df$month == 8), 'step']
+emp_subs$date <- 0
+emp_subs[emp_subs$year == 2014, 'date'] <- subs_density[
+  (subs_density$year == 2014) & (subs_density$month == 8), 'date']
+emp_subs[emp_subs$year == 2015, 'date'] <- subs_density[
+  (subs_density$year == 2015) & (subs_density$month == 8), 'date']
 # correct MLU by the same factor I used above to calculate site-level total animals
 emp_subs$MLU_cor <- emp_subs$MLU / 7.58
 emp_subs$distance <- factor(emp_subs$distance, levels=c('50 m', '1500 m'))
+emp_subs$site <- factor(emp_subs$site, levels=c(1:15))
 
-p <- ggplot(dist_subs, aes(x=step, y=animal_density, group=distance))
-p <- p + geom_line(aes(color=distance)) + facet_wrap(~site, nrow=3, scales='free')
-p <- p + xlab("Step (month)") + ylab("Animal density (animals/ha)")
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
+p <- ggplot(dist_subs, aes(x=date, y=animal_density, group=distance))
+p <- p + geom_line(aes(color=distance)) + facet_wrap(~site, nrow=5, scales='free')
+p <- p + xlab("Date") + ylab("Animal density (animals/ha)")
+p <- p + scale_x_continuous(breaks=c(2014, 2015), labels=c('Jan-2014', 'Jan-2015'))
+p <- p + theme(legend.position='bottom',
+               legend.direction='horizontal')
 pngname <- paste(fig_dir, "RPM_density_comparison_to_ndvi_50m_1500m.png", sep='/')
-png(file=pngname, units="in", res=300, width=8, height=4.5)
+png(file=pngname, units="in", res=300, width=5, height=7)
 print(p)
 dev.off()
 
-p <- p + geom_jitter(data=emp_subs, aes(x=step, y=MLU_cor, color=distance), width=1)
+p <- p + geom_jitter(data=emp_subs, aes(x=date, y=MLU_cor, color=distance), width=0.04)
 pngname <- paste(fig_dir, "RPM_density_comparison_to_ndvi_50m_1500m_with_empirical.png", sep='/')
-png(file=pngname, units="in", res=300, width=8, height=4.5)
+png(file=pngname, units="in", res=300, width=5, height=7)
 print(p)
 dev.off()
+
+# is animal density usually higher at 50 m than at 1500 m?
+dist_comp_df <- reshape(dist_subs, v.names='animal_density',
+  timevar='plot', idvar=c('site', 'year', 'month', 'date'),
+  direction='wide')
+dist_comp_df$density_1500m_minus_50m <- dist_comp_df$animal_density.E - dist_comp_df$animal_density.A
+dist_comp_df$density_50m_gt_1500m <- dist_comp_df$density_1500m_minus_50m < 0
+count_gt <- aggregate(density_50m_gt_1500m ~ site, dist_comp_df, FUN=sum)
+colnames(count_gt) <- c('site', 'num_months_50m_gt_1500m')
+count_gt$proportion_months_50m_gt_1500m <- (
+  count_gt$num_months_50m_gt_1500m / length(unique(dist_comp_df$date)))
+p <- ggplot(count_gt, aes(x=site, y=proportion_months_50m_gt_1500m))
+p <- p + geom_bar(stat='identity') + coord_flip()
+p <- p + ylab("Proportion of months where\n density[50 m] > density[1500 m]") + xlab("Site")
+pngname <- paste(fig_dir, "proportion_months_density50m_gt_density1500m.png", sep='/')
+png(file=pngname, units="in", res=300, width=4, height=5)
+print(p)
+dev.off()
+
+# taking all months across the simulation, not just 2014 and 2015
+full_comp_df <- reshape(sim_density_df, v.names='animal_density',
+  timevar='plot', idvar=c('site', 'year', 'month'), direction='wide')
+full_comp_df$date <- 0
+for (r in 1:nrow(full_comp_df)){
+  full_comp_df[r, 'date'] <- date_fun(full_comp_df[r, 'year'], full_comp_df[r, 'month'])
+}
+full_comp_df$density_1500m_minus_50m <- full_comp_df$animal_density.E - full_comp_df$animal_density.A
+full_comp_df$density_50m_gt_1500m <- full_comp_df$density_1500m_minus_50m < 0
+full_count_gt <- aggregate(density_50m_gt_1500m ~ site, full_comp_df, FUN=sum)
+colnames(full_count_gt) <- c('site', 'num_months_50m_gt_1500m')
+full_count_gt$proportion_months_50m_gt_1500m <- (
+  full_count_gt$num_months_50m_gt_1500m / length(unique(full_comp_df$date)))
