@@ -6,6 +6,7 @@ dir.create(processed_dir)
 # create processed cover data for comparison with RPM results
 veg_dat <- read.table(paste(data_dir, 'raw_data', 'Mongol_dat.txt', sep='/'),
                       header=TRUE)
+site_df <- veg_dat[!duplicated(veg_dat$site), c('site', 'hotspot_type')]
 cover_df <- veg_dat[, c('site', 'code', 'plot', 'date_2014', 'date_2015', 'cover_perc_2014', 'cover_perc_2015')]
 cover_long_df <- reshape(cover_df, idvar=c('site', 'code', 'plot'), varying=c('date_2014', 'date_2015'),
                          v.names='date', timevar='year', times=c('2014', '2015'),
@@ -403,13 +404,14 @@ for (r in 1:nrow(rpm_df)){
 }
 date_subs <- rpm_df[rpm_df$year >= 2014, ]
 date_subs$site <- factor(date_subs$site, levels=1:15)
+
+# for all sites
 date_subs$method <- factor(date_subs$method,
                            levels=c('zero_sd', 'uniform', 'via_ndvi'),
                            labels=c('Without grazing', 'Uniform density', 'Disaggregated via NDVI'))
 date_subs$plot <- factor(date_subs$plot,
                          levels=c('A', 'B', 'C', 'D', 'E'),
                          labels=c('50 m', '150 m', '350 m', '750 m', '1500 m'))
-# for all sites
 p <- ggplot(date_subs, aes(x=date, y=total_biomass_gm2, group=method))
 p <- p + geom_line(aes(color=method)) + facet_grid(site~plot, scales='free')
 p <- p + xlab("Date") + ylab("Standing biomass (g/m2)")
@@ -443,85 +445,82 @@ method_df <- reshape(method_comp_df, v.names='total_biomass_gm2',
                      idvar=c('year', 'month', 'site', 'plot', 'date'),
                      direction="wide")
 method_df$diff_ndvi_minus_uniform <- method_df$total_biomass_gm2.via_ndvi - method_df$total_biomass_gm2.uniform
-
+method_df$perc_diff <- (method_df$diff_ndvi_minus_uniform / method_df$total_biomass_gm2.uniform) * 100
+method_df <- merge(method_df, site_df)
+method_df$plot <- factor(method_df$plot,
+                                levels=c('A', 'B', 'C', 'D', 'E'),
+                                labels=c('50', '150', '350', '750', '1500'))
 # monthly diff between the two methods
-p <- ggplot(method_df, aes(x=plot, y=diff_ndvi_minus_uniform))
+p <- ggplot(method_df, aes(x=plot, y=perc_diff))  # y=diff_ndvi_minus_uniform))
 p <- p + geom_boxplot()
 p <- p + facet_wrap(~year, scales='free')
 print(p)
-p <- ggplot(method_df, aes(x=plot, y=diff_ndvi_minus_uniform))
+p <- ggplot(method_df, aes(x=plot, y=perc_diff))  # y=diff_ndvi_minus_uniform))
 p <- p + geom_boxplot()
-p <- p + facet_wrap(~site, scales='free')
+p <- p + xlab("Distance from grazing hotspot") + ylab("% Difference:\nBiomass[via NDVI] - Biomass[uniform]")
+p <- p + facet_wrap(~hotspot_type, scales='free')
 print(p)
-pngname <- paste(diff_fig_dir, "monthly_difference_by_site_x_plot.png", sep='/')
-png(file=pngname, units="in", res=300, width=6, height=8)
+pngname <- paste(diff_fig_dir, "monthly_difference_by_hotspot_type_x_plot.png", sep='/')
+png(file=pngname, units="in", res=300, width=7, height=3)
 print(p)
 dev.off()
 
 # yearly mean diff between the two methods
-mean_yearly_diff <- aggregate(diff_ndvi_minus_uniform~year + plotid + site + plot, method_df, FUN=mean)
-colnames(mean_yearly_diff) <- c('year', 'plotid', 'site', 'plot', 'yearly_diff_mean')
+mean_yearly_diff <- aggregate(perc_diff~year + plotid + site + plot, method_df, FUN=mean)
+colnames(mean_yearly_diff) <- c('year', 'plotid', 'site', 'plot', 'yearly_perc_diff_mean')
 mean_yearly_diff$year <- factor(mean_yearly_diff$year)
 mean_yearly_diff$site <- factor(mean_yearly_diff$site, levels=1:15)
-mean_yearly_diff$plot <- factor(mean_yearly_diff$plot,
-                         levels=c('A', 'B', 'C', 'D', 'E'),
-                         labels=c('50 m', '150 m', '350 m', '750 m', '1500 m'))
-p <- ggplot(mean_yearly_diff, aes(x=site, y=yearly_diff_mean))
+mean_yearly_diff <- merge(mean_yearly_diff, site_df)
+p <- ggplot(mean_yearly_diff, aes(x=site, y=yearly_perc_diff_mean))
 p <- p + geom_boxplot()
 p <- p + facet_wrap(~year, scales='free')
 pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_site.png", sep='/')
 png(file=pngname, units="in", res=300, width=5, height=3)
 print(p)
 dev.off()
-p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_diff_mean))
+p <- ggplot(mean_yearly_diff, aes(x=site, y=yearly_perc_diff_mean))
 p <- p + geom_boxplot()
-p <- p + facet_wrap(~year, scales='free')
-p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean:\n Biomass[via NDVI] - Biomass[uniform]")
-pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_plot.png", sep='/')
-png(file=pngname, units="in", res=300, width=5, height=3)
+p <- p + facet_wrap(~hotspot_type, scales='free')
+print(p)
+p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_perc_diff_mean))
+p <- p + geom_boxplot()
+p <- p + facet_wrap(~site, nrow=5, scales='free')
+p <- p + xlab("Distance from grazing hotspot (m)") + ylab("Yearly mean % difference:\n Biomass[via NDVI] - Biomass[uniform]")
+pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_plot_x_site.png", sep='/')
+png(file=pngname, units="in", res=300, width=6, height=8)
 print(p)
 dev.off()
-p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_diff_mean))
+p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_perc_diff_mean))
 p <- p + geom_boxplot()
-p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean:\n Biomass[via NDVI] - Biomass[uniform]")
+p <- p + facet_wrap(~hotspot_type, scales='free')
+p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean % difference:\n Biomass[via NDVI] - Biomass[uniform]")
+print(p)
+p <- ggplot(mean_yearly_diff, aes(x=plot, y=yearly_perc_diff_mean))
+p <- p + geom_boxplot()
+p <- p + xlab("Distance from grazing hotspot") + ylab("Yearly mean % difference:\n Biomass[via NDVI] - Biomass[uniform]")
 pngname <- paste(diff_fig_dir, "mean_yearly_difference_by_plot_both_years.png", sep='/')
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
 
 # ANOVA: analysis of the difference in biomass between uniform and via NDVI
-# on monthly basis (each observation = difference at 1 plot in 1 month)
-method_df$plot <- factor(method_df$plot)
-method_df$site <- factor(method_df$site)
-method_df$year <- factor(method_df$year)
-anova_test <- aov(diff_ndvi_minus_uniform ~ plot + site + year, method_df)
-summary(anova_test)
-
-anova_test2 <- aov(diff_ndvi_minus_uniform ~ plot*site + year, method_df)
-summary(anova_test2)
-
-par(mfrow=c(2,2))
-plot(anova_test2)  # residuals are ... ok?
-
-# post-hoc test: sig differences between groups
-TukeyHSD(anova_test2)  # between plots, only A and E are significantly different
-
-# Kruskal-Wallis, a nonparametric alternative to a one-way anova
-kruskal.test(diff_ndvi_minus_uniform ~ plot, method_df)
-pairwise.wilcox.test(method_df$diff_ndvi_minus_uniform, method_df$plot)
-
 # on yearly basis (each observation = average yearly difference at 1 plot in 1 year)
 mean_yearly_diff$plot <- factor(mean_yearly_diff$plot)
 mean_yearly_diff$site <- factor(mean_yearly_diff$site)
 mean_yearly_diff$year <- factor(mean_yearly_diff$year)
-anova_test <- aov(yearly_diff_mean ~ plot + site + year, mean_yearly_diff)
+anova_test <- aov(yearly_perc_diff_mean ~ plot + site + year, mean_yearly_diff)
 summary(anova_test)
-anova_test3 <- aov(yearly_diff_mean ~ plot*site + year, mean_yearly_diff)
-summary(anova_test)
-plot(anova_test)
+anova_test2 <- aov(yearly_perc_diff_mean ~ plot*site + year, mean_yearly_diff)
+summary(anova_test2)
+plot(anova_test2)
+# post-hoc test: sig differences between groups
+TukeyHSD(anova_test2)  # look for differences between plots
+anova_test3 <- aov(yearly_perc_diff_mean ~ plot*hotspot_type + year, mean_yearly_diff)
+summary(anova_test3)
 
-kruskal.test(yearly_diff_mean ~ plot, mean_yearly_diff)
-pairwise.wilcox.test(mean_yearly_diff$yearly_diff_mean, method_df$plot)
+# Kruskal-Wallis, a nonparametric alternative to a one-way anova
+kruskal.test(yearly_perc_diff_mean ~ plot, mean_yearly_diff)
+pairwise.wilcox.test(mean_yearly_diff$yearly_perc_diff_mean, method_df$plot)
 
 # compare animal density estimated via NDVI to empirical
 sim_density_df <- read.csv(
