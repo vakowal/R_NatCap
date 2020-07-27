@@ -394,6 +394,9 @@ rpm_df$date <- 0
 for (r in 1:nrow(rpm_df)){
   rpm_df[r, 'date'] <- date_fun(rpm_df[r, 'year'], rpm_df[r, 'month'])
 }
+rpm_dat_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/RPM_results_zero_sd_uniform_via_ndvi.csv"
+write.csv(rpm_df, rpm_dat_path, row.names=FALSE)
+
 date_subs <- rpm_df[rpm_df$year >= 2014, ]
 date_subs$site <- factor(date_subs$site, levels=1:15)
 
@@ -611,6 +614,38 @@ colnames(full_count_gt) <- c('site', 'num_months_50m_gt_1500m')
 full_count_gt$proportion_months_50m_gt_1500m <- (
   full_count_gt$num_months_50m_gt_1500m / length(unique(full_comp_df$date)))
 
+# compare simulated biomass to range of empirical biomass across replicates
+# generate this above
+rpm_dat_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/RPM_results_zero_sd_uniform_via_ndvi.csv"
+rpm_df <- read.csv(rpm_dat_path)
+mean_veg_df <- read.csv(paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'))
+veg_date_df <- read.csv(paste(processed_dir, 'veg_sampling_dates_reclass.csv', sep='/'))
+mean_veg_df <- merge(mean_veg_df, veg_date_df)
+rpm_mean_veg <- merge(rpm_df, mean_veg_df)  # to get only the months sampled
+rpm_df <- rpm_mean_veg[, colnames(rpm_df)]
+# process raw biomass dat to get range per plot
+biomass_df <- read.csv(paste(processed_dir, 'veg_biomass_data.csv', sep='/'))
+biomass_min <- aggregate(biomass_gm2 ~ site + plot + year, data=biomass_df, FUN=min)
+colnames(biomass_min) <- c('site', 'plot', 'year', 'min_emp_biomass')
+biomass_max <- aggregate(biomass_gm2 ~ site + plot + year, data=biomass_df, FUN=max)
+colnames(biomass_max) <- c('site', 'plot', 'year', 'max_emp_biomass')
+emp_df <- merge(biomass_min, biomass_max)
+bio_sum_df <- merge(emp_df, rpm_df)
+bio_sum_df$rpm_in_range <- 0
+bio_sum_df[(bio_sum_df$total_biomass_gm2 >= bio_sum_df$min_emp_biomass) &
+             (bio_sum_df$total_biomass_gm2 <= bio_sum_df$max_emp_biomass), 
+           'rpm_in_range'] <- 1
+bio_sum_df$rpm_lt_min <- 0
+bio_sum_df[(bio_sum_df$total_biomass_gm2 < bio_sum_df$min_emp_biomass), 
+           'rpm_lt_min'] <- 1
+bio_sum_df$rpm_gt_max <- 0
+bio_sum_df[(bio_sum_df$total_biomass_gm2 > bio_sum_df$max_emp_biomass),
+           'rpm_gt_max'] <- 1
+in_range_agg <- aggregate(rpm_in_range ~ method, bio_sum_df, FUN=mean)
+lt_min_agg <- aggregate(rpm_lt_min ~ method, bio_sum_df, FUN=mean)
+gt_max_agg <- aggregate(rpm_gt_max ~ method, bio_sum_df, FUN=mean)
+range_sum_df <- merge(in_range_agg, lt_min_agg)
+range_sum_df <- merge(range_sum_df, gt_max_agg)
 
 # Cover data
 # create processed cover data for comparison with RPM results
