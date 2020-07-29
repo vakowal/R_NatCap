@@ -92,6 +92,39 @@ dung_1500_site_agg_df <- dung_1500_site_agg_df[, c('site', 'mMLU_per_ha_1500')]
 dung_1500_site_df_path <- paste(processed_dir, 'mMLU_per_ha_1500_location_by_site.csv', sep='/')
 write.csv(dung_1500_site_agg_df, dung_1500_site_df_path, row.names=FALSE)
 
+# join sfu_per_ha from GLW, area-weighted and dasymetric estimates
+sfu_per_ha_GLW_plot <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/plot_centroid_join_GLW_sfu_per_ha.csv")
+glw_sfu_per_ha_Aw <- aggregate(sfu_ha_Aw~site, data=sfu_per_ha_GLW_plot, FUN=mean)
+glw_sfu_per_ha_Da <- aggregate(sfu_ha_Da~site, data=sfu_per_ha_GLW_plot, FUN=mean)
+sfu_per_ha_GLW <- merge(glw_sfu_per_ha_Aw, glw_sfu_per_ha_Da)
+
+dung_1500_site_agg_df <- read.csv(dung_1500_site_df_path)
+colnames(sfu_per_ha_soum) <- c('site', 'sfu_per_ha_soum')
+animals_per_ha_df <- merge(sfu_per_ha_GLW, dung_1500_site_agg_df)
+animals_per_ha_df <- merge(animals_per_ha_df, sfu_per_ha_soum)
+
+animals_per_ha_df$GLW_Da_div_Aw <- animals_per_ha_df$sfu_ha_Da / animals_per_ha_df$sfu_ha_Aw
+summary(animals_per_ha_df$GLW_Da_div_Aw)
+animals_per_ha_df$soum_div_GLW_Da <- animals_per_ha_df$sfu_per_ha_soum / animals_per_ha_df$sfu_ha_Da
+summary(animals_per_ha_df$GLW_Da_div_soum)
+animals_per_ha_df$soum_div_GLW_Aw <- animals_per_ha_df$sfu_per_ha_soum / animals_per_ha_df$sfu_ha_Aw
+summary(animals_per_ha_df$GLW_Aw_div_soum)
+
+p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Aw, y=sfu_per_ha_soum))
+p <- p + geom_point() + geom_abline(slope=1, intercept=0)
+p <- p + xlab("SFU per ha: GLW (area-weighted)") + ylab("SFU per ha: Livestock household data")
+print(p)
+
+p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Da, y=sfu_per_ha_soum))
+p <- p + xlab("SFU per ha: GLW (covariate-calculated)") + ylab("SFU per ha: Livestock household data")
+p <- p + geom_point() + geom_abline(slope=1, intercept=0)
+print(p)
+
+p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Da, y=sfu_ha_Aw))
+p <- p + xlab("SFU per ha: GLW (covariate-calculated)") + ylab("SFU per ha: GLW (area-weighted)")
+p <- p + geom_point() + geom_abline(slope=1, intercept=0)
+print(p)
+
 # join sfu_per_ha from soum-level livestock statistics
 sfu_per_ha_soum <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/site_centroid_join_soum_sfu_per_ha.csv")
 sfu_per_ha_soum <- sfu_per_ha_soum[, c('site', 'sfu_per_ha')]
@@ -107,6 +140,9 @@ print(p)
 corrected_path <- paste(processed_dir, 'mMLU_per_ha_1500_location_by_site.csv', sep='/')
 animals_per_ha_corr <- animals_per_ha[, c('site', 'mMLU_per_ha_corr')]
 write.csv(animals_per_ha_corr, corrected_path, row.names=FALSE)
+
+# livestock statistics downloaded from 1212.mn
+sfu_nso_df <- read.csv(paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'))
 
 # export coordinates to make a shapefile
 sampling_coords <- veg_dat[, c('code', 'site', 'plot', 'latitude', 'longitude')]
@@ -695,4 +731,28 @@ cover_df <- cover_df[, c('site', 'plot', 'replicate', 'year', 'cover')]
 cover_agg <- aggregate(cover ~ site + plot + year, data=cover_df, FUN=mean)
 veg_df <- merge(biomass_agg, cover_agg, all=TRUE)
 write.csv(veg_df, paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'),
+          row.names=FALSE)
+
+# process livestock data downloaded from 1212.mn
+nso_by_category <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/National_Statistics_Office/livestock_by_type_2014_2015_2018.csv")
+# calculate SFU
+df_list <- list()
+for(year in c(2014, 2015, 2018)) {
+  nso_1year <- nso_by_category[, c("Aimag_nso_dat", "Soum_nso_dat", 'type', year)]
+  colnames(nso_1year) <- c("Aimag_nso_dat", "Soum_nso_dat", 'type', 'year')
+  nso_wide <- reshape(nso_1year, timevar='type', v.names='year',
+                      idvar=c('Aimag_nso_dat', 'Soum_nso_dat'), direction='wide')
+  colnames(nso_wide) <- c('Aimag_nso_dat', 'Soum_nso_dat', unique(nso_by_category$type))
+  nso_wide$SFU <- ((nso_wide$Horse * 7) + (nso_wide$Cattle * 6) + (nso_wide$Camel * 5) +
+                     nso_wide$Sheep + (nso_wide$Goat * 0.9))
+  nso_wide <- nso_wide[, c('Aimag_nso_dat', 'Soum_nso_dat', 'SFU')]
+  nso_wide$year <- year
+  df_list[[year]] <- nso_wide
+}
+sfu_df <- do.call(rbind, df_list)
+area_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/Site_centroid_Aimag_soum_table.csv")
+area_df <- area_df[, c('Site', "area_ha", "Aimag_nso_dat", "Soum_nso_dat")]
+sfu_df <- merge(sfu_df, area_df)
+sfu_df$sfu_per_ha <- sfu_df$SFU / sfu_df$area_ha
+write.csv(sfu_df, paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'),
           row.names=FALSE)
