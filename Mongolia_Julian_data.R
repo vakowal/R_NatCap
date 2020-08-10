@@ -2,12 +2,60 @@
 data_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn"
 processed_dir <- paste(data_dir, 'summaries_GK')
 dir.create(processed_dir)
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
+
+# all runs share the same starting date and number of steps
+step_key_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd/step_key.csv")
+colnames(step_key_df) <- c('year', 'month', 'step')
+
+# composition data
+pfg_df <- read.csv(paste(data_dir, 'raw_data', 'biomassPFGs_SHARED.csv', sep='/'),
+                   sep=';')
+pfg_cols_2015 <- c('Site', 'Grasses_tha', 'Sedges_tha', 'Legumes_tha', 'Herbs_tha', 'Shrubs_tha')
+pfg_subs <- pfg_df[pfg_df$year == 2015, pfg_cols_2015]
+pfg_total <- apply(pfg_subs[, -1], 1, sum)
+pfg_percent = as.data.frame(lapply(pfg_subs[, -1], function(x) {x / pfg_total * 100}))
+pfg_percent$site <- pfg_subs$Site
+pfg_site_means <- aggregate(.~site, data=pfg_percent, FUN=mean)
+site_means_res <- reshape(pfg_site_means, idvar='site',
+                          varying=colnames(pfg_site_means)[-1],
+                          v.names='percent', timevar='PFG',
+                          times=c('Grasses', 'Sedges', 'Legumes', 'Herbs', 'Shrubs'),
+                          direction='long')
+library(ggplot2)
+p <- ggplot(site_means_res, aes(x=PFG, y=percent))
+p <- p + geom_point() + facet_wrap(~site, nrow=5)
+p <- p + xlab("") + ylab("Percent of total biomass")
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+print(p)
+pngname <- paste(processed_dir, "plant_functional_type_by_site_2015.png", sep='/')
+png(file=pngname, units="in", res=300, width=6, height=8)
+print(p)
+dev.off()
+
+pfg_cols_2014 <- c('Site', 'Grasses_tha', 'Sedges_tha', 'Forbs_tha', 'Wormwood_tha', 'Legumes_tha')
+pfg_subs <- pfg_df[pfg_df$year == 2014, pfg_cols_2014]
+pfg_total <- apply(pfg_subs[, -1], 1, sum)
+pfg_percent = as.data.frame(lapply(pfg_subs[, -1], function(x) {x / pfg_total * 100}))
+pfg_percent$site <- pfg_subs$Site
+pfg_site_means <- aggregate(.~site, data=pfg_percent, FUN=mean)
+site_means_res <- reshape(pfg_site_means, idvar='site',
+                          varying=colnames(pfg_site_means)[-1],
+                          v.names='percent', timevar='PFG',
+                          times=c('Grasses', 'Sedges', 'Forbs', 'Wormwood', 'Legumes'),
+                          direction='long')
+p <- ggplot(site_means_res, aes(x=PFG, y=percent))
+p <- p + geom_point() + facet_wrap(~site, nrow=5)
+p <- p + xlab("") + ylab("Percent of total biomass")
+p <- p + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+print(p)
+pngname <- paste(processed_dir, "plant_functional_type_by_site_2014.png", sep='/')
+png(file=pngname, units="in", res=300, width=6, height=8)
+print(p)
+dev.off()
 
 # CHIRPS precip data at sampling plots
 chirps_raw_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn/CHIRPS_precip_plot_centroids.csv")
-step_key_df <- read.csv(
-  "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd/step_key.csv")
-colnames(step_key_df) <- c('year', 'month', 'step')
 chirps_df <- merge(chirps_raw_df, step_key_df, all.x=TRUE)
 plot_out <- strsplit(as.character(chirps_df$plotid), '[ ]')
 plot_df <- data.frame(do.call(rbind, plot_out))
@@ -47,11 +95,11 @@ precip_2015_biomass_test <- lm(biomass_gm2~precip_cm_12mo, data=precip_2015_df)
 summary(precip_2015_biomass_test)$r.squared  # 0.02
 
 cum_chirps_veg_df$year <- factor(cum_chirps_veg_df$year)
-p <- ggplot(cum_chirps_veg_df, aes(x=precip_cm_12mo, y=mean_perc_cover))
+p <- ggplot(cum_chirps_veg_df, aes(x=precip_cm_12mo, y=biomass_gm2))
 p <- p + geom_point(aes(color=site)) + facet_grid(~year, scales="free")
-p <- p + xlab("Precip in previous 12 months (cm)") + ylab("Mean % cover")
+p <- p + xlab("Precip in previous 12 months (cm)") + ylab("Biomass (g/m2)")
 print(p)
-pngname <- paste(processed_dir, "percent_cover_v_precip_by_year.png", sep='/')
+pngname <- paste(processed_dir, "biomass_v_precip_by_year.png", sep='/')
 png(file=pngname, units="in", res=300, width=7, height=4)
 print(p)
 dev.off()
@@ -92,57 +140,45 @@ dung_1500_site_agg_df <- dung_1500_site_agg_df[, c('site', 'mMLU_per_ha_1500')]
 dung_1500_site_df_path <- paste(processed_dir, 'mMLU_per_ha_1500_location_by_site.csv', sep='/')
 write.csv(dung_1500_site_agg_df, dung_1500_site_df_path, row.names=FALSE)
 
-# join sfu_per_ha from GLW, area-weighted and dasymetric estimates
+# sfu_per_ha from GLW (2010), area-weighted and dasymetric estimates
 sfu_per_ha_GLW_plot <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/plot_centroid_join_GLW_sfu_per_ha.csv")
 glw_sfu_per_ha_Aw <- aggregate(sfu_ha_Aw~site, data=sfu_per_ha_GLW_plot, FUN=mean)
 glw_sfu_per_ha_Da <- aggregate(sfu_ha_Da~site, data=sfu_per_ha_GLW_plot, FUN=mean)
 sfu_per_ha_GLW <- merge(glw_sfu_per_ha_Aw, glw_sfu_per_ha_Da)
 
 dung_1500_site_agg_df <- read.csv(dung_1500_site_df_path)
-colnames(sfu_per_ha_soum) <- c('site', 'sfu_per_ha_soum')
-animals_per_ha_df <- merge(sfu_per_ha_GLW, dung_1500_site_agg_df)
-animals_per_ha_df <- merge(animals_per_ha_df, sfu_per_ha_soum)
-
-animals_per_ha_df$GLW_Da_div_Aw <- animals_per_ha_df$sfu_ha_Da / animals_per_ha_df$sfu_ha_Aw
-summary(animals_per_ha_df$GLW_Da_div_Aw)
-animals_per_ha_df$soum_div_GLW_Da <- animals_per_ha_df$sfu_per_ha_soum / animals_per_ha_df$sfu_ha_Da
-summary(animals_per_ha_df$GLW_Da_div_soum)
-animals_per_ha_df$soum_div_GLW_Aw <- animals_per_ha_df$sfu_per_ha_soum / animals_per_ha_df$sfu_ha_Aw
-summary(animals_per_ha_df$GLW_Aw_div_soum)
-
-p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Aw, y=sfu_per_ha_soum))
-p <- p + geom_point() + geom_abline(slope=1, intercept=0)
-p <- p + xlab("SFU per ha: GLW (area-weighted)") + ylab("SFU per ha: Livestock household data")
-print(p)
-
-p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Da, y=sfu_per_ha_soum))
-p <- p + xlab("SFU per ha: GLW (covariate-calculated)") + ylab("SFU per ha: Livestock household data")
-p <- p + geom_point() + geom_abline(slope=1, intercept=0)
-print(p)
-
-p <- ggplot(animals_per_ha_df, aes(x=sfu_ha_Da, y=sfu_ha_Aw))
-p <- p + xlab("SFU per ha: GLW (covariate-calculated)") + ylab("SFU per ha: GLW (area-weighted)")
-p <- p + geom_point() + geom_abline(slope=1, intercept=0)
-print(p)
-
-# join sfu_per_ha from soum-level livestock statistics
+# Livestock household data from Oggie, winter 2018
 sfu_per_ha_soum <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/site_centroid_join_soum_sfu_per_ha.csv")
 sfu_per_ha_soum <- sfu_per_ha_soum[, c('site', 'sfu_per_ha')]
 sfu_per_ha_soum[sfu_per_ha_soum$sfu_per_ha == 0, 'sfu_per_ha'] <- NA
-animals_per_ha <- merge(dung_1500_site_agg_df, sfu_per_ha_soum)
-animals_per_ha$ratio <- animals_per_ha$mMLU_per_ha_1500 / animals_per_ha$sfu_per_ha
-animals_per_ha$mMLU_per_ha_corr <- animals_per_ha$mMLU_per_ha_1500 / 758
-hist(animals_per_ha$ratio, breaks=50)
-p <- ggplot(animals_per_ha, aes(x=mMLU_per_ha_corr, y=sfu_per_ha))
-p <- p + geom_point() # + xlim(150, 590)
-print(p)
-# write mMLU_per_ha, corrected by comparison with soum-level livestock densities
-corrected_path <- paste(processed_dir, 'mMLU_per_ha_1500_location_by_site.csv', sep='/')
-animals_per_ha_corr <- animals_per_ha[, c('site', 'mMLU_per_ha_corr')]
-write.csv(animals_per_ha_corr, corrected_path, row.names=FALSE)
+colnames(sfu_per_ha_soum) <- c('site', 'sfu_per_ha_household_data')
+# Livestock census data from National Statistics Office, 2014-2015-2018
+sfu_per_ha_nso <- read.csv(paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'))
+sfu_per_ha_nso <- sfu_per_ha_nso[, c('Site', 'year', 'sfu_per_ha')]
+colnames(sfu_per_ha_nso) <- c('site', 'year', 'sfu_per_ha_nso')
+sfu_per_ha_nso_wide <- reshape(sfu_per_ha_nso, timevar='year', v.names='sfu_per_ha_nso',
+                               idvar='site', direction='wide')
+animals_per_ha_df <- merge(sfu_per_ha_GLW, dung_1500_site_agg_df)
+animals_per_ha_df <- merge(animals_per_ha_df, sfu_per_ha_soum)
+animals_per_ha_df <- merge(animals_per_ha_df, sfu_per_ha_nso_wide)
+colnames(animals_per_ha_df) <- c('site', 'sfu_per_ha_GLW_Aw', 'sfu_per_ha_GLW_Da',
+                                 'mMLU_per_ha_Julian_1500m', 'sfu_per_ha_household_data',
+                                 "sfu_per_ha_nso.2014", "sfu_per_ha_nso.2015", "sfu_per_ha_nso.2018")
+animals_per_ha_path <- paste(processed_dir, "sfu_per_ha_in_soums_containing_sites.csv", sep='/')
+write.csv(animals_per_ha_df, animals_per_ha_path, row.names=FALSE)
 
-# livestock statistics downloaded from 1212.mn
-sfu_nso_df <- read.csv(paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'))
+# Use empirical livestock numbers from NSO to convert dung to animal density
+animals_per_ha_path <- paste(processed_dir, "sfu_per_ha_in_soums_containing_sites.csv", sep='/')
+animals_per_ha_df <- read.csv(animals_per_ha_path)
+nso_2015_df <- animals_per_ha_df[, c('site', 'sfu_per_ha_nso.2015')]
+dung_1500_site_df_path <- paste(processed_dir, 'mMLU_per_ha_1500_location_by_site.csv', sep='/')
+dung_1500_site_agg_df <- read.csv(dung_1500_site_df_path)
+conversion_df <- merge(dung_1500_site_agg_df, nso_2015_df)
+mean_ratio <- mean(conversion_df$sfu_per_ha_nso.2015 / conversion_df$mMLU_per_ha_1500)
+adj_ratio <- mean_ratio * 1.5
+conversion_df$est_animals_per_ha <- conversion_df$mMLU_per_ha_1500 * adj_ratio
+conversion_path <- paste(processed_dir, "est_sfu_per_ha.csv", sep='/')
+write.csv(conversion_df, conversion_path, row.names=FALSE)
 
 # export coordinates to make a shapefile
 sampling_coords <- veg_dat[, c('code', 'site', 'plot', 'latitude', 'longitude')]
@@ -166,7 +202,7 @@ write.csv(plot_centroid, paste(data_dir, 'plot_centroids.csv', sep='/'),
           row.names=FALSE)
 
 # Century results at Julian's sites
-biomass_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/Century_outputs/biomass_summary.csv")
+biomass_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/Century_outputs_Aug2020/biomass_summary.csv")
 biomass_df$year <- floor(biomass_df$time)
 biomass_df$month <- round((biomass_df$time - biomass_df$year) * 12, digits=0)
 biomass_df[biomass_df$month == 0, 'month'] <- 12
@@ -176,121 +212,122 @@ peak_biomass_df <- biomass_df[biomass_df$month == 8,
                               c('live_biomass', 'total_biomass',
                                 'total_biomass_kgha', 'live_biomass_kgha', 'site_id', 'month')]
 
-# reported productivity at each site, Julian's J Arid Env. paper
-j_table1 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn/J_arid_env_table_1.csv")
-colnames(j_table1) <- c('site_id', 'Site_table1', 'latitude', 'longitude', 'altitude', 'hotspot_type',
-                        'ecosystem', 'average_temp', 'average_precip', 'precip_cv',
-                        'richness', 'cover', 'biomass_kg_ha')
+# average empirical biomass per site
+veg_df <- read.csv(paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'))
+veg_2014 <- veg_df[veg_df$year == 2014, ]
+site_mean_biomass <- aggregate(biomass_gm2~site, data=veg_2014, FUN=mean)
+colnames(site_mean_biomass) <- c('site_id', 'emp_biomass_gm2')
+site_mean_biomass$emp_biomass_kgha <- site_mean_biomass$emp_biomass_gm2 * 10
+merged_df <- merge(peak_biomass_df, site_mean_biomass)
 
-merged_df <- merge(peak_biomass_df, j_table1, by='site_id')
 library(ggplot2)
-p <- ggplot(merged_df, aes(x=total_biomass, y=biomass_kg_ha))
-p <- p + geom_point()
+p <- ggplot(merged_df, aes(x=total_biomass_kgha, y=emp_biomass_kgha))
+p <- p + geom_point() + xlab("Peak biomass simulated by Century") + ylab("Empirical biomass (2014)")
+p <- p + geom_abline(slope=1, intercept=0, linetype='dashed')
+p <- p + geom_text(aes(label=site_id), hjust=0, vjust=0, nudge_x=0.3)
 print(p)
-
-p <- ggplot(merged_df, aes(x=live_biomass, y=biomass_kg_ha))
-p <- p + geom_point()
+pngname <- paste(fig_dir, "peak_biomass_Century_v_2014biomass.png", sep='/')
+png(file=pngname, units="in", res=300, width=4, height=4)
 print(p)
+dev.off()
 
-p <- ggplot(merged_df, aes(x=total_biomass, y=cover))
-p <- p + geom_point()
-print(p)
-
-# compare reported productivity at each site to precip: Worldclim and CHIRPS
+# compare reported productivity at each site to average precip from Worldclim
 worldclim_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_inputs/Ahlborn_sites/intermediate_data/worldclim_precip.csv")
 worldclim_df <- aggregate(prec~site, worldclim_df, FUN=sum)
 colnames(worldclim_df) <- c('site_id', 'annual_prec_worldclim')
-# annual precip in 2014 from CHIRPS
-zero_sd_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd"
-step_key_df <- read.csv(
-  paste(zero_sd_dir, "step_key.csv", sep='/'))
-colnames(step_key_df) <- c('year', 'month', 'step')
-chirps_raw_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn/CHIRPS_precip_plot_centroids.csv")
-chirps_df <- merge(chirps_raw_df, step_key_df, all.x=TRUE)
-chirps_df <- chirps_df[chirps_df$year == 2014, ]
-plot_out <- strsplit(as.character(chirps_df$plotid), '[ ]')
-plot_df <- data.frame(do.call(rbind, plot_out))
-colnames(plot_df) <- c('site', 'plot')
-chirps_df <- cbind(chirps_df, plot_df)
-chirps_mean_monthly <- aggregate(precip_cm~month+site, chirps_df, FUN=mean)
-chirps_annual_sum <- aggregate(precip_cm~site, chirps_mean_monthly, FUN=sum)
-colnames(chirps_annual_sum) <- c('site_id', 'annual_prec_chirps')
-prec_df <- merge(worldclim_df, chirps_annual_sum)
-plot_df <- merge(prec_df, merged_df)
+plot_df <- merge(worldclim_df, merged_df)
 plot_df$site_id <- as.factor(plot_df$site_id)
-p <- ggplot(plot_df, aes(x=average_precip, y=annual_prec_worldclim))
-p <- p + geom_point() + geom_text(aes(label=site_id), hjust=0, vjust=0, nudge_x=0.5)
-p <- p + xlab("Average precip (Julian's table 1)") + ylab("Annual precip (Worldclim)")
-pngname <- paste(fig_dir, "Julian_table1_precip_v_Worldclim_annual_precip.png", sep='/')
-png(file=pngname, units="in", res=300, width=6, height=6)
-print(p)
-dev.off()
+
 biomass_df <- plot_df[, c('site_id', 'annual_prec_worldclim',
-                            'total_biomass_kgha', 'biomass_kg_ha')]
+                            'total_biomass_kgha', 'emp_biomass_kgha')]
 colnames(biomass_df) <- c('site_id', 'annual_prec_worldclim',
-                          'biomass_Century', 'biomass_table1')
-biomass_re <- reshape(biomass_df, varying=c('biomass_Century', 'biomass_table1'),
+                          'biomass_Century', 'empirical_mean_biomass')
+biomass_re <- reshape(biomass_df, varying=c('biomass_Century', 'empirical_mean_biomass'),
                       v.names='biomass_kg_ha', timevar='source',
-                      times=c('Century', 'Table 1'),
+                      times=c('Century', 'Empirical mean (2014)'),
                       idvar=c('site_id', 'annual_prec_worldclim'),
                       direction='long')
 p <- ggplot(biomass_re, aes(x=annual_prec_worldclim, y=biomass_kg_ha))
 p <- p + geom_point() + geom_text(aes(label=site_id), hjust=0, vjust=0, nudge_x=0.3)
-p <- p + facet_wrap(~source, nrow=1, scales='free')
+p <- p + facet_wrap(~source, nrow=1)  #, scales='free')
 p <- p + xlab("Annual average precip: Worldclim (cm)") + ylab("Biomass (kg/ha)")
 print(p)
-pngname <- paste(fig_dir, "biomass_v_annual_precip_Julian_table1_Century.png", sep='/')
+pngname <- paste(fig_dir, "biomass_v_annual_precip_empirical2014_Century.png", sep='/')
 png(file=pngname, units="in", res=300, width=6, height=3)
 print(p)
 dev.off()
 
 # RPM results
-fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
-
+# generate table of RPM results, zero_sd and uniform and via_ndvi
 # zero density
-zero_sd_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd"
-step_key_df <- read.csv(
-  paste(zero_sd_dir, "step_key.csv", sep='/'))
-colnames(step_key_df) <- c('year', 'month', 'step')
+zero_sd_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd/RPM_biomass_plot_centroids_zero_sd.csv")
+zero_sd_df <- merge(zero_sd_df, step_key_df)
+zero_sd_df <- zero_sd_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+zero_sd_df$method <- 'zero_sd'
+# uniform density
+uniform_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/uniform_density_sfu_per_site/RPM_biomass_plot_centroids_uniform_density_sfu_per_site.csv")
+uniform_df <- merge(uniform_df, step_key_df)
+uniform_df <- uniform_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+uniform_df$method <- 'uniform'
+# via NDVI
+via_ndvi_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/via_ndvi/RPM_biomass_plot_centroids_via_ndvi.csv")
+via_ndvi_df <- merge(via_ndvi_df, step_key_df)
+via_ndvi_df <- via_ndvi_df[, c(
+  'year', 'month', 'plotid', 'total_biomass_gm2')]
+via_ndvi_df$method <- 'via_ndvi'
 
-# site centroid results: compare to Century and Julian's table 1
-sim_centroid_df <- read.csv(
-  paste(zero_sd_dir, "RPM_biomass_site_centroids_zero_sd.csv", sep='/'))
-sim_centroid_df <- merge(step_key_df, sim_centroid_df)
-# restrict to complete years only
-sim_centroid_df_full_years <- sim_centroid_df[sim_centroid_df$step >= 4, ]
-sim_centroid_df_full_years$total_biomass_kgha <- sim_centroid_df_full_years$total_biomass_gm2 * 10
-max_total_biomass_df <- aggregate(total_biomass_kgha~site + year, sim_centroid_df_full_years, FUN=max)
-max_total_biomass_df$site <- factor(max_total_biomass_df$site)
-p <- ggplot(max_total_biomass_df, aes(x=site, y=total_biomass_kgha))
-p <- p + geom_boxplot()
-p <- p + geom_point(data=j_table1, aes(x=site_id, y=biomass_kg_ha), color="red")
-p <- p + geom_point(data=peak_biomass_df, aes(x=site_id, y=total_biomass_kgha), color="blue")
-pngname <- paste(fig_dir, "biomass_boxplot_zero_sd.png", sep='/')
-png(file=pngname, units="in", res=300, width=7, height=5)
-print(p)
-dev.off()
+rpm_df <- rbind(zero_sd_df, uniform_df, via_ndvi_df)
+plot_out <- strsplit(as.character(rpm_df$plotid), '[ ]')
+plot_df <- data.frame(do.call(rbind, plot_out))
+colnames(plot_df) <- c('site', 'plot')
+rpm_df <- cbind(rpm_df, plot_df)
+date_fun <- function(year, month) {
+  return(year + month/12)
+}
+rpm_df$date <- 0
+for (r in 1:nrow(rpm_df)){
+  rpm_df[r, 'date'] <- date_fun(rpm_df[r, 'year'], rpm_df[r, 'month'])
+}
+rpm_dat_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/RPM_results_zero_sd_uniform_via_ndvi.csv"
+write.csv(rpm_df, rpm_dat_path, row.names=FALSE)
 
 # RPM results at plot centroid
 veg_df <- read.csv(paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'))
 colnames(veg_df) <- c('site', 'plot', 'year', 'empirical_biomass_gm2', 'cover')
 veg_date_df <- read.csv(paste(processed_dir, 'veg_sampling_dates_reclass.csv', sep='/'))
 veg_df <- merge(veg_df, veg_date_df)
-sim_plot_df <- read.csv(
-  paste(zero_sd_dir, "RPM_biomass_plot_centroids_zero_sd.csv", sep='/'))
-plot_out <- strsplit(as.character(sim_plot_df$plotid), '[ ]')
-plot_df <- data.frame(do.call(rbind, plot_out))
-colnames(plot_df) <- c('site', 'plot')
-sim_plot_df <- cbind(sim_plot_df, plot_df)
-sim_plot_df <- merge(step_key_df, sim_plot_df)
-sim_plot_df <- sim_plot_df[, c(
+rpm_df <- read.csv(rpm_dat_path)
+sim_plot_df <- rpm_df[, c(
   'site', 'plot', 'year', 'month', 'plotid',
-  'aboveground_live_biomass_gm2', 'total_biomass_gm2')]
+  'total_biomass_gm2', 'method')]
 colnames(sim_plot_df) <- c(
   'site', 'plot', 'year', 'month', 'plotid',
-  'sim_aboveground_live_biomass_gm2', 'sim_total_biomass_gm2')
+  'sim_total_biomass_gm2', 'method')
 merged_df <- merge(veg_df, sim_plot_df, by=c('site', 'plot', 'year', 'month'))
+summary_df <- data.frame("method"=c(), "metric"=c(), "year"=c(), "Rsq"=c())
+for(year in c('both', 2014, 2015)) {
+  for(method in unique(merged_df$method)) {
+    if(year == 'both') {
+      subs_df <- merged_df[merged_df$method == method, ]
+    } else {
+      subs_df <- merged_df[(merged_df$year == year) &
+                             (merged_df$method == method), ]
+    }
+    cover_lm <- lm(cover~sim_total_biomass_gm2, data=subs_df)
+    cover_rsq <- summary(cover_lm)$r.squared
+    biomass_lm <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=subs_df)
+    biomass_rsq <- summary(biomass_lm)$r.squared
+    one_df <- data.frame("method"=c(method, method), "metric"=c('cover', 'biomass'),
+                         "year"=c(year, year), "Rsq"=c(cover_rsq, biomass_rsq))
+    summary_df <- rbind(summary_df, one_df)
+  }
+}
+summary_table_path <- paste(fig_dir, "Simulated_vs_empirical_R_sq_summary.csv", sep='/')
+write.csv(summary_df, summary_table_path, row.names=FALSE)
 
+# TODO delete the following?
 combined_cover_lm <- lm(cover~sim_total_biomass_gm2, data=merged_df)
 summary(combined_cover_lm)$r.squared  # 0.64
 combined_biomass_lm <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=merged_df)
@@ -385,54 +422,10 @@ print(p)
 # compare biomass estimated by RPM: zero_sd vs uniform vs via_ndvi
 fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
 
-# zero density
-zero_sd_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd"
-step_key_df <- read.csv(
-  paste(zero_sd_dir, "step_key.csv", sep='/'))
-colnames(step_key_df) <- c('year', 'month', 'step')
-zero_sd_df <- read.csv(
-  paste(zero_sd_dir, "RPM_biomass_plot_centroids_zero_sd.csv", sep='/'))
-zero_sd_df <- merge(step_key_df, zero_sd_df)
-zero_sd_df <- zero_sd_df[, c(
-  'year', 'month', 'plotid', 'total_biomass_gm2')]
-zero_sd_df$method <- 'zero_sd'
 
-# uniform density
-uniform_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/uniform_density_mMLU_per_site"
-uniform_df <- read.csv(
-  paste(uniform_dir,
-    "RPM_biomass_plot_centroids_uniform_density_mMLU_per_site.csv", sep='/'))
-uniform_df <- merge(step_key_df, uniform_df)
-uniform_df <- uniform_df[, c(
-  'year', 'month', 'plotid', 'total_biomass_gm2')]
-uniform_df$method <- 'uniform'
 
-# via NDVI
-via_ndvi_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/compare_to_ndvi"
-ndvi_df = read.csv(
-  paste(via_ndvi_dir, "RPM_biomass_plot_centroids_compare_to_ndvi.csv", sep='/'))
-ndvi_step_key_df = read.csv(paste(via_ndvi_dir, 'step_key.csv', sep='/'))
-colnames(ndvi_step_key_df) <- c('year', 'month', 'step')
-ndvi_df <- merge(ndvi_df, ndvi_step_key_df)
-ndvi_df <- ndvi_df[, c(
-  'year', 'month', 'plotid', 'total_biomass_gm2')]
-ndvi_df$method <- 'via_ndvi'
-
-rpm_df <- rbind(zero_sd_df, uniform_df, ndvi_df)
-plot_out <- strsplit(as.character(rpm_df$plotid), '[ ]')
-plot_df <- data.frame(do.call(rbind, plot_out))
-colnames(plot_df) <- c('site', 'plot')
-rpm_df <- cbind(rpm_df, plot_df)
-date_fun <- function(year, month) {
-  return(year + month/12)
-}
-rpm_df$date <- 0
-for (r in 1:nrow(rpm_df)){
-  rpm_df[r, 'date'] <- date_fun(rpm_df[r, 'year'], rpm_df[r, 'month'])
-}
 rpm_dat_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/RPM_results_zero_sd_uniform_via_ndvi.csv"
-write.csv(rpm_df, rpm_dat_path, row.names=FALSE)
-
+rpm_df <- read.csv(rpm_dat_path)
 date_subs <- rpm_df[rpm_df$year >= 2014, ]
 date_subs$site <- factor(date_subs$site, levels=1:15)
 
@@ -554,6 +547,7 @@ kruskal.test(yearly_perc_diff_mean ~ plot, mean_yearly_diff)
 pairwise.wilcox.test(mean_yearly_diff$yearly_perc_diff_mean, method_df$plot)
 
 # compare animal density estimated via NDVI to empirical
+# TODO need to generate this animal density table
 sim_density_df <- read.csv(
   paste(via_ndvi_dir, "RPM_density_plot_centroids_compare_to_ndvi.csv", sep='/'))
 sim_density_df <- merge(sim_density_df, ndvi_step_key_df)
@@ -669,10 +663,10 @@ emp_df <- merge(biomass_min, biomass_max)
 bio_sum_df <- merge(emp_df, rpm_df)
 bio_sum_df$rpm_in_range <- 0
 bio_sum_df[(bio_sum_df$total_biomass_gm2 >= bio_sum_df$min_emp_biomass) &
-             (bio_sum_df$total_biomass_gm2 <= bio_sum_df$max_emp_biomass), 
+             (bio_sum_df$total_biomass_gm2 <= bio_sum_df$max_emp_biomass),
            'rpm_in_range'] <- 1
 bio_sum_df$rpm_lt_min <- 0
-bio_sum_df[(bio_sum_df$total_biomass_gm2 < bio_sum_df$min_emp_biomass), 
+bio_sum_df[(bio_sum_df$total_biomass_gm2 < bio_sum_df$min_emp_biomass),
            'rpm_lt_min'] <- 1
 bio_sum_df$rpm_gt_max <- 0
 bio_sum_df[(bio_sum_df$total_biomass_gm2 > bio_sum_df$max_emp_biomass),
@@ -733,7 +727,7 @@ veg_df <- merge(biomass_agg, cover_agg, all=TRUE)
 write.csv(veg_df, paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'),
           row.names=FALSE)
 
-# process livestock data downloaded from 1212.mn
+# process livestock data from National Statistics Office, downloaded from 1212.mn
 nso_by_category <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/National_Statistics_Office/livestock_by_type_2014_2015_2018.csv")
 # calculate SFU
 df_list <- list()
@@ -749,10 +743,11 @@ for(year in c(2014, 2015, 2018)) {
   nso_wide$year <- year
   df_list[[year]] <- nso_wide
 }
-sfu_df <- do.call(rbind, df_list)
+sfu_df <- do.call(rbind, df_list)  # Multiply SFU by 1000, these data are in units of 1000
 area_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/Julian_Ahlborn summaries_GK/Site_centroid_Aimag_soum_table.csv")
 area_df <- area_df[, c('Site', "area_ha", "Aimag_nso_dat", "Soum_nso_dat")]
 sfu_df <- merge(sfu_df, area_df)
 sfu_df$sfu_per_ha <- sfu_df$SFU / sfu_df$area_ha
 write.csv(sfu_df, paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'),
           row.names=FALSE)
+
