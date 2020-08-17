@@ -5,7 +5,7 @@ dir.create(processed_dir)
 fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
 
 # all runs share the same starting date and number of steps
-step_key_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/zero_sd/step_key.csv")
+step_key_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_inputs/Ahlborn_sites/RPM_inputs/step_key.csv")
 colnames(step_key_df) <- c('year', 'month', 'step')
 
 # composition data
@@ -231,6 +231,9 @@ png(file=pngname, units="in", res=300, width=4, height=4)
 print(p)
 dev.off()
 
+# mean bias
+bias <- mean(merged_df$total_biomass_kgha - merged_df$emp_biomass_kgha)
+
 # compare reported productivity at each site to average precip from Worldclim
 worldclim_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_inputs/Ahlborn_sites/intermediate_data/worldclim_precip.csv")
 worldclim_df <- aggregate(prec~site, worldclim_df, FUN=sum)
@@ -327,102 +330,8 @@ for(year in c('both', 2014, 2015)) {
 summary_table_path <- paste(fig_dir, "Simulated_vs_empirical_R_sq_summary.csv", sep='/')
 write.csv(summary_df, summary_table_path, row.names=FALSE)
 
-# TODO delete the following?
-combined_cover_lm <- lm(cover~sim_total_biomass_gm2, data=merged_df)
-summary(combined_cover_lm)$r.squared  # 0.64
-combined_biomass_lm <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=merged_df)
-summary(combined_biomass_lm)$r.squared  # 0.48
-
-# separate comparison by year
-zero_sd_2014 <- merged_df[merged_df$year == 2014, ]
-cover_lm_2014 <- lm(cover~sim_total_biomass_gm2, data=zero_sd_2014)
-summary(cover_lm_2014)$r.squared  # 0.69
-biomass_lm_2014 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=zero_sd_2014)
-summary(biomass_lm_2014)$r.squared  # 0.5
-
-zero_sd_2015 <- merged_df[merged_df$year == 2015, ]
-cover_lm_2015 <- lm(cover~sim_total_biomass_gm2, data=zero_sd_2015)
-summary(cover_lm_2015)$r.squared  # 0.49
-biomass_lm_2015 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=zero_sd_2015)
-summary(biomass_lm_2015)$r.squared  # 0.39
-
-# RPM results with uniform (corrected) mean MLU per ha average across 2014 and 2015
-uniform_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/uniform_density_mMLU_per_site"
-uniform_df <- read.csv(
-  paste(uniform_dir,
-    "RPM_biomass_plot_centroids_uniform_density_mMLU_per_site.csv", sep='/'))
-colnames(uniform_df)[6] <- 'sim_total_biomass_gm2'
-plot_out <- strsplit(as.character(uniform_df$plotid), '[ ]')
-plot_df <- data.frame(do.call(rbind, plot_out))
-colnames(plot_df) <- c('site', 'plot')
-uniform_df <- cbind(uniform_df, plot_df)
-uniform_df <- merge(step_key_df, uniform_df)
-merged_df <- merge(veg_df, uniform_df, by=c('site', 'plot', 'year', 'month'))
-
-combined_cover_lm <- lm(cover~sim_total_biomass_gm2, data=merged_df)
-summary(combined_cover_lm)$r.squared  # 0.61
-combined_biomass_lm <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=merged_df)
-summary(combined_biomass_lm)$r.squared  # 0.48
-
-# separate comparison by year
-uniform_2014 <- merged_df[merged_df$year == 2014, ]
-cover_lm_2014 <- lm(cover~sim_total_biomass_gm2, data=uniform_2014)
-summary(cover_lm_2014)$r.squared  # 0.67
-biomass_lm_2014 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=uniform_2014)
-summary(biomass_lm_2014)$r.squared  # 0.5
-
-uniform_2015 <- merged_df[merged_df$year == 2015, ]
-cover_lm_2015 <- lm(cover~sim_total_biomass_gm2, data=uniform_2015)
-summary(cover_lm_2015)$r.squared  # 0.47
-biomass_lm_2015 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=uniform_2015)
-summary(biomass_lm_2015)$r.squared  # 0.42
-
-p <- ggplot(merged_df, aes(x=sim_total_biomass_gm2, y=empirical_biomass_gm2))
-p <- p + geom_point() + facet_grid(~year, scales="free")
-p <- p + xlab("Total simulated biomass (g/m2)") + ylab("Empirical biomass (g/m2)")
-print(p)
-
-# RPM results using NDVI to disaggregate animals
-via_ndvi_dir = "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/compare_to_ndvi"
-ndvi_df = read.csv(
-  paste(via_ndvi_dir, "RPM_biomass_plot_centroids_compare_to_ndvi.csv", sep='/'))
-ndvi_step_key_df = read.csv(paste(via_ndvi_dir, 'step_key.csv', sep='/'))
-colnames(ndvi_step_key_df) <- c('year', 'month', 'step')
-colnames(ndvi_df)[8] <- 'sim_total_biomass_gm2'
-plot_out <- strsplit(as.character(ndvi_df$plotid), '[ ]')
-plot_df <- data.frame(do.call(rbind, plot_out))
-colnames(plot_df) <- c('site', 'plot')
-ndvi_df <- cbind(ndvi_df, plot_df)
-ndvi_df <- merge(ndvi_step_key_df, ndvi_df)
-merged_df <- merge(veg_df, ndvi_df, by=c('site', 'plot', 'year', 'month'))
-
-combined_cover_lm <- lm(cover~sim_total_biomass_gm2, data=merged_df)
-summary(combined_cover_lm)$r.squared  # 0.62
-combined_biomass_lm <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=merged_df)
-summary(combined_biomass_lm)$r.squared  # 0.48
-
-# separate comparison by year
-ndvi_2014 <- merged_df[merged_df$year == 2014, ]
-cover_lm_2014 <- lm(cover~sim_total_biomass_gm2, data=ndvi_2014)
-summary(cover_lm_2014)$r.squared  # 0.71
-biomass_lm_2014 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=ndvi_2014)
-summary(biomass_lm_2014)$r.squared  # 0.51
-
-ndvi_2015 <- merged_df[merged_df$year == 2015, ]
-cover_lm_2015 <- lm(cover~sim_total_biomass_gm2, data=ndvi_2015)
-summary(cover_lm_2015)$r.squared  # 0.47
-biomass_lm_2015 <- lm(empirical_biomass_gm2~sim_total_biomass_gm2, data=ndvi_2015)
-summary(biomass_lm_2015)$r.squared  # 0.41
-
-p <- ggplot(merged_df, aes(x=sim_total_biomass_gm2, y=empirical_biomass_gm2))
-p <- p + geom_point() + facet_grid(~year, scales="free")
-p <- p + xlab("Total simulated biomass (g/m2)") + ylab("Empirical biomass (g/m2)")
-print(p)
-
 # compare biomass estimated by RPM: zero_sd vs uniform vs via_ndvi
 fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/summary_figs"
-
-
 
 rpm_dat_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/Ahlborn_sites/RPM_results_zero_sd_uniform_via_ndvi.csv"
 rpm_df <- read.csv(rpm_dat_path)
@@ -462,18 +371,15 @@ dev.off()
 # analyze difference between biomass: via NDVI vs uniform animal density
 diff_fig_dir <- paste(fig_dir, 'biomass_ndvi_minus_uniform', sep='/')
 dir.create(diff_fig_dir)
-method_comp_df <- date_subs[(date_subs$method == 'uniform') |
-                              (date_subs$method == 'via_ndvi'), ]
+method_comp_df <- date_subs[(date_subs$method == 'Uniform density') |
+                              (date_subs$method == 'Disaggregated via NDVI'), ]
 method_df <- reshape(method_comp_df, v.names='total_biomass_gm2',
                      timevar='method',
                      idvar=c('year', 'month', 'site', 'plot', 'date'),
                      direction="wide")
-method_df$diff_ndvi_minus_uniform <- method_df$total_biomass_gm2.via_ndvi - method_df$total_biomass_gm2.uniform
-method_df$perc_diff <- (method_df$diff_ndvi_minus_uniform / method_df$total_biomass_gm2.uniform) * 100
+method_df$diff_ndvi_minus_uniform <- method_df$`total_biomass_gm2.Disaggregated via NDVI` - method_df$`total_biomass_gm2.Uniform density`
+method_df$perc_diff <- (method_df$diff_ndvi_minus_uniform / method_df$`total_biomass_gm2.Uniform density`) * 100
 method_df <- merge(method_df, site_df)
-method_df$plot <- factor(method_df$plot,
-                                levels=c('A', 'B', 'C', 'D', 'E'),
-                                labels=c('50', '150', '350', '750', '1500'))
 # monthly diff between the two methods
 p <- ggplot(method_df, aes(x=plot, y=perc_diff))  # y=diff_ndvi_minus_uniform))
 p <- p + geom_boxplot()
@@ -539,18 +445,16 @@ summary(anova_test2)
 plot(anova_test2)
 # post-hoc test: sig differences between groups
 TukeyHSD(anova_test2)  # look for differences between plots
-anova_test3 <- aov(yearly_perc_diff_mean ~ plot*hotspot_type + year, mean_yearly_diff)
-summary(anova_test3)
 
 # Kruskal-Wallis, a nonparametric alternative to a one-way anova
 kruskal.test(yearly_perc_diff_mean ~ plot, mean_yearly_diff)
 pairwise.wilcox.test(mean_yearly_diff$yearly_perc_diff_mean, method_df$plot)
 
 # compare animal density estimated via NDVI to empirical
-# TODO need to generate this animal density table
+via_ndvi_dir <- "C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/via_ndvi"
 sim_density_df <- read.csv(
-  paste(via_ndvi_dir, "RPM_density_plot_centroids_compare_to_ndvi.csv", sep='/'))
-sim_density_df <- merge(sim_density_df, ndvi_step_key_df)
+  paste(via_ndvi_dir, "RPM_density_plot_centroids_via_ndvi.csv", sep='/'))
+sim_density_df <- merge(sim_density_df, step_key_df)
 plot_out <- strsplit(as.character(sim_density_df$plotid), '[ ]')
 plot_df <- data.frame(do.call(rbind, plot_out))
 colnames(plot_df) <- c('site', 'plot')
@@ -589,8 +493,9 @@ emp_subs[emp_subs$year == 2014, 'date'] <- subs_density[
 emp_subs[emp_subs$year == 2015, 'date'] <- subs_density[
   (subs_density$year == 2015) & (subs_density$month == 8), 'date']
 # correct MLU by the same factor I used above to calculate site-level total animals
-# this correction accounts for conversion to MLU/ha (* 100) and correction (/ 758)
-emp_subs$MLU_cor <- emp_subs$MLU / 7.58
+adj_ratio <- 0.002055487  # calculated above
+emp_subs$MLU_per_ha <- emp_subs$MLU * 100
+emp_subs$MLU_cor <- emp_subs$MLU_per_ha * adj_ratio 
 emp_subs$distance <- factor(emp_subs$distance, levels=c('50 m', '1500 m'))
 emp_subs$site <- factor(emp_subs$site, levels=c(1:15))
 
@@ -617,6 +522,7 @@ dist_comp_df <- reshape(dist_subs, v.names='animal_density',
   timevar='plot', idvar=c('site', 'year', 'month', 'date'),
   direction='wide')
 dist_comp_df$density_1500m_minus_50m <- dist_comp_df$animal_density.E - dist_comp_df$animal_density.A
+summary(dist_comp_df$density_1500m_minus_50m)
 dist_comp_df$density_50m_gt_1500m <- dist_comp_df$density_1500m_minus_50m < 0
 count_gt <- aggregate(density_50m_gt_1500m ~ site, dist_comp_df, FUN=sum)
 colnames(count_gt) <- c('site', 'num_months_50m_gt_1500m')
@@ -676,6 +582,12 @@ lt_min_agg <- aggregate(rpm_lt_min ~ method, bio_sum_df, FUN=mean)
 gt_max_agg <- aggregate(rpm_gt_max ~ method, bio_sum_df, FUN=mean)
 range_sum_df <- merge(in_range_agg, lt_min_agg)
 range_sum_df <- merge(range_sum_df, gt_max_agg)
+
+# Generate site df
+veg_dat <- read.table(paste(data_dir, 'raw_data', 'Mongol_dat.txt', sep='/'),
+                      header=TRUE)
+site_df <- veg_dat[, c('site', 'hotspot_type')]
+site_df <- site_df[!duplicated(site_df$site), ]
 
 # Cover data
 # create processed cover data for comparison with RPM results
@@ -751,3 +663,8 @@ sfu_df$sfu_per_ha <- sfu_df$SFU / sfu_df$area_ha
 write.csv(sfu_df, paste(processed_dir, "sfu_per_ha_by_site_centroid_2014_2015_2018.csv", sep='/'),
           row.names=FALSE)
 
+# calculate linear regression to get cover from biomass
+veg_df <- read.csv(paste(processed_dir, 'biomass_cover_plot_mean.csv', sep='/'))
+veg_df$biomass_kgha <- veg_df$biomass_gm2 * 10
+cover_lm <- lm(cover~biomass_kgha, data=veg_df)
+summary(cover_lm)
