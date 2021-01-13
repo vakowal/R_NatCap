@@ -3,12 +3,162 @@
 
 library(RODBC)
 
+# look for the impact of grazing on cover in 2019 WCS data
+out_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/linear_models_2019_data"
+data_2019 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2019.csv")
+treatment_df <- data_2019[!is.na(data_2019$PlotType) & (data_2019$PlotType != ""), ]
+treatment_df$herb_cover <- treatment_df$Cover.of.all.vegetation - treatment_df$Cover.of.all.shrubs
+predictors <- colnames(treatment_df)[c(5:7, 17:22)]
+rmetric_df <- treatment_df[, c('Rangeland.metric.score', predictors)]
+rmetric_model <- lm(Rangeland.metric.score~., data=rmetric_df)
+sink(paste(out_dir, "rangeland_metric_model.txt", sep="/"))
+summary(rmetric_model)
+sink()
+
+total_cover_df <- treatment_df[, c('Cover.of.all.vegetation', predictors)]
+total_cover_model <- lm(Cover.of.all.vegetation~., data=total_cover_df)
+sink(paste(out_dir, "total_cover_model.txt", sep="/"))
+summary(total_cover_model)
+sink()
+
+herb_cover_df <- treatment_df[, c('herb_cover', predictors)]
+herb_cover_model <- lm(herb_cover~., data=herb_cover_df)
+sink(paste(out_dir, "herb_cover_model.txt", sep="/"))
+summary(herb_cover_model)
+sink()
+
+p <- ggplot(herb_cover_df, aes(x=total_sheep_equiv, y=herb_cover))
+p <- p + geom_point() + facet_grid(PlotType~Season)
+pngname <- paste(out_dir, "herb_cover_by_plotType+season.png", sep='/')
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+p <- ggplot(herb_cover_df, aes(x=PlotType, y=herb_cover))
+p <- p + geom_boxplot() + facet_wrap('Season')
+print(p)
+pngname <- paste(out_dir, "herb_cover_boxplot_by_plotType+season.png", sep='/')
+png(file=pngname, units="in", res=300, width=7, height=5)
+print(p)
+dev.off()
+
+# precip vs percent cover at WCS sampling sites
+library(ggplot2)
+
+veg_list <- list(
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2017.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2018.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2019.csv"
+)
+veg_df_list <- lapply(veg_list, FUN=read.csv)
+cover_df_list <- list()
+i <- 1
+for (df in veg_df_list) {
+  df$cover_herb <- df$Cover.of.all.vegetation - df$Cover.of.all.shrubs
+  cover_df <- df[, c('site_id', 'cover_herb', 'Rangeland.metric.score')]
+  cover_df_list[[i]] <- cover_df
+  i <- i + 1
+}
+# CHIRPS
+chirps_csv_list <- c(
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/CHIRPS/CHIRPS_precip_master_veg_coords_2017.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/CHIRPS/CHIRPS_precip_master_veg_coords_2018.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/CHIRPS/CHIRPS_precip_master_veg_coords_2019.csv"
+)
+chirps_df_list <- lapply(chirps_csv_list, FUN=read.csv)
+year_list <- list(2017, 2018, 2019)
+emp_step_list <- list(11, 23, 35)  # model steps at which empirical measurements were taken
+# out_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/cover_v_precip"
+out_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/rangeland_metric_v_precip"
+dir.create(out_dir, recursive=TRUE, showWarnings=FALSE)
+df_list = list()
+for (i in c(1, 2, 3)) {
+  year <- year_list[[i]]
+  chirps_df <- chirps_df_list[[i]]
+  cover_df <- cover_df_list[[i]]
+  emp_step <- emp_step_list[[i]]
+  for (n_months in c(1, 3, 6, 12)) {
+    chirps_subs <- chirps_df[(chirps_df$step > emp_step - n_months) &
+                               (chirps_df$step <= emp_step), ]
+    chirps_subs$precip_cm_chirps <- chirps_subs$precip_cm
+    chirps_cumulative <- aggregate(precip_cm_chirps~site_id, data=chirps_subs, FUN=sum)
+    chirps_merge_cover <- merge(chirps_cumulative, cover_df)
+    chirps_merge_cover$year <- year
+    df_list[[i]] <- chirps_merge_cover
+    
+    # CHIRPS precip vs rangeland metric
+    lm_model <- lm(Rangeland.metric.score~precip_cm_chirps, data=chirps_merge_cover)
+    rsq <- summary(lm_model)$r.squared
+    p <- ggplot(chirps_merge_cover, aes(x=precip_cm_chirps, y=Rangeland.metric.score))
+    p <- p + geom_point() + ggtitle(paste(year, ":", n_months, "mo precip",
+                                          paste("(R sq: ", round(rsq, 2), ")", sep=""), sep=" "))
+    p <- p + xlab("Precip (cm)") + ylab("Rangeland metric")
+    pngname <- paste(out_dir, paste("rangeland_metric_vs_cumulative_precip_", year, "_", n_months, "_months.png", sep=""),
+                     sep="/")
+    png(file=pngname, units="in", res=300, width=3.5, height=4)
+    print(p)
+    dev.off()
+  }
+}
+combined_df <- do.call(rbind, df_list)
+# rangeland metric v precip, all years combined
+lm_model <- lm(Rangeland.metric.score~precip_cm_chirps, data=combined_df)
+rsq <- summary(lm_model)$r.squared
+p <- ggplot(combined_df, aes(x=precip_cm_chirps, y=Rangeland.metric.score))
+p <- p + geom_point() + ggtitle(paste("2017-19: 12 mo precip",
+                                      paste("(R sq: ", round(rsq, 2), ")", sep=""), sep=" "))
+p <- p + xlab("Precip (cm)") + ylab("Rangeland metric")
+pngname <- paste(out_dir, paste("rangeland_metric_vs_cumulative_precip_2017-9_combined_12_months.png", sep=""),
+                 sep="/")
+png(file=pngname, units="in", res=300, width=3.5, height=4)
+print(p)
+dev.off()
+
+# CHIRPS precip vs GPCC precip
+p <- ggplot(combined_df, aes(x=precip_cm_gpcc, y=precip_cm_chirps))
+p <- p + geom_point() + geom_abline(slope=1, intercept=0)
+p <- p + xlab("GPCC precip") + ylab("CHIRPS precip")
+print(p)
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/climate/precip_comparison_12month_cumulative_sampling_points_2017-9.png"
+png(file=pngname, units="in", res=300, width=3.5, height=4)
+print(p)
+dev.off()
+
+# match herbaceous biomass records with site coordinates
+shp_table <- read.csv("E:/GIS_local/Mongolia/From_Boogie/shapes/GK_reanalysis/CBM_SCP_sites.csv")
+biomass_table <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/CBM_SCP_sites_2016_2017_herb_biomass.csv")
+shp_subs <- shp_table[, c('site_id', 'NEAR_FID')]
+biomass_subs <- biomass_table[, c('site_ID', 'Herb_biomass')]
+test_merge <- merge(shp_subs, biomass_subs, by.x='site_id', by.y='site_ID', all.y=TRUE) # excellent, all match
+  
 # organize site coordinates and veg data
 # the goal: one table per year, containing coordinates and veg data for SCP and CBM
 veg_2017 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/rangeland_metric_SCP_CBM_2017.csv")
 CBM_coords_2017 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Seegii/CBM_site_coordinates_2016_17.csv")
-SCP_coords_2017 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/SCP_monitoring_points_coordinates_2016_2017_2018.csv")
-merged <- merge(veg_2017, CBM_coords_2017, by.x='site_id', by.y='id_GK')
+CBM_veg_2017 <- veg_2017[veg_2017$source=='CBM', ]
+CBM_coords_2017 <- CBM_coords_2017[, c('id_GK', 'Long', 'Lat')]
+colnames(CBM_coords_2017) <- c('id_GK', "longitude", "latitude")
+merged1 <- merge(CBM_veg_2017, CBM_coords_2017, by.x='site_id', by.y='id_GK', all.x=TRUE)
+SCP_coords_2017 <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/SCP_monitoring_points_coordinates_2016_2017_2018.csv",
+                            stringsAsFactors=FALSE)
+for (s in c(1:7)) {
+  coord_siteid <- paste('st', s, sep='')
+  veg_siteid <- paste('st0', s, sep='')
+  SCP_coords_2017[SCP_coords_2017$site==coord_siteid, 'site'] <- veg_siteid
+}
+SCP_veg_2017 <- veg_2017[(veg_2017$source=='SCP') & (veg_2017$year=='2017'), ]
+merged2 <- merge(SCP_veg_2017, SCP_coords_2017, by.x='site_id', by.y='site', all.x=TRUE)
+merged_2017 <- rbind(merged1, merged2)
+write.csv(merged_2017,
+          "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2017.csv",
+          row.names=FALSE)
+# generated "master" veg and coords for 2018 by rearranging and renaming columns in 
+# "C:\Users\ginge\Dropbox\NatCap_backup\Mongolia\data\from_Chantsa\RangelandData_WCS2018.xlsx"
+cbm_veg_2019 <- read.csv("C:/Users/ginge/Desktop/CBM_2019_temp.csv")
+cbm_coords_2019 <- read.csv("C:/Users/ginge/Desktop/CBM_2019_coords_temp.csv")
+cbm_2019 <- merge(cbm_veg_2019, cbm_coords_2019, by.x='site_id', by.y='Site', all=TRUE)
+write.csv(cbm_2019, "C:/Users/ginge/Desktop/cbm_merged_2019.csv", row.names=FALSE)
+# merged with SCP data for 2019 by hand
 
 # process rangeland metric variables and scores
 # SCP

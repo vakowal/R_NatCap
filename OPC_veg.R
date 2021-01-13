@@ -99,6 +99,77 @@ for (r in (1:NROW(dung_gr_br))){
   dung_gr_br[r, 'year_month'] <- format(date, "%Y_%m")
 }
 
+# compare standing biomass from RPM to transect biomass
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC_RPM"
+PDM_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
+
+# zero density
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_OPC_zero_sd/RPM_outputs_transect_locations.csv")
+biomass_df <- merge(PDM_summary, rpm_df)
+p <- ggplot(biomass_df, aes(x=standing_biomass, y=biomass_kgha))
+p <- p + geom_point() + xlab("Standing biomass (RPM)") + ylab("Empirical biomass")
+print(p)
+model <- lm(biomass_kgha~standing_biomass, data=biomass_df)
+summary(model)  # r squared: 0.02
+cor <- cor.test(biomass_df$biomass_kgha, biomass_df$standing_biomass, method='pearson')
+cor['estimate']  # pearson correlation: 0.14
+
+# uniform density
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_OPC_uniform_sd/RPM_outputs_transect_locations.csv")
+biomass_df <- merge(PDM_summary, rpm_df)
+p <- ggplot(biomass_df, aes(x=standing_biomass, y=biomass_kgha))
+p <- p + geom_point() + xlab("Standing biomass (RPM)") + ylab("Empirical biomass")
+print(p)
+model <- lm(biomass_kgha~standing_biomass, data=biomass_df)
+summary(model)  # r squared: 0.02
+cor <- cor.test(biomass_df$biomass_kgha, biomass_df$standing_biomass, method='pearson')
+cor['estimate']  # pearson correlation: 0.16
+
+# uniform, doubled density
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_OPC_uniform_sd_doubled_animals/RPM_outputs_transect_locations.csv")
+biomass_df <- merge(PDM_summary, rpm_df)
+p <- ggplot(biomass_df, aes(x=standing_biomass, y=biomass_kgha))
+p <- p + geom_point() + xlab("Standing biomass (RPM)") + ylab("Empirical biomass")
+print(p)
+pngname <- paste(fig_dir, "RPM_biomass_vs_transect_biomass_uniform_doubled_density.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+model <- lm(biomass_kgha~standing_biomass, data=biomass_df)
+summary(model)  # r squared: 0.01
+cor <- cor.test(biomass_df$biomass_kgha, biomass_df$standing_biomass, method='pearson')
+cor['estimate']  # pearson correlation: 0.13
+
+# via NDVI, estimated density
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI_OPC/fitted_through_2015/RPM_outputs_transect_locations.csv")
+biomass_df <- merge(PDM_summary, rpm_df)
+p <- ggplot(biomass_df, aes(x=standing_biomass, y=biomass_kgha))
+p <- p + geom_point() + xlab("Standing biomass (RPM)") + ylab("Empirical biomass")
+print(p)
+pngname <- paste(fig_dir, "RPM_biomass_vs_transect_biomass_via_fitted_NDVI.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+model <- lm(biomass_kgha~standing_biomass, data=biomass_df)
+summary(model)  # r squared: 0.0009
+cor <- cor.test(biomass_df$biomass_kgha, biomass_df$standing_biomass, method='pearson')
+cor['estimate']  # pearson correlation: 0.04
+
+# via NDVI, doubled density
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI_OPC/fitted_through_2015_doubled_animals/RPM_outputs_transect_locations.csv")
+biomass_df <- merge(PDM_summary, rpm_df)
+p <- ggplot(biomass_df, aes(x=standing_biomass, y=biomass_kgha))
+p <- p + geom_point() + xlab("Standing biomass (RPM)") + ylab("Empirical biomass")
+print(p)
+pngname <- paste(fig_dir, "RPM_biomass_vs_transect_biomass_via_fitted_NDVI_doubled_animals.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+model <- lm(biomass_kgha~standing_biomass, data=biomass_df)
+summary(model)  # r squared: 0.03
+cor <- cor.test(biomass_df$biomass_kgha, biomass_df$standing_biomass, method='pearson')
+cor['estimate']  # pearson correlation: 0.17
+
 # package up data for submission to PLOS ONE
 PDM_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/OPC_PDM_summary.csv")
 dung_gb_subs <- dung_gr_br[, c('bovid', 'grazer_ex_bovid', 'carnivore', 'mixed',

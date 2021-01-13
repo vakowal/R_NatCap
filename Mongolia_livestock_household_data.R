@@ -40,3 +40,16 @@ soum_sum$aimag_soum <- paste(soum_sum$AimagCode, "_", soum_sum$SoumCode, sep="")
 soum_sum_match_fid <- merge(soum_sum, shp_id_match)
 write.csv(soum_sum_match_fid, "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/from_Oggie/processed_GK/sfu_sum_per_soum_fid_match.csv",
           row.names=FALSE)
+
+## correct % liverstock in each soum by area of desert ecosystem, which is not modeled
+sfu_tes_gobi_csv <- "E:/GIS_local/Mongolia/Livestock_household_data/masked_by_tes_gobi_ecosystem/sfu_per_soum_intersect_tes_gobi.csv"
+sfu_df <- read.csv(sfu_tes_gobi_csv)
+soum_total_area <- aggregate(AREA_M2~aimag_soum, data=sfu_df, FUN=sum)
+colnames(soum_total_area)[2] <- 'area_total'
+soum_area_desert <- aggregate(AREA_M2~aimag_soum, data=sfu_df[sfu_df$tes_gobi==13, ], FUN=sum)
+colnames(soum_area_desert)[2] <- 'area_tes_gobi=13'
+area_df <- merge(soum_total_area, soum_area_desert, all=TRUE)
+area_df[is.na(area_df$`area_tes_gobi=13`), 'area_tes_gobi=13'] <- 0
+area_df$proportion_area_non_desert <- (area_df$area_total - area_df$`area_tes_gobi=13`) / area_df$area_total
+write.csv(area_df, "E:/GIS_local/Mongolia/Livestock_household_data/masked_by_tes_gobi_ecosystem/percent_area_non_desert.csv",
+          row.names=FALSE)

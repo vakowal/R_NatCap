@@ -919,6 +919,7 @@ print(p)
 dev.off()
 
 p <- ggplot(plot_df, aes(x=mean_biomass_gm2, y=biomass_emp_densities))
+p <- p + geom_abline(slope=1, intercept=0)
 p <- p + facet_wrap(~density_multiplier)
 p <- p + geom_point()
 print(p) # wow

@@ -1,8 +1,8 @@
 # summarize dung data for Kenya Ticks
 library(ggplot2)
-print_theme <- theme(strip.text.y=element_text(size=10), 
-                     strip.text.x=element_text(size=9), 
-                     axis.title.x=element_text(size=10), 
+print_theme <- theme(strip.text.y=element_text(size=10),
+                     strip.text.x=element_text(size=9),
+                     axis.title.x=element_text(size=10),
                      axis.title.y=element_text(size=10),
                      axis.text=element_text(size=10),
                      plot.title=element_text(size=10, face="bold"),
@@ -44,7 +44,93 @@ comb_df$bovid <- rowSums(comb_df[, c(2, 4)])
 save_as <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv"
 write.csv(comb_df, file=save_as, row.names=FALSE)
 
-# dung around weather stations summarized in python 
+# summarize grazer dung, 10.12.20
+comb_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
+bovid_avg <- mean(comb_df$bovid)  # property-level bovid dung per transect
+cattle_per_ha <- 0.1526  # property-level cattle density, from property master file
+conversion_rate <- cattle_per_ha / bovid_avg
+
+group_key <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+grazers <- gr_key_df[gr_key_df$Herbivory == 'grazer', c('Abbrev', 'Unit_weight_kg')]
+grazers$body_weight <- as.numeric(grazers$Unit_weight_kg)
+grazers$AUE <- 0
+for (r in (1:NROW(grazers))) {
+  grazers[r, 'AUE'] <- (grazers[r, 'body_weight']**0.75) / (207**0.75) # (453.6**0.75)
+}
+
+transect_count_t <- as.data.frame(t(comb_df[2:24]))
+colnames(transect_count_t) <- comb_df$transect
+transect_count_t$Abbrev <- rownames(transect_count_t)
+transect_merge <- merge(transect_count_t, grazers, by='Abbrev')  # get spp with AUE only
+transect_t_restr <- transect_merge[, colnames(
+    transect_count_t)[colnames(transect_count_t) != 'Abbrev']]
+grazers_AUE <- transect_merge[, 'AUE']
+multiply_by_AUE <- function(x) x * grazers_AUE
+transect_AUE <- data.frame(lapply(transect_t_restr, multiply_by_AUE))
+transect_AUE_sum_df <- data.frame('transect'=comb_df$transect, 'grazer_AUE_sum'=colSums(transect_AUE))
+transect_AUE_animals_per_ha <- data.frame(
+  'transect'=comb_df$transect, 'grazer_AUE_per_ha'=transect_AUE_sum_df$grazer_AUE_sum * conversion_rate)
+write.csv(transect_AUE_animals_per_ha, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/grazer_AUE_per_ha.csv")
+
+# split transects by month to extract RPM outputs
+comb_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
+date_df <- comb_df[, c('transect', 'Date')]
+for (r in (1:NROW(date_df))){
+  a_list <- unlist(strsplit(date_df[r, "Date"], split="-"))
+  date_df[r, 'day'] <- as.numeric(a_list[1])
+  date_df[r, 'month_str'] <- a_list[2]
+  date_df[r, 'year'] <- as.numeric(paste('20', a_list[3], sep=''))
+}
+date_df[date_df$month_str == 'Feb', 'month'] <- 2
+date_df[date_df$month_str == 'Mar', 'month'] <- 3
+date_df[date_df$month_str == 'Apr', 'month'] <- 4
+date_df[date_df$month_str == 'May', 'month'] <- 5
+date_df[date_df$month_str == 'Jun', 'month'] <- 6
+date_df[date_df$month_str == 'Sep', 'month'] <- 9
+date_df[date_df$month_str == 'Nov', 'month'] <- 11
+date_df[date_df$month_str == 'Dec', 'month'] <- 12
+date_df$month_corr <- date_df$month
+date_df[date_df$day < 15, 'month_corr'] <- (date_df[date_df$day < 15, 'month'] - 1)
+transect_date_corr_df <- data.frame('transect'=comb_df$transect,
+                                    'Lat'=comb_df$Lat, 'Long'=comb_df$Long,
+                                    'year_month'=paste(date_df$year, date_df$month_corr, sep='_'))
+write.csv(transect_date_corr_df, "E:/GIS_local_archive/Kenya_ticks/Kenya_forage/OPC_transect_RPM_date.csv",
+          row.names=FALSE)
+
+# compare animal density from dung with density estimated by RPM
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/OPC_RPM"
+emp_grazers_per_ha <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/grazer_AUE_per_ha.csv")
+rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI_OPC/fitted_through_2015/RPM_outputs_transect_locations.csv")
+animal_df <- merge(emp_grazers_per_ha, rpm_df)
+p <- ggplot(animal_df, aes(x=animal_density, y=grazer_AUE_per_ha))
+p <- p + geom_point() + geom_abline(intercept=0, slope=1, linetype=3)
+p <- p + xlab('Density from RPM') + ylab('Density from dung') # + facet_wrap(~year_month, scales='free')
+print(p)
+pngname <- paste(fig_dir, "RPM_density_vs_AUE_density_from_dung.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+pearson_cor <- cor.test(animal_df$animal_density, animal_df$grazer_AUE_per_ha, method='pearson')
+pearson_cor[['estimate']]
+pearson_cor[['p.value']]
+
+# compare animal density from RPM with bovid dung only
+comb_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/dung_summary.csv")
+bovid_df <- comb_df[, c('transect', 'bovid')]
+bovid_rpm_df <- merge(bovid_df, rpm_df)
+p <- ggplot(bovid_rpm_df, aes(x=animal_density, y=bovid))
+p <- p + geom_point() + xlab('Density from RPM') + ylab('Bovid dung count')
+print(p)
+pngname <- paste(fig_dir, "RPM_density_vs_bovid_dung_count.png", sep="/")
+png(file=pngname, units="in", res=300, width=5, height=5)
+print(p)
+dev.off()
+pearson_cor <- cor.test(bovid_rpm_df$animal_density, bovid_rpm_df$bovid, method='pearson')
+pearson_cor[['estimate']]
+pearson_cor[['p.value']]
+
+# dung around weather stations summarized in python
 outerdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/OPC_dung_analysis/OPC_weather_stations"
 points_file <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Climate/OPC_weather_stations_coordinates.csv"
 group_key <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
@@ -217,7 +303,7 @@ test <- cor.test(c_df$average_monthly_GPS_density, c_df$total_rem_back.calc, met
 sum_df[6, 'group'] <- 'GPS-derived cattle density'
 sum_df[6, 'rho'] <- test[[4]]
 sum_df[6, 'p'] <- test[[3]]
-  
+
 test <- cor.test(joined$mean_dung, joined$total_rem_back.calc, method="spearman")
 sum_df[7, 'group'] <- 'cattle'
 sum_df[7, 'rho'] <- test[[4]]
@@ -275,10 +361,10 @@ for(distance in c(0.1, 0.3, 0.5)){
       png(file=pngname, units="in", res=300, width=8, height=5)
       print(p)
       dev.off()
-      
+
       rho_buf = cor.test(cor_df$Buf, cor_df$total_anim, method='spearman')[[4]]
       p_buf = cor.test(cor_df$Buf, cor_df$total_anim, method='spearman')[[3]]
-      
+
       rho_bovid = cor.test(cor_df$bovid, cor_df$total_anim, method='spearman')[[4]]
       p_bovid = cor.test(cor_df$bovid, cor_df$total_anim, method='spearman')[[3]]
     }
@@ -408,6 +494,114 @@ gr1_res <- reshape(gr1_means, idvar="group", varying=list(2:25), timevar='site',
 gr3_res <- reshape(gr3_means, idvar="group", varying=list(2:25), timevar='site',
                    v.names="mean_dung", times=colnames(gr1_means)[2:25], direction="long",
                    new.row.names=1:1000)
+
+# total grazers per property
+property_means_path <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/From_Sharon/Processed_by_Ginger/regional_dung_2015_property_means.csv"
+property_means <- read.csv(property_means_path)
+FID_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/Property_FID_match.csv"
+FID_list <- read.csv(FID_csv)
+property_means <- merge(property_means, FID_list, by.x="Property",
+                        by.y="NAME", all.x=TRUE)[, 2:25]
+group_key <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/Kenya_ticks_project_specific/wildlife_group_definition.csv"
+gr_key_df <- read.csv(group_key)
+grazers <- gr_key_df[gr_key_df$Herbivory == 'grazer', c('Abbrev', 'Unit_weight_kg')]
+grazers$body_weight <- as.numeric(grazers$Unit_weight_kg)
+grazers$AUE <- 0
+for (r in (1:NROW(grazers))) {
+  grazers[r, 'AUE'] <- (grazers[r, 'body_weight']**0.75) / (207**0.75) # (453.6**0.75)
+}
+
+propmeans_t <- as.data.frame(t(property_means[1:24]))
+colnames(propmeans_t) <- property_means$FID
+propmeans_t$Abbrev <- rownames(propmeans_t)
+propmeans_merge <- merge(propmeans_t, grazers, by='Abbrev')  # get only the spp with AUE
+propmeans_t_restr <- propmeans_merge[, colnames(propmeans_t)[colnames(propmeans_t) != 'Abbrev']]
+grazers_AUE <- propmeans_merge[, 'AUE']
+multiply_by_AUE <- function(x) x * grazers_AUE
+propmeans_AUE <- data.frame(lapply(propmeans_t_restr, multiply_by_AUE))
+property_AUE_sum <- colSums(propmeans_AUE)
+property_AUE_sum_df <- data.frame('FID'=colnames(propmeans_t_restr),
+                                  'grazer_AUE_sum'=property_AUE_sum)
+property_AUE_sum_df <- merge(property_AUE_sum_df, FID_list)
+write.csv(property_AUE_sum_df, "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/grazer_AUE_from_dung_by_property_2015.csv",
+          row.names=FALSE)
+
+# animal density estimated by RPM with comparison to NDVI
+fig_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/Laikipia_RPM/via_NDVI/summary_figures"
+library(ggplot2)
+rpm_density <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI/fitted_through_2015_Nov2020/animal_density_summary.csv")
+rpm_dens_t <- reshape(rpm_density, varying=colnames(rpm_density)[c(3:38)],
+                      v.names='density', timevar='step', idvar='NAME', times=c(0:35),
+                      drop=c('mean_density'), direction='long')
+p <- ggplot(rpm_dens_t, aes(x=step, y=density, group=NAME))
+p <- p + geom_line(aes(colour=NAME))
+print(p)
+
+# order of properties by mean density computed by hand
+property_order <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI/fitted_through_2015/mean_density_rank.csv")
+colnames(property_order) <- c('NAME', 'mean_density', 'mean_density_rank')
+rpm_dens_t <- merge(rpm_dens_t, property_order)
+property_reported_animals <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+property_reported_animals <- property_reported_animals[, c('Property', 'CattleDensity', 'EcolClass')]
+property_reported_animals[property_reported_animals$Property == 'Lombala', 'Property'] <- 'Lombala Ranch'
+name_match_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/grazer_AUE_from_dung_by_property_2015_name_match.csv")
+rpm_dens_t <- merge(rpm_dens_t, name_match_df, by.x='NAME', by.y='NAME_RPM')
+rpm_dens_t <- subset(rpm_dens_t, select=-c(NAME, NAME_AUE))
+merged_df <- merge(rpm_dens_t, property_reported_animals, by.x='name_harm', by.y='Property')
+merged_df$mean_density_rank <- factor(merged_df$mean_density_rank)
+p <- ggplot(merged_df, aes(x=mean_density_rank, y=density))
+p <- p + geom_boxplot(aes(colour=EcolClass)) + xlab('Property') + ylab('Monthly density (animals/ha) from RPM')
+print(p)
+pngname <- paste(fig_dir, 'RPM_density_boxplot_by_property.png', sep='/')
+png(file=pngname, units="in", res=300, width=8, height=4)
+print(p)
+dev.off()
+
+# compare RPM density estimated by RPM with empirical density
+rpm_density <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Kenya/RPM_via_NDVI/fitted_through_2015_Nov2020/animal_density_summary.csv")
+property_AUE_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/grazer_AUE_from_dung_by_property_2015.csv")
+property_reported_animals <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/PropertyMasterFile_10July2016_Final.csv")
+property_reported_animals <- property_reported_animals[, c('Property', 'CattleDensity', 'EcolClass')]
+property_reported_animals[property_reported_animals$Property == 'Lombala', 'Property'] <- 'Lombala Ranch'
+name_match_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Data/Kenya/grazer_AUE_from_dung_by_property_2015_name_match.csv")
+rpm_density <- merge(rpm_density, name_match_df, by.x='NAME', by.y='NAME_RPM')
+rpm_density <- subset(rpm_density, select=-c(NAME, NAME_AUE))
+property_AUE_df <- merge(property_AUE_df, name_match_df, by.x='NAME', by.y='NAME_AUE')
+property_AUE_df <- subset(property_AUE_df, select=-c(NAME, NAME_RPM, FID))
+density_merged <- merge(rpm_density, property_AUE_df, by='name_harm', all=TRUE)
+density_merged <- merge(density_merged, property_reported_animals, by.x='name_harm', by.y='Property', all=TRUE)
+
+p <- ggplot(density_merged, aes(x=mean_density, y=grazer_AUE_sum))
+p <- p + geom_point()
+p <- p + xlab("Mean animals/ha (from RPM)") + ylab("Grazer AUE dung per transect")
+print(p)
+pngname <- paste(fig_dir, 'RPM_density_mean_through_2015_vs_grazer_AUE_dung_per_transect.png', sep='/')
+png(file=pngname, units="in", res=300, width=4, height=3.5)
+print(p)
+dev.off()
+
+p <- ggplot(density_merged, aes(x=mean_density, y=CattleDensity, color=EcolClass))
+p <- p + geom_point()
+p <- p + xlab("Mean animals/ha (from RPM)") + ylab("Reported cattle density")
+print(p)
+pngname <- paste(fig_dir, 'RPM_density_mean_through_2015_vs_reported_cattle_density.png', sep='/')
+png(file=pngname, units="in", res=300, width=5, height=3.5)
+print(p)
+dev.off()
+
+# remove Makurian, severe outlier in terms of reported cattle density
+subset_df <- density_merged[density_merged$name_harm != 'Makurian', ]
+p <- ggplot(subset_df, aes(x=mean_density, y=CattleDensity, color=EcolClass))
+p <- p + geom_point()
+p <- p + xlab("Mean animals/ha (from RPM)") + ylab("Reported cattle density")
+print(p)
+pngname <- paste(fig_dir, 'RPM_density_mean_through_2015_vs_reported_cattle_density_ex_Makurian.png', sep='/')
+png(file=pngname, units="in", res=300, width=5, height=3.5)
+print(p)
+dev.off()
+print(cor.test(subset_df$mean_density, subset_df$CattleDensity, method='pearson')[['p.value']])
+print(cor.test(subset_df$mean_density, subset_df$CattleDensity, method='pearson')[['estimate']])
+print(cor.test(subset_df$mean_density, subset_df$CattleDensity, method='spearman')[['p.value']])
 
 # summary of back-calc intensity
 bc_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_results/regional_properties/back_calc_results_analysis/match_2015_intensity_summary.csv"
@@ -557,7 +751,7 @@ cor_df <- merge(bovid_sum, adj_df, by="Property")
 cor_df <- cor_df[cor_df$Property != "Makurian", ]
 cor_df <- cor_df[which(cor_df$Confirmed == "Yes"), ]
 
-lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df) 
+lm1_0 <- lm(prop_density ~ 0 + bovid, data=cor_df)
 lm2_0 <- lm(prop_non_density ~ 0 + bovid, data=cor_df)
 summary(lm1_0)
 summary(lm2_0) # lm1 is stronger (exclude non-property cattle)
@@ -635,7 +829,7 @@ gr9_res <- gr9_res[, c('Property', 'bovid_shoat', 'grazer_ex_bovid_shoat')]
 grouped_dung <- merge(gr5_res, gr8_res, all=TRUE)
 grouped_dung <- merge(gr9_res, grouped_dung, all=TRUE)
 grouped_dung <- grouped_dung[, c('Property', 'bovid', 'grazer_ex_bovid',
-                                 'livestock', 'wildlife', 
+                                 'livestock', 'wildlife',
                                  'bovid_shoat', 'grazer_ex_bovid_shoat')]
 
 # join Felicia's classification with grouped dung
@@ -685,7 +879,7 @@ grouped_dung[(grouped_dung$ln_grazerexshoat_bovidshoat > max_grazerexshoat_bovid
              'ln_grazerexshoat_bovidshoat'] <- max_grazerexshoat_bovidshoat
 grouped_dung[(grouped_dung$ln_grazerexshoat_bovid > max_grazerexshoat_bovid),
              'ln_grazerexshoat_bovid'] <- max_grazerexshoat_bovid
-  
+
 # relationship of different definitions of wildlife and livestock to ticks
 science_df <- science_df[science_df$included_science_ms == "Y", ]
 science_df$total_ticks <- (science_df$X2014LarvaeM2 + science_df$X2014NymphsM2 + science_df$X2014AdultsM2
@@ -729,7 +923,7 @@ grouped_dung <- gr10_res
 # convert dung to animals/ha on each property
 animals_per_prop <- gr10_res * 0.016578  # regression estimated from reported property cattle
 anim_t <- animals_per_prop[, c('bovid', 'non-ruminant_large', 'non-ruminant_medium',
-                               'non-ruminant_small', 'ruminant_large', 'ruminant_medium',   
+                               'non-ruminant_small', 'ruminant_large', 'ruminant_medium',
                                'ruminant_small', 'shoat')]
 anim_t_labeled <- anim_t
 anim_t_labeled$Property <- rownames(gr10_res)

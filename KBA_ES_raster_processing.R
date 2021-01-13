@@ -1,6 +1,27 @@
 # memory-intensive raster processing for KBA+ES
 library(raster)
 
+# generate area raster aligned with marine habitat that provides coastal protection
+marine_habitat_path <- "F:/Data_marine_coastal_habitat/aligned/1_2000_mask_md5_91e7f997e1197e4a2abf064095e2179e.tif"
+area_ras <- area(raster(marine_habitat_path))
+writeRaster(area_ras, filename="F:/Data_marine_coastal_habitat/aligned/area_km2.tif")
+
+# zonal stats giving area of KBAs, calculated in Q
+zonal_stat_df <- read.csv("F:/KBAs_3.1.20/KBA_pixel_area_zonal_stat_table.csv")
+# the field "pixel_km_1" gives area in square km, calculated as sum of area pixels
+# falling inside the KBA
+# the field "pixel_km2_" gives the count of area pixels falling inside the KBA
+kba_area_sum <- sum(zonal_stat_df$pixel_km_1)  # total land area in KBAs
+
+# generate aligned raster of pixel area values, for calculating area of KBAs
+template_raster_path <- "F:/ESA_landcover_2015/product/ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif"
+area_km2_raster <- area(raster(template_raster_path))
+writeRaster(area_km2_raster, "F:/ESA_landcover_2015/pixel_area_km2.tif")
+# generate land mask: ESA landcover, setting class 210 to nodata
+in_ras <- raster(template_raster_path)
+out_ras <- reclassify(in_ras, cbind(210, NA))
+writeRaster(out_ras, filename="F:/ESA_landcover_2015/land_mask.tif")
+
 # generate aligned raster of pixel area values, for calculating area of KBAs
 # for carbon
 template_raster_path <- "F:/carbon_lpj_guess_workspace/aligned_inputs/LPJ-GUESS_rcp2p6_IMAGE_cVeg_2015_1x1.tif"

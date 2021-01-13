@@ -1,6 +1,124 @@
 # examine Mongolia simulations
 library(ggplot2)
 
+# modeled biomass vs empirical cover, various livestock disaggregation methods
+out_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/comparisons_with_empirical_cover"
+# empirical herbaceous cover
+veg_list <- list(
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2017.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2018.csv",
+  "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/master_veg_coords_2019.csv"
+)
+veg_df_list <- lapply(veg_list, FUN=read.csv)
+cover_df_list <- list()
+i <- 1
+for (df in veg_df_list) {
+  df$cover_herb <- df$Cover.of.all.vegetation - df$Cover.of.all.shrubs
+  cover_df <- df[, c('site_id', 'cover_herb')]
+  cover_df_list[[i]] <- cover_df
+  i <- i + 1
+}
+# modeled biomass at sampling sites
+table_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/model_results_at_sampling_sites"
+method_list <- list(
+  'uniform_density_per_soum', 'zero_sd_v2', 'winter_camps_v3', 'compare_to_normalized_ndvi', 'compare_to_ndvi_v3')
+method_df_list = list()
+for(method in method_list) {
+  # populate csv list
+  csv_list <- list(
+    paste(table_dir, paste(
+      'biomass_summary', method, 'master_veg_coords_2017.csv', sep='_'), sep='/'),
+    paste(table_dir, paste(
+      'biomass_summary', method, 'master_veg_coords_2018.csv', sep='_'), sep='/'),
+    paste(table_dir, paste(
+      'biomass_summary', method, 'master_veg_coords_2019.csv', sep='_'), sep='/')
+  )
+  one_method_list <- lapply(csv_list, FUN=read.csv)
+  method_df_list[[method]] <- one_method_list
+}
+# each entry in the method_df_list is a list of data frames. The list belongs to
+# one modeling method; each data frame belongs to one year of sampling.
+modeled_cols <- c('site_id', 'aboveground_live_biomass_gm2', 'total_biomass_gm2')
+year_list <- list(2017, 2018, 2019)
+emp_step_list <- list(11, 23, 35)  # model steps at which empirical measurements were taken
+df_list = list()
+for (method in method_list) {
+  one_method_list <- list()
+  modeled_df_list <- method_df_list[[method]]
+  for (i in c(1, 2, 3)) {
+    year <- year_list[[i]]
+    modeled_df <- modeled_df_list[[i]]
+    cover_df <- cover_df_list[[i]]
+    emp_step <- emp_step_list[[i]]
+    modeled_subs <- modeled_df[(modeled_df$step == emp_step), modeled_cols]
+    df_merge <- merge(cover_df, modeled_subs)
+    df_merge$year <- year
+    modeled_df_list[[i]] <- df_merge
+  }
+  combined_df <- do.call(rbind, modeled_df_list)
+  combined_df$method <- method
+  df_list[[method]] <- combined_df
+}
+combined_df <- do.call(rbind, df_list)
+comb_wide <- reshape(combined_df, idvar=c("site_id", "year", "cover_herb", "method"),
+                     varying=c('aboveground_live_biomass_gm2', 'total_biomass_gm2'),
+                     v.names="sim_biomass", times=c("live", "total"), timevar="biomass_fraction",
+                     direction="long")
+comb_wide$method <- factor(comb_wide$method,
+                           levels=c('zero_sd_v2', 'uniform_density_per_soum', 'winter_camps_v3',
+                                    'compare_to_ndvi_v3', 'compare_to_normalized_ndvi'),
+                           labels=c('ungrazed', 'uniform', 'winter camps', 'biomass from ndvi', 'normalized ndvi'))
+
+# combined_df$method <- factor(combined_df$method,
+#                              levels=c('uniform_density_per_soum', 'compare_to_ndvi'),
+#                              labels=c('uniform', 'via_ndvi'))
+# herb cover vs biomass, by method
+rsq_table <- data.frame('method'=NA, 'R squared'=NA, 'biomass_fraction'=NA)
+r <- 1
+for (method in levels(comb_wide$method)) {
+  for (fraction in unique(comb_wide$biomass_fraction)) {
+    df_subs <- comb_wide[(comb_wide$method == method) &
+                             (comb_wide$biomass_fraction == fraction), ]
+    lm_model <- lm(cover_herb~sim_biomass, data=df_subs)
+    r_sq <- summary(lm_model)$r.squared
+    rsq_table[r, 'method'] <- method
+    rsq_table[r, 'R.squared'] <- format(round(r_sq, 2), nsmall = 2)
+    rsq_table[r, 'biomass_fraction'] <- fraction
+    r <- r + 1
+  }
+}
+write.csv(rsq_table, paste(out_dir, "r_squared_summary.csv", sep='/'),
+          row.names=FALSE)
+
+# scatterplots, all methods
+rsq_table$x <- 250
+rsq_table$y <- 78
+p <- ggplot(comb_wide, aes(x=sim_biomass, y=cover_herb))
+p <- p + geom_point()
+p <- p + ylim(0, 310)
+p <- p + geom_text(data=rsq_table, aes(x=x,  y=y, label=R.squared)) 
+p <- p + facet_grid(biomass_fraction~method)
+p <- p + ylab('Percent cover herbaceous') + xlab('Simulated biomass (g/m2)')
+print(p)
+pngname <- paste(out_dir, "livestock_disaggregation_method_comparison.png", sep='/')
+png(file=pngname, units="in", res=300, width=8, height=4)
+print(p)
+dev.off()
+
+# THROWAWAY!
+df_subs <- comb_wide[(comb_wide$method == 'uniform') &
+                       (comb_wide$biomass_fraction == 'total'), ]
+df_subs <- df_subs[sample(nrow(df_subs), 50), ]
+p <- ggplot(df_subs, aes(x=sim_biomass, y=cover_herb))
+p <- p + geom_point()
+p <- p + ylab('Percent cover herbaceous') + xlab('Simulated biomass (g/m2)')
+p <- p + print_theme
+pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Forage_model/Forage_model/model_documentation/RPM_website_design/sim_obs_scatterplot_example.png"
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+print(p)
+
 # results of back-calculate to match 2016 sites
 back_calc_match_csv <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/monitoring_sites/chirps_prec_back_calc/match_summary.csv"
 back_calc_match_df <- read.csv(back_calc_match_csv)
@@ -40,7 +158,7 @@ sum_df$Herb_biomass_prior <- sum_df$Herb_biomass
 sum_df$Herb_biomass <- sum_df$Herb_biomass_prior * 10
 
 cor_df <- data.frame('modeled_biomass_source'=character(),
-                     'spearman_rho'=numeric(), 'spearman_pval'=numeric(), 
+                     'spearman_rho'=numeric(), 'spearman_pval'=numeric(),
                      'pearson_cor'=numeric(), 'pearson_pval'=numeric(),
                      stringsAsFactors=FALSE)
 p <- ggplot(sum_df, aes(x=Herb_biomass, y=potential))
@@ -225,7 +343,7 @@ for(soum in unique(range_df$soum_site_id)){
   nm_df$soum <- soum
   df_list[[i]] <- nm_df
   i <- i + 1
-  
+
   pixel_id <- range_df[range_df$soum_site_id == soum, 'min_range_pixel_id']
   ch_df <- read.csv(paste(ch_res_dir, pixel_id, 'summary_results.csv', sep='/'))
   cols <- c('month', 'year', paste(paste("X", pixel_id, sep=""), 'dead_kgha', sep='_'),
@@ -237,7 +355,7 @@ for(soum in unique(range_df$soum_site_id)){
   ch_df$soum <- soum
   df_list[[i]] <- ch_df
   i <- i + 1
-  
+
   pixel_id <- range_df[range_df$soum_site_id == soum, 'max_range_pixel_id']
   ch_df <- read.csv(paste(ch_res_dir, pixel_id, 'summary_results.csv', sep='/'))
   cols <- c('month', 'year', paste(paste("X", pixel_id, sep=""), 'dead_kgha', sep='_'),
@@ -249,7 +367,7 @@ for(soum in unique(range_df$soum_site_id)){
   ch_df$soum <- soum
   df_list[[i]] <- ch_df
   i <- i + 1
-  
+
   pixel_id <- range_df[range_df$soum_site_id == soum, 'min_peak_pixel_id']
   ch_df <- read.csv(paste(ch_res_dir, pixel_id, 'summary_results.csv', sep='/'))
   cols <- c('month', 'year', paste(paste("X", pixel_id, sep=""), 'dead_kgha', sep='_'),
@@ -261,7 +379,7 @@ for(soum in unique(range_df$soum_site_id)){
   ch_df$soum <- soum
   df_list[[i]] <- ch_df
   i <- i + 1
-  
+
   pixel_id <- range_df[range_df$soum_site_id == soum, 'max_peak_pixel_id']
   ch_df <- read.csv(paste(ch_res_dir, pixel_id, 'summary_results.csv', sep='/'))
   cols <- c('month', 'year', paste(paste("X", pixel_id, sep=""), 'dead_kgha', sep='_'),
@@ -347,7 +465,7 @@ for(soum in unique(closest_df$soum_site_id)){
   nm_df$soum <- soum
   df_list[[i]] <- nm_df
   i <- i + 1
-  
+
   pixel_id <- closest_df[closest_df$soum_site_id == soum, 'pixel_site_id']
   ch_df <- read.csv(paste(ch_res_dir, pixel_id, 'summary_results.csv', sep='/'))
   cols <- c('month', 'year', paste(paste("X", pixel_id, sep=""), 'dead_kgha', sep='_'),
@@ -641,7 +759,148 @@ norm <- function(vec){
   normalized = (vec - min(vec)) / (max(vec) - min(vec))
   return(normalized)
 }
+# with RPM, April 2020
+summary_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/RPM_initialized_by_Century/summary_figs"
+dir.create(summary_dir)
+sim_zero_sd <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/RPM_initialized_by_Century/RPM_biomass_exclosure_points_zero_sd_v2.csv")
+sim_zero_sd$version <- 'no_grazing'
+sim_unif_sd <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/RPM_initialized_by_Century/RPM_biomass_exclosure_points_uniform_density_per_soum.csv")
+sim_unif_sd$version <- 'uniform_sd_by_soum'
+sim_df <- rbind(sim_zero_sd, sim_unif_sd)
 
+emp_step_list <- list(11, 23, 35)  # model steps at which empirical measurements were taken: 2017, 2018, 2019
+sim_df <- sim_df[sim_df$step %in% emp_step_list, ]
+sim_df$year <- 0
+sim_df[sim_df$step == 11, 'year'] <- 2017
+sim_df[sim_df$step == 23, 'year'] <- 2018
+sim_df[sim_df$step == 35, 'year'] <- 2019
+sim_cols <- c('year', 'site_id', 'aboveground_live_biomass_gm2', 'total_biomass_gm2', 'version')
+sim_df <- sim_df[, sim_cols]
+
+emp_raw_dat <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/data/summaries_GK/exclosure_data_2017_2018_2019.csv")
+emp_raw_dat$cover_herb <- emp_raw_dat$Cover.of.all.vegetation - emp_raw_dat$Cover.of.all.shrubs
+emp_cols <- c('year', 'site_id', 'cover_herb', 'Rangeland.metric.score')
+emp_raw_dat <- emp_raw_dat[emp_raw_dat$treatment == 'inside', emp_cols]
+cover_agg <- aggregate(emp_raw_dat$cover_herb~emp_raw_dat$year + emp_raw_dat$site_id, FUN=mean)
+colnames(cover_agg) <- c('year', 'site_id', 'empirical_herbaceous_cover')
+rmetric_agg <- aggregate(emp_raw_dat$Rangeland.metric.score~emp_raw_dat$year + emp_raw_dat$site_id, FUN=mean)
+colnames(rmetric_agg) <- c('year', 'site_id', 'empirical_rangeland_metric')
+
+# aboveground live v herbaceous cover
+sim_df_copy <- sim_df[, c('year', 'site_id', 'aboveground_live_biomass_gm2', 'version')]
+colnames(sim_df_copy) <- c('year', 'site_id', 'simulated_live_biomass', 'version')
+plot_df <- merge(sim_df_copy, cover_agg)
+p <- ggplot(plot_df, aes(x=simulated_live_biomass, y=empirical_herbaceous_cover))
+p <- p + geom_point() + facet_grid(site_id~version)
+print(p)
+pngname <- paste(summary_dir, "sim_live_v_emp_herbaceous_cover.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+
+# total biomass v herbaceous cover
+sim_df_copy <- sim_df[, c('year', 'site_id', 'total_biomass_gm2', 'version')]
+colnames(sim_df_copy) <- c('year', 'site_id', 'simulated_total_biomass', 'version')
+plot_df <- merge(sim_df_copy, cover_agg)
+p <- ggplot(plot_df, aes(x=simulated_total_biomass, y=empirical_herbaceous_cover))
+p <- p + geom_point() + facet_grid(site_id~version)
+print(p)
+pngname <- paste(summary_dir, "sim_total_v_emp_herbaceous_cover.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+
+# aboveground live v rangeland metric
+sim_df_copy <- sim_df[, c('year', 'site_id', 'aboveground_live_biomass_gm2', 'version')]
+colnames(sim_df_copy) <- c('year', 'site_id', 'simulated_live_biomass', 'version')
+plot_df <- merge(sim_df_copy, rmetric_agg)
+p <- ggplot(plot_df, aes(x=simulated_live_biomass, y=empirical_rangeland_metric))
+p <- p + geom_point() + facet_grid(site_id~version)
+print(p)
+pngname <- paste(summary_dir, "sim_live_v_emp_rangeland_metric.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+
+# total biomass v rangeland metric
+sim_df_copy <- sim_df[, c('year', 'site_id', 'total_biomass_gm2', 'version')]
+colnames(sim_df_copy) <- c('year', 'site_id', 'simulated_total_biomass', 'version')
+plot_df <- merge(sim_df_copy, rmetric_agg)
+p <- ggplot(plot_df, aes(x=simulated_total_biomass, y=empirical_rangeland_metric))
+p <- p + geom_point() + facet_grid(site_id~version)
+print(p)
+pngname <- paste(summary_dir, "sim_total_v_emp_rangeland_metric.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+
+# rejigger plots: only using simulated results without grazing
+sim_df_zerosd <- sim_df[sim_df$version == 'no_grazing',
+                        c('year', 'site_id', 'aboveground_live_biomass_gm2', 'total_biomass_gm2')]
+sim_reshape <- reshape(sim_df_zerosd, varying=c('aboveground_live_biomass_gm2', 'total_biomass_gm2'),
+                       idvar=c('year', 'site_id'), timevar='biomass_fraction',
+                       v.names=c('simulated_biomass'), times=c('live', 'total'),
+                       direction='long')
+plot_df <- merge(sim_reshape, cover_agg)
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=empirical_herbaceous_cover))
+p <- p + geom_point() + facet_grid(site_id~biomass_fraction)
+print(p)
+pngname <- paste(summary_dir, "sim_biomass_v_emp_herbaceous_cover_by_site.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=empirical_herbaceous_cover))
+p <- p + geom_point() + facet_grid(year~biomass_fraction)
+pngname <- paste(summary_dir, "sim_biomass_v_emp_herbaceous_cover_by_year.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
+plot_df <- merge(sim_reshape, rmetric_agg)
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=empirical_rangeland_metric))
+p <- p + geom_point() + facet_grid(site_id~biomass_fraction)
+pngname <- paste(summary_dir, "sim_biomass_v_emp_rangeland_metric_by_site.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=7)
+print(p)
+dev.off()
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=empirical_rangeland_metric))
+p <- p + geom_point() + facet_grid(year~biomass_fraction)
+pngname <- paste(summary_dir, "sim_biomass_v_emp_rangeland_metric_by_year.png", sep="/")
+png(file=pngname, units="in", res=300, width=4, height=4)
+print(p)
+dev.off()
+
+# using both empirical data points
+plot_df <- merge(sim_reshape, emp_raw_dat)
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=cover_herb))
+p <- p + geom_point() + facet_grid(site_id~biomass_fraction)
+print(p)
+p <- ggplot(plot_df, aes(x=simulated_biomass, y=cover_herb))
+p <- p + geom_point() + facet_grid(year~biomass_fraction)
+print(p)
+
+# spearman rank correlation, average herbaceous cover vs simulated biomass
+cor_df <- merge(sim_df_zerosd, cover_agg)
+cor_model_live <- cor.test(cor_df$empirical_herbaceous_cover, cor_df$aboveground_live_biomass_gm2,
+                           method='spearman')
+cor_model_live[['p.value']]
+cor_model_live[['estimate']]
+cor_model_total <- cor.test(cor_df$empirical_herbaceous_cover, cor_df$total_biomass_gm2)
+cor_model_total[['p.value']]
+cor_model_total[['estimate']]
+
+# spearman rank correlation: average rangeland metric vs simulated biomass
+cor_df <- merge(sim_df_zerosd, rmetric_agg)
+cor_model_live <- cor.test(cor_df$empirical_rangeland_metric, cor_df$aboveground_live_biomass_gm2,
+                           method='spearman')
+cor_model_live[['p.value']]
+cor_model_live[['estimate']]
+cor_model_total <- cor.test(cor_df$empirical_rangeland_metric, cor_df$total_biomass_gm2)
+cor_model_total[['p.value']]
+cor_model_total[['estimate']]
+
+
+# with Century, May 2019
 figdir <- "C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/figs"
 sim_summary <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_results/WCS_exclosures/simulated_biomass_summary.csv")
 sim_summary <- sim_summary[sim_summary$month == 9, ]
@@ -747,9 +1006,9 @@ summary(max_green_biomass_per_year[max_green_biomass_per_year$year == 2016, 'gre
 summary(max_green_biomass_per_year[max_green_biomass_per_year$year == 2017, 'green_biomass_gm2'])
 
 ### compare biomass calculated from NDVI via regression to modeled biomass
-print_theme <- theme(strip.text.y=element_text(size=10), 
-                     strip.text.x=element_text(size=9), 
-                     axis.title.x=element_text(size=10), 
+print_theme <- theme(strip.text.y=element_text(size=10),
+                     strip.text.x=element_text(size=9),
+                     axis.title.x=element_text(size=10),
                      axis.title.y=element_text(size=10),
                      axis.text=element_text(size=10),
                      plot.title=element_text(size=7, face="bold"),

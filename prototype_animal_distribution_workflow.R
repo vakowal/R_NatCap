@@ -17,7 +17,7 @@ total_animals <- 100
 
 plotdf <- data.frame('potential_biomass'=modeled_index, 'observed_biomass'=EO_index)
 
-p <- ggplot(plotdf, aes(x=potential_biomass, y=observed_biomass))
+p <- ggplot(plotdf, aes(x=observed_biomass, y=potential_biomass))
 p <- p + geom_point()
 p <- p + geom_abline(intercept = 0, slope=1)
 print(p)
@@ -28,6 +28,14 @@ modeled_normalized <- (
   (modeled_index - min(modeled_index)) / (max(modeled_index) - min(modeled_index)))
 EO_normalized <- (
   (EO_index - min(EO_index)) / (max(EO_index) - min(EO_index)))
+
+norm_df <- data.frame('potential_norm'=modeled_normalized, 'observed_norm'=EO_normalized)
+norm_df$diff <- norm_df$potential_norm - norm_df$observed_norm
+p <- ggplot(norm_df, aes(x=observed_norm, y=potential_norm))
+p <- p + geom_point() + geom_abline(intercept=0, slope=1)
+print(p)
+
+hist(norm_df$diff, breaks=100)
 
 # translate modeled index to be >= EO index
 max_diff <- max(EO_normalized - modeled_normalized)
