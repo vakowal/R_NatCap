@@ -253,11 +253,11 @@ peak_rmse <- sqrt(mean(diff_sq))
 
 library(ggplot2)
 p <- ggplot(merged_df, aes(x=total_biomass_kgha, y=emp_biomass_kgha))
-p <- p + geom_point() + xlab("Peak biomass (Century)") + ylab("Empirical biomass, 2014")
+p <- p + xlab("Peak biomass (Century)") + ylab("Empirical biomass, 2014") # + geom_point()
 p <- p + geom_abline(slope=1, intercept=0, linetype='dashed') + print_theme
-p <- p + geom_text(aes(label=site_id), hjust=0, vjust=0, nudge_x=0.5)
+p <- p + geom_text(aes(label=site_id))
 print(p)
-pngname <- paste(fig_dir, "peak_biomass_Century_v_2014biomass_outliers_removed.png", sep='/')  # TODO check name
+pngname <- paste(fig_dir, "peak_biomass_Century_v_2014biomass_sitelabels.png", sep='/')
 png(file=pngname, units="in", res=300, width=4, height=4)
 print(p)
 dev.off()
@@ -277,12 +277,12 @@ century_sampling_month_df <- merge(century_bothyears, mean_veg_df)  # to get onl
 century_df <- century_sampling_month_df[, colnames(century_df)]
 century_mean_veg <- merge(century_df, mean_veg_df)
 p <- ggplot(century_mean_veg, aes(x=total_biomass_kgha, y=emp_biomass_kgha))
-p <- p + geom_point() + facet_grid(~year)
+p <- p + facet_grid(~year) # + geom_point()
 p <- p + xlab("Simulated biomass, Century (kg/ha)") + ylab("Empirical biomass (kg/ha)")
 p <- p + geom_abline(slope=1, intercept=0, linetype='dashed') + print_theme
-p <- p + geom_text(aes(label=site), hjust=0, vjust=0, nudge_x=0.5)
+p <- p + geom_text(aes(label=site))
 print(p)
-pngname <- paste(fig_dir, "biomass_Century_both_years_v_empirical_biomass.png", sep='/')
+pngname <- paste(fig_dir, "biomass_Century_both_years_v_empirical_biomass_sitelabels.png", sep='/')
 png(file=pngname, units="in", res=300, width=7, height=4)
 print(p)
 dev.off()
@@ -294,6 +294,8 @@ cor_2015 <- cor.test(century_mean_veg[century_mean_veg$year == 2015, 'total_biom
 
 # biomass per site simulated with CHIRPS and uniform empirical density, Nov 2020
 rpm_df <- read.csv("C:/Users/ginge/Documents/NatCap/GIS_local/Mongolia/Ahlborn_sites_RPM_outputs/uniform_density_sfu_per_site/RPM_biomass_site_centroids_uniform_density_sfu_per_site.csv")
+step_key_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_inputs/Ahlborn_sites/RPM_inputs/step_key.csv")
+colnames(step_key_df) <- c('year', 'month', 'step')
 rpm_df <- merge(rpm_df, step_key_df)
 rpm_df <- rpm_df[, c(
   'year', 'month', 'site', 'standing_biomass')]
@@ -334,8 +336,8 @@ rpm_mean_grass <- merge(rpm_df, mean_grass_df)
 rpm_df <- rpm_mean_grass[, c(colnames(rpm_df))]
 merged_df <- merge(rpm_df, grass_by_site)
 p <- ggplot(merged_df, aes(x=standing_biomass, y=grass_kgha))
-p <- p + geom_point() + geom_abline(slope=1, intercept=0, linetype='dashed') + facet_wrap(~year)
-p <- p + geom_text(aes(label=site), hjust=0, vjust=0, nudge_x=0.5)
+p <- p + geom_abline(slope=1, intercept=0, linetype='dashed') + facet_wrap(~year) # + geom_point()
+p <- p + geom_text(aes(label=site))
 p <- p + print_theme + xlab("Simulated biomass, RPM (kg/ha)") + ylab("Empirical grass biomass (kg/ha)")
 print(p)
 pngname <- paste(fig_dir, "biomass_RPM_CHIRPS_uniform_v_empirical_grass_biomass.png", sep='/')
@@ -358,11 +360,11 @@ rpm_df <- rpm_mean_veg[, colnames(rpm_df)]
 merged_df <- merge(rpm_df, site_mean_biomass)
 
 p <- ggplot(merged_df, aes(x=standing_biomass, y=emp_biomass_kgha))
-p <- p + geom_point() + geom_abline(slope=1, intercept=0, linetype='dashed') + facet_wrap(~year)
-p <- p + geom_text(aes(label=site), hjust=0, vjust=0, nudge_x=0.5)
+p <- p + geom_abline(slope=1, intercept=0, linetype='dashed') + facet_wrap(~year) # + geom_point()
+p <- p + geom_text(aes(label=site))
 p <- p + print_theme + xlab("Simulated biomass, RPM (kg/ha)") + ylab("Empirical biomass (kg/ha)")
 print(p)
-pngname <- paste(fig_dir, "biomass_RPM_CHIRPS_uniform_v_empirical_biomass.png", sep='/')
+pngname <- paste(fig_dir, "biomass_RPM_CHIRPS_uniform_v_empirical_biomass_sitelabels.png", sep='/')
 png(file=pngname, units="in", res=300, width=7, height=4)
 print(p)
 dev.off()
@@ -372,6 +374,8 @@ bias_2014 <- mean(merged_df[merged_df$year == 2014, 'standing_biomass'] -
                     merged_df[merged_df$year == 2014, 'emp_biomass_kgha'])
 bias_2015 <- mean(merged_df[merged_df$year == 2015, 'standing_biomass'] -
                     merged_df[merged_df$year == 2015, 'emp_biomass_kgha'])
+mean_biomass_2014 <- mean(merged_df[merged_df$year == 2014, 'emp_biomass_kgha'])
+mean_biomass_2015 <- mean(merged_df[merged_df$year == 2015, 'emp_biomass_kgha'])
 
 # pearson corr
 pearson_2014 <- cor.test(merged_df[merged_df$year == 2014, 'standing_biomass'],
@@ -847,10 +851,11 @@ dung_resh <- reshape(biomass_sfu_df, idvar=c('site', 'annual_prec_worldclim'),
                             'live_biomass_kgha', 'month', 'ratio'))
 dung_resh$source <- factor(dung_resh$source, levels=c('Sheep forage unit (animal/ha)', 'Dung (count/ha)'))
 p <- ggplot(dung_resh, aes(x=annual_prec_worldclim, y=density))
-p <- p + geom_point() + facet_wrap(~source, scales='free')
+p <- p + geom_text(aes(label=site))
+p <- p + facet_wrap(~source, scales='free') # + geom_point()
 p <- p + xlab('Average annual precipitation (cm)') + ylab('Animal density') + print_theme
 print(p)
-pngname <- paste(processed_dir, "precip_vs_dung_density_est_sfu_density.png", sep='/')
+pngname <- paste(processed_dir, "precip_vs_dung_density_est_sfu_density_sitelabels.png", sep='/') # "precip_vs_dung_density_est_sfu_density.png", sep='/')
 png(file=pngname, units="in", res=300, width=7, height=3.5)
 print(p)
 dev.off()

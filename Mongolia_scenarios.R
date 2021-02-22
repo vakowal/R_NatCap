@@ -86,18 +86,20 @@ colnames(worldclim_df) <- c('site', 'annual_prec_worldclim')
 biom_pc_df <- perc_change_df[perc_change_df$output == 'standing_biomass', ]
 summary(biom_pc_df[(biom_pc_df$run_id == 'K'), 'mean_perc_change'])
 
+# maximum change in diet sufficiency
 ds_pc_df <- perc_change_df[perc_change_df$output == 'diet_sufficiency', ]
 summary(ds_pc_df[(biom_pc_df$run_id == 'B'), 'mean_perc_change'])
 
 # summary of diet sufficiency values across pixels within site, baseline scenario
+ave_val_df <- merge(ave_val_df, worldclim_df)
 baseline_ds_df <- ave_val_df[(ave_val_df$year == 2017) &
                                 (ave_val_df$run_id == 'A') &
                                 (ave_val_df$output == 'diet_sufficiency'), ]
 p <- ggplot(baseline_ds_df, aes(x=annual_prec_worldclim, y=pixel_mean))
-p <- p + geom_point() + geom_errorbar(aes(ymin=pixel_min, ymax=pixel_max), width=0.2)
+p <- p + geom_text(aes(label=site)) # geom_point() + geom_errorbar(aes(ymin=pixel_min, ymax=pixel_max), width=0.2)
 p <- p + print_theme + xlab("Average annual precipitation (cm)") + ylab("Diet sufficiency")
 print(p)
-pngname <- paste(fig_dir, "diet_sufficiency_by_site_baseline.png", sep='/')
+pngname <- paste(fig_dir, "diet_sufficiency_by_site_baseline_sitelabels.png", sep='/') # "diet_sufficiency_by_site_baseline.png", sep='/')
 png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
@@ -111,11 +113,23 @@ perc_change_df$output <- factor(perc_change_df$output,
 oneway_df <- perc_change_df[(perc_change_df$year == 2017) &
                               (perc_change_df$run_id %in% c('B', 'F', 'H', 'I')), ]
 p <- ggplot(oneway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
-p <- p + geom_point() # + geom_errorbar(aes(ymin=min_perc_change, ymax=max_perc_change))
-p <- p + facet_grid(run_id~output, scales='free') + print_theme
+p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x) + geom_point() # + geom_errorbar(aes(ymin=min_perc_change, ymax=max_perc_change))
+p <- p + facet_grid(run_id~output, scales='free_y') + print_theme
 p <- p + xlab("Average annual precipitation (cm)") + ylab("Percent change from baseline")
 print(p)
 pngname <- paste(fig_dir, "oneway_scenarios.png", sep='/')
+png(file=pngname, units="in", res=300, width=4, height=6)
+print(p)
+dev.off()
+
+# alternative: use site labels instead of points
+p <- ggplot(oneway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
+p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x)
+p <- p + geom_text(aes(label=site))
+p <- p + facet_grid(run_id~output, scales='free_y') + print_theme
+p <- p + xlab("Average annual precipitation (cm)") + ylab("Percent change from baseline")
+print(p)
+pngname <- paste(fig_dir, "oneway_scenarios_sitelabels.png", sep='/')
 png(file=pngname, units="in", res=300, width=4, height=6)
 print(p)
 dev.off()
@@ -124,12 +138,13 @@ dev.off()
 twoway_df <- perc_change_df[(perc_change_df$year == 2017) &
                               (perc_change_df$run_id %in% c('C', 'D', 'G', 'J', 'L')), ]
 p <- ggplot(twoway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
-p <- p + geom_point()
+p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x)  # + geom_point()
+p <- p + geom_text(aes(label=site))
 # p <- p + geom_errorbar(aes(ymin=min_perc_change, ymax=max_perc_change))
 p <- p + facet_grid(run_id~output, scales='free') + print_theme
 p <- p + xlab("Average annual precipitation (cm)") + ylab("Percent change from baseline")
 print(p)
-pngname <- paste(fig_dir, "twoway_scenarios.png", sep='/')
+pngname <- paste(fig_dir, "twoway_scenarios_sitelabels.png", sep='/')  # "twoway_scenarios.png", sep='/')
 png(file=pngname, units="in", res=300, width=4, height=7.5)
 print(p)
 dev.off()
@@ -138,12 +153,13 @@ dev.off()
 threeway_df <- perc_change_df[(perc_change_df$year == 2017) &
                                   (perc_change_df$run_id %in% c('E', 'K')), ]
 p <- ggplot(threeway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
-p <- p + geom_point()
+p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x) # + geom_point()
+p <- p + geom_text(aes(label=site))
 # p <- p + geom_errorbar(aes(ymin=min_perc_change, ymax=max_perc_change))
 p <- p + facet_grid(run_id~output, scales='free') + print_theme
 p <- p + xlab("Average annual precipitation (cm)") + ylab("Percent change from baseline")
 print(p)
-pngname <- paste(fig_dir, "threeway_scenarios.png", sep='/')
+pngname <- paste(fig_dir, "threeway_scenarios_sitelabels.png", sep='/')  # "threeway_scenarios.png", sep='/')
 png(file=pngname, units="in", res=300, width=5, height=5)
 print(p)
 dev.off()
