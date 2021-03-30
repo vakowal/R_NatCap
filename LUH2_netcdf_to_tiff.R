@@ -14,6 +14,7 @@ head(lat)
 
 print(c(nlon, nlat)) # confirms 5 minute data resolution
 
+
 # The variable and its longname, units and fill value (_FillValue) attributes are read next.
 
 pft_names <- names(ncin$var)[c(1:14)]

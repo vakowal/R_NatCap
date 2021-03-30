@@ -1,5 +1,6 @@
 # Moore-Amazon InVEST results for Chaglla dam watershed
 library(ggplot2)
+library(raster)
 
 relative_to_baseline <- function(df) {
   df$relative_value <- 0
@@ -12,6 +13,12 @@ relative_to_baseline <- function(df) {
   }
   return(df)
 }
+
+# plot histograms of difference values?
+diff_dir <- "C:/Users/ginge/Dropbox/NatCap_backup/Moore_Amazon/SDR_SWY_results/SDR/sed_export_diff_from_baseline"
+eg_path <- paste(diff_dir, "diff_2070_2.6.tif", sep='/')
+raster_vals <- raster(eg_path)
+histvals <- hist(raster_vals, maxpixels=100000000000, plot=FALSE)
 
 # examine precip that was used to run SWY
 precip_summary <- read.csv("C:/SWY_workspace/precip_summary.csv")
@@ -48,8 +55,6 @@ for (year in c(2050, 2070)){
     write.csv(events_table, out_path, row.names=FALSE)
   }
 }
-  
-  
 
 # SWY: streamflow. Annual baseflow was distributed across months according to relative precip in the prior month
 swy_summary <- read.csv("C:/SWY_workspace/seasonal_streamflow_summary.csv")
@@ -57,7 +62,7 @@ swy_summary$scenario <- factor(swy_summary$scenario, levels=c('current', '2.6', 
                                labels=c('current', 'RCP2.6-SSP1', 'RCP6.0-SSP4', 'RCP8.5-SSP5'))
 
 swy_subs <- swy_summary[swy_summary$CN_option == 'CN-III', 
-                        c('month', 'baseflow', 'quickflow', 'scenario', 'year')]  # TODO keep both?
+                        c('month', 'baseflow', 'quickflow', 'scenario', 'year')]  # TODO keep both CN-II and CN-III?
 swy_res1 <- reshape(swy_subs, varying=c('baseflow', 'quickflow'),
                     v.names='value', idvar=c('month', 'scenario', 'year'),
                     times=c('baseflow', 'quickflow'),
@@ -70,7 +75,7 @@ swy_res1[swy_res1$scenario == 'RCP6.0-SSP4', 'scenario_numeric'] <- 3
 swy_res1[swy_res1$scenario == 'RCP8.5-SSP5', 'scenario_numeric'] <- 4
 p <- ggplot(swy_res1, aes(x=scenario, y=value, fill=fraction))
 p <- p + geom_bar(position='stack', stat='identity')
-p <- p + facet_grid(year~month) + xlab("") + ylab("flow (mm)")
+p <- p + facet_grid(year~month) + xlab("") + ylab("flow (m3/sec)")
 p <- p + theme(panel.spacing.x=unit(0, 'lines'), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 print(p)
 pngname <- "C:/Users/ginge/Dropbox/NatCap_backup/Moore_Amazon/SDR_SWY_results/summary_figs/swy_flow_summary_stack_bar.png"

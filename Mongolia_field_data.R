@@ -95,9 +95,9 @@ for (i in c(1, 2, 3)) {
     p <- p + xlab("Precip (cm)") + ylab("Rangeland metric")
     pngname <- paste(out_dir, paste("rangeland_metric_vs_cumulative_precip_", year, "_", n_months, "_months.png", sep=""),
                      sep="/")
-    png(file=pngname, units="in", res=300, width=3.5, height=4)
-    print(p)
-    dev.off()
+    # png(file=pngname, units="in", res=300, width=3.5, height=4)
+    # print(p)
+    # dev.off()
   }
 }
 combined_df <- do.call(rbind, df_list)

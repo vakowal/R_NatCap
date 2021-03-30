@@ -57,6 +57,7 @@ png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
 
+
 # pixel mean values
 df_list = list()
 for(aoi_idx in c(1:15)) {
@@ -81,14 +82,25 @@ perc_change_df <- do.call(rbind, df_list)
 worldclim_df <- read.csv("C:/Users/ginge/Dropbox/NatCap_backup/Mongolia/model_inputs/Ahlborn_sites/intermediate_data/worldclim_precip.csv")
 worldclim_df <- aggregate(prec~site, worldclim_df, FUN=sum)
 colnames(worldclim_df) <- c('site', 'annual_prec_worldclim')
+breaks <- c(15, 20, 25, 30)
+tags <- c('10 - 15', '15 - 20', '20 - 25', '25 - 30')
+# classify precip into bins used in fig 1
+worldclim_df$precip_tags <- cut(worldclim_df$annual_prec_worldclim, breaks=breaks,
+                   include.lowest=TRUE, right=FALSE, labels=tags)
+worldclim_df$precip_tags <- factor(worldclim_df$precip_tags, levels=tags, ordered=TRUE)
+# colors for precip levels used in fig 1
+prec_colors <- c("#8fc2de", "#5ba3d0", "#3182be", "#08306b")  # 25-30, 35+
+names(prec_colors) <- tags
+precip_scale <- scale_colour_manual(name="worldclim", values=prec_colors)
 
-# maximum change in biomass
-biom_pc_df <- perc_change_df[perc_change_df$output == 'standing_biomass', ]
-summary(biom_pc_df[(biom_pc_df$run_id == 'K'), 'mean_perc_change'])
-
-# maximum change in diet sufficiency
-ds_pc_df <- perc_change_df[perc_change_df$output == 'diet_sufficiency', ]
-summary(ds_pc_df[(biom_pc_df$run_id == 'B'), 'mean_perc_change'])
+# summarize mean, maximum change in biomass & diet sufficiency
+pc_df_2017 <- perc_change_df[(perc_change_df$year == 2017), ]
+mean_pc_df <- aggregate(mean_perc_change~run_id + output, pc_df_2017, FUN=mean)
+colnames(mean_pc_df) <- c('run_id', 'output', 'mean_perc_change_across_sites')
+max_pc_df <- aggregate(mean_perc_change~run_id + output, pc_df_2017, FUN=max)
+colnames(max_pc_df) <- c('run_id', 'output', 'max_perc_change_across_sites')
+summarized <- merge(mean_pc_df, max_pc_df)
+write.csv(summarized, paste(fig_dir, 'percent_change_summary_across_sites.csv', sep='/'), row.names=FALSE)
 
 # summary of diet sufficiency values across pixels within site, baseline scenario
 ave_val_df <- merge(ave_val_df, worldclim_df)
@@ -104,25 +116,48 @@ png(file=pngname, units="in", res=300, width=3, height=3)
 print(p)
 dev.off()
 
-# one-way changes only
 perc_change_df <- merge(perc_change_df, worldclim_df)
 perc_change_df$output <- factor(perc_change_df$output,
-                               levels=c('standing_biomass', 'diet_sufficiency'),
-                               labels=c('Biomass', 'Diet sufficiency'))
+                                levels=c('standing_biomass', 'diet_sufficiency'),
+                                labels=c('Biomass', 'Diet sufficiency'))
 
-oneway_df <- perc_change_df[(perc_change_df$year == 2017) &
-                              (perc_change_df$run_id %in% c('B', 'F', 'H', 'I')), ]
-p <- ggplot(oneway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
-p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x) + geom_point() # + geom_errorbar(aes(ymin=min_perc_change, ymax=max_perc_change))
-p <- p + facet_grid(run_id~output, scales='free_y') + print_theme
-p <- p + xlab("Average annual precipitation (cm)") + ylab("Percent change from baseline")
+# density plot contrasting changes in grazing: with and without changes in climate
+gr_sc_df <- perc_change_df[(perc_change_df$year == 2017) & (perc_change_df$run_id %in% c('E', 'K', 'H', 'I')), ]
+gr_sc_df$run_id <- factor(gr_sc_df$run_id, levels=c('H', 'I', 'E', 'K'),
+                          labels=c('Doubled animal density alone',
+                                   'No grazing alone',
+                                   'Doubled animal density, \nelevated temperature \nand precipitation',
+                                   'No grazing, \nelevated temperature \nand precipitation'))
+p <- ggplot(gr_sc_df, aes(mean_perc_change, fill=run_id))
+p <- p + geom_density(alpha=0.7) + facet_wrap(~output, nrow=2) + scale_color_brewer(palette="Accent")  # Set2
+p <- p + facet_wrap(~output, nrow=2, scales='free_y') + theme(legend.title = element_blank())
+p <- p + print_theme + xlab("Percent change from baseline") + ylab("Density")
 print(p)
-pngname <- paste(fig_dir, "oneway_scenarios.png", sep='/')
-png(file=pngname, units="in", res=300, width=4, height=6)
+pngname <- paste(fig_dir, "grazing_scenarios_oneway_threeway.png", sep='/')
+png(file=pngname, units="in", res=300, width=6, height=6)
 print(p)
 dev.off()
 
-# alternative: use site labels instead of points
+# one-way drivers colored by site precip
+oneway_df <- perc_change_df[(perc_change_df$year == 2017) &
+                              (perc_change_df$run_id %in% c('B', 'F', 'H', 'I')), ]
+oneway_df$run_id <- factor(oneway_df$run_id, levels=c('B', 'F', 'H', 'I'),
+                           labels=c('Elevated \ntemperature', 'Elevated \nprecipitation', 'Doubled \nanimal density',
+                                    'No grazing'))
+p <- ggplot(oneway_df, aes(x=run_id, y=mean_perc_change)) + precip_scale
+p <- p + geom_jitter(width=0.05, aes(color=precip_tags)) + facet_wrap(~output, nrow=2, scales='free_y')
+p <- p + geom_abline(intercept=0, slope=0, linetype='dashed')
+p <- p + print_theme + theme(axis.text.x=element_text(angle=90)) + theme(legend.position="none")
+p <- p + xlab("") + ylab("Percent change from baseline")
+print(p)
+pngname <- paste(fig_dir, "perc_change_colored_by_precip.png", sep='/')
+png(file=pngname, units="in", res=300, width=3, height=5)
+print(p)
+dev.off()
+
+# one-way changes only
+oneway_df <- perc_change_df[(perc_change_df$year == 2017) &
+                              (perc_change_df$run_id %in% c('B', 'F', 'H', 'I')), ]
 p <- ggplot(oneway_df, aes(x=annual_prec_worldclim, y=mean_perc_change))
 p <- p + geom_smooth(method="lm", color='black', size=0.1, alpha=0.2, formula=y~x)
 p <- p + geom_text(aes(label=site))
@@ -170,14 +205,35 @@ comb_resh <- reshape(restr_df, idvar=c('run_id', 'site'), timevar='output', dire
                      drop=c('year', 'min_perc_change', 'max_perc_change', 'annual_prec_worldclim'))
 colnames(comb_resh) <- c('run_id', 'site', 'perc_change_biomass', 'perc_change_dietsuff')
 comb_resh$site <- factor(comb_resh$site)
-comb_resh <- merge(comb_resh, residual_df)
+# comb_resh <- merge(comb_resh, residual_df)
 comb_resh <- merge(comb_resh, worldclim_df)
 p <- ggplot(comb_resh, aes(x=perc_change_biomass, y=perc_change_dietsuff, color=site)) # , color=residual))
 p <- p + geom_point() + facet_wrap(~run_id, nrow=4, scales='free') + theme(legend.position='none')
 p <- p + xlab("Percent change: biomass") + ylab("Percent change: diet sufficiency")
 print(p)
-pngname <- paste(fig_dir, "perc_change_dietsuff_vs_biomass.png", sep='/')
+pngname <- paste(fig_dir, "perc_change_dietsuff_vs_biomass_by_scenario.png", sep='/')
 png(file=pngname, units="in", res=300, width=5, height=8)
+print(p)
+dev.off()
+
+p <- ggplot(comb_resh, aes(x=perc_change_biomass, y=perc_change_dietsuff, color=run_id)) # , color=residual))
+p <- p + geom_point()
+p <- p + xlab("Percent change: biomass") + ylab("Percent change: diet sufficiency")
+p <- p + geom_abline(intercept=0, slope=1, linetype='dotted')
+print(p)
+pngname <- paste(fig_dir, "perc_change_dietsuff_vs_biomass_by_scenario.png", sep='/')
+png(file=pngname, units="in", res=300, width=5, height=4)
+print(p)
+dev.off()
+
+p <- ggplot(comb_resh, aes(x=perc_change_biomass, y=perc_change_dietsuff, color=precip_tags))
+p <- p + geom_point() + precip_scale
+p <- p + xlab("Percent change: biomass") + ylab("Percent change: diet sufficiency")
+p <- p + geom_abline(intercept=0, slope=1, linetype='dotted')
+p <- p + print_theme + theme(legend.position='none')
+print(p)
+pngname <- paste(fig_dir, "perc_change_dietsuff_vs_biomass_by_precip.png", sep='/')
+png(file=pngname, units="in", res=300, width=4, height=4)
 print(p)
 dev.off()
 
